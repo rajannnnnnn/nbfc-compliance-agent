@@ -1,0 +1,1083 @@
+# ClauseCheck — Task Breakdown
+
+Expansion of `ClauseCheck_LLD_v1.0.md` §21 into ordered, individually shippable tasks.
+
+Authority: the LLD is what to build; `CLAUDE.md` is how to build it. Where this file and the
+LLD disagree, the LLD wins and this file is wrong — except where a task is annotated
+**[SPEC]**, which marks a point where the specification is internally inconsistent or
+unimplementable as written and a decision is required before the task can be closed. Those
+are listed in full in `docs/SPEC_QUERIES.md` and are open until answered.
+
+## How to read a task
+
+Every task carries **Depends on**, **Files**, and **Acceptance**. Acceptance is a command or
+a test. A criterion that cannot be executed is not an acceptance criterion and does not
+appear here. `pytest` node ids are written as they will exist; a task is not done until its
+node id runs green from a clean checkout.
+
+## Conventions binding on every task
+
+- Branch per task, `feat/<slug>` / `fix/<slug>` / `chore/<slug>`, conventional commits
+  (`CLAUDE.md` §6). *Note: this session is constrained to push to `claude/session-specs-0069s6`;
+  per-task branching resumes once that constraint lifts.*
+- Definition of done is `CLAUDE.md` §7 in full, not just the acceptance line below.
+- Every task that changes extraction, retrieval or verdict behaviour ships at least one case
+  in `eval/cases/`, not only a unit test.
+- Non-obvious choices are recorded in `docs/DECISIONS.md` as a short ADR before the task closes.
+- `make lint` (ruff + black --check + mypy strict on `app/`) passes on every commit.
+
+## Status legend
+
+`open` · `in-progress` · `blocked` · `done`
+
+---
+
+# M0 — Repository scaffolding *(added; not in LLD §21)*
+
+LLD §21 begins at `corpus_sources.yaml`, but every M1 task presumes an installable Python
+package, a Makefile, and a container. That scaffolding has no owning task in the LLD, so it
+is given one here rather than smuggled into M1-T01.
+
+### M0-T01 — Project skeleton and tooling
+- **Status** open
+- **Depends on** —
+- **Files** `pyproject.toml`, `Makefile`, `.gitignore`, `.env.example`, `.pre-commit-config.yaml`, `app/__init__.py`
+- **Acceptance**
+  ```bash
+  python -c "import sys; assert sys.version_info[:2]==(3,11)"
+  pip install -e ".[dev]" && make lint          # ruff, black --check, mypy strict on app/
+  git check-ignore -q .env data/raw reports && echo "ignored"
+  ```
+  `.gitignore` must cover `.env`, `data/raw/`, `reports/`, `*.pdf`, adapter artefacts
+  (`CLAUDE.md` §6).
+
+### M0-T02 — `app/config.py` Settings
+- **Status** open
+- **Depends on** M0-T01
+- **Files** `app/config.py`, `tests/unit/test_config.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/test_config.py -q
+  ```
+  Asserts: `extra="forbid"` rejects an unknown `CC_*` var; `env` rejects a value outside
+  `local|ci|prod`; `serving_mode` rejects a value outside the three modes; a missing
+  `database_url` raises; `get_settings()` is cached (same object on two calls). Every key in
+  LLD §2 is present with the specified default.
+  **[SPEC]** `extract_model`, `verdict_model` and `classify_model` default to the literal
+  placeholders `<frontier-model-id>` / `<small-model-id>`; real ids required — see SQ-11.
+
+### M0-T03 — Docker Compose and the `cc_app` role
+- **Status** open
+- **Depends on** M0-T01
+- **Files** `Dockerfile`, `docker-compose.yml`, `scripts/db_bootstrap.sql`, `Makefile`
+- **Acceptance**
+  ```bash
+  make dev && docker compose ps --format json | jq -e 'all(.Health=="healthy" or .State=="running")'
+  psql "$CC_DATABASE_URL" -c "SELECT extname FROM pg_extension WHERE extname IN ('vector','pg_trgm')" | grep -c . 
+  psql -U postgres -c "SELECT rolbypassrls FROM pg_roles WHERE rolname='cc_app'" | grep -q f
+  ```
+  **[SPEC]** LLD §20.1 grants `ON ALL TABLES IN SCHEMA public` at bootstrap, before Alembic
+  has created any table, so the grant reaches nothing. Bootstrap must use
+  `ALTER DEFAULT PRIVILEGES` (or re-grant post-migration) — see SQ-08.
+
+### M0-T04 — CI pipeline
+- **Status** open
+- **Depends on** M0-T01
+- **Files** `.github/workflows/ci.yml`
+- **Acceptance**
+  ```bash
+  act -j lint && act -j test          # or: push a branch and observe both jobs green
+  ```
+  Jobs: `lint` (ruff, black, mypy), `test-unit` (`pytest -m "not integration"`), `test-integration`
+  (testcontainers Postgres 16 + Redis 7). Weekly scheduled `corpus-drift` job added in M1-T09.
+  **[SPEC]** LLD §17.4 puts `temporal` and `abstention` on every pull request as "fast, no
+  extraction", but both are `stage: verdict` and call the frontier model — so CI needs a
+  provider key and a per-PR budget — see SQ-24.
+
+---
+
+# M1 — Corpus
+
+First because every other component's correctness is defined relative to it. The deliverable
+is `docs/CORPUS.md`, not working code.
+
+> **Blocked at the environment level.** `rbi.org.in` returns 403 at the proxy CONNECT in this
+> execution environment, so M1-T02, M1-T09, M1-T10 and M1-T11 cannot resolve against live
+> sources here. See SQ-01. Tasks below are written to be developed against checked-in fixtures
+> and re-run against live sources once reachable.
+
+### M1-T01 — `corpus_sources.yaml`
+- **Status** open
+- **Depends on** M0-T01
+- **Files** `app/corpus/corpus_sources.yaml`, `app/corpus/sources.py`, `tests/unit/corpus/test_sources.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/corpus/test_sources.py -q
+  ```
+  Asserts: all five instrument codes present (`DL2025`, `KFS2024`, `RBC2025`, `RBC-AMD2026`,
+  `RBC-AMD2026-DRAFT`); each declares `source_url`, `effective_from`, `status`,
+  `verification_status`, `citable`; `DL2025.para_overrides` contains `6 → 2025-11-01` and
+  `17 → 2025-06-15` (PRD §10); `RBC-AMD2026-DRAFT` is `status: draft`, `citable: false`,
+  `effective_from: null`; `RBC-AMD2026` is `secondary_sourced`; loader rejects an unknown key
+  and an instrument whose `status` and `effective_from` disagree.
+  **[SPEC]** Source URLs are not supplied by any document in the set — see SQ-02.
+
+### M1-T02 — `fetch.py`
+- **Status** blocked *(SQ-01)*
+- **Depends on** M1-T01
+- **Files** `app/corpus/fetch.py`, `app/errors.py`, `tests/unit/corpus/test_fetch.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/corpus/test_fetch.py -q
+  ```
+  Against a local stub server, asserts: 200 writes `data/raw/<sha256>.<ext>` and the returned
+  `sha256` equals `sha256sum` of that file; non-200 raises `CorpusFetchError`; a body under
+  2 KiB raises; an anti-bot interstitial (content heuristic) raises **and no file is written**;
+  a cross-host redirect is refused; the configured `corpus_user_agent` is sent; 30 s timeout
+  honoured. Manual-placement path: a file already present in `data/raw/` with its hash in
+  `corpus_sources.yaml` is accepted without a network call.
+
+### M1-T03 — `continuous_para.py`
+- **Status** open
+- **Depends on** M1-T01
+- **Files** `app/corpus/parsers/base.py`, `app/corpus/parsers/continuous_para.py`, `tests/unit/corpus/test_continuous_para.py`, `tests/fixtures/corpus/{dl2025,rbc2025}_excerpt.html`, `tests/fixtures/corpus/{dl2025,rbc2025}_expected.json`
+- **Depends on** M1-T01
+- **Acceptance**
+  ```bash
+  pytest tests/unit/corpus/test_continuous_para.py -q
+  ```
+  Golden-file: parsed node tree equals the checked-in expected JSON exactly, per instrument.
+  Plus the ambiguities LLD §6.2 names explicitly: `i.` resolves as level-2 only when a
+  paragraph is open and as a paragraph marker otherwise; `(i)` note markers do not collide
+  with `(a)` level-3 letters; `100W` parses with `para_number="100W"` and `para_sort=100`;
+  sorting places `100A < 100W < 101`; each of the four warning conditions fires on a crafted
+  fixture and **warns rather than raises**; a parent node's `text` excludes its children's text.
+
+### M1-T04 — `annex_table.py`
+- **Status** open
+- **Depends on** M1-T03
+- **Files** `app/corpus/parsers/annex_table.py`, `tests/unit/corpus/test_annex_table.py`, `tests/fixtures/corpus/kfs2024_annexA.html`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/corpus/test_annex_table.py -q
+  ```
+  One node per table row; `para_number == "annexA"`, `level2_label == part number`,
+  `level3_label == row number`; every row's `text` begins with the column headers; a worked
+  numeric illustration yields a single node with `chunk_kind == "illustration"`; node count
+  equals row count in the fixture.
+  **[SPEC]** R04 cites `KFS2024/annexB`, whose structure is specified nowhere — see SQ-06.
+
+### M1-T05 — `chunk.py`
+- **Status** open
+- **Depends on** M1-T03, M1-T04
+- **Files** `app/corpus/chunk.py`, `tests/unit/corpus/test_chunk.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/corpus/test_chunk.py -q
+  ```
+  A node under `STEM_MIN_TOKENS` (40) gets `text_with_stem == parent_stem + node.text` and
+  `chunk_strategy == "leaf+stem"`; a node at or above threshold gets `text_with_stem == node.text`
+  and `chunk_strategy == "leaf"`; the stem is the parent's first sentence truncated to 200 chars;
+  table rows record `"table_row"`, illustrations `"illustration_whole"`; `len(chunks) == len(nodes)`.
+
+### M1-T06 — `embed.py`
+- **Status** blocked *(SQ-03: embedding API key)*
+- **Depends on** M1-T05, M2-T02 *(needs the `clause` table to write into)*
+- **Files** `app/corpus/embed.py`, `tests/unit/corpus/test_embed.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/corpus/test_embed.py -q
+  ```
+  Against a stubbed embedding endpoint: batches at `embedding_batch_size` (64); a 429 on one
+  batch retries with backoff and the run completes; a permanent error fails the ingest rather
+  than writing partial vectors; every emitted vector has length `settings.embedding_dimension`;
+  embedded chunk count equals node count.
+  **[SPEC]** `embedding_dimension: 3072` cannot carry an HNSW index in pgvector (2000-dim
+  ceiling) — see SQ-04. This task cannot close until the dimension decision is made.
+
+### M1-T07 — `references.py`
+- **Status** open
+- **Depends on** M1-T03, M1-T04
+- **Files** `app/corpus/references.py`, `tests/unit/corpus/test_references.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/corpus/test_references.py -q -k incorporates_kfs
+  ```
+  The edge `DL2025/p8/i --incorporates--> KFS2024` is present in the output for the DL2025
+  fixture. Plus: `CIRCULAR_RE` matches a real circular number and rejects a near-miss;
+  `reference_kind` resolves to `incorporates` on "in terms of" / "as per instructions
+  contained in" / "shall comply with", `repeals` inside a repeal paragraph, `amends` for an
+  amendment instrument, `see_also` otherwise.
+
+### M1-T08 — `snapshot.py`
+- **Status** open
+- **Depends on** M1-T05, M2-T02
+- **Files** `app/corpus/snapshot.py`, `app/corpus/service.py`, `tests/integration/corpus/test_snapshot.py`
+- **Acceptance**
+  ```bash
+  pytest tests/integration/corpus/test_snapshot.py -q
+  ```
+  Against real Postgres: `ingest()` writes a snapshot with `is_active = false`; activation is
+  one transaction and leaves exactly one active row; a direct attempt to set a second row
+  active raises a unique-violation on `uq_snapshot_active`; deleting a snapshot cascades its
+  instruments, clauses and references; an ingest whose `para_overrides` name a paragraph the
+  parser did not find **fails fatally** (LLD §6.4).
+  Implementation note: deactivate-then-activate as two statements — a single `UPDATE ... CASE`
+  can transiently violate the partial unique index.
+
+### M1-T09 — `make corpus-verify`
+- **Status** blocked *(SQ-01)*
+- **Depends on** M1-T02, M1-T08
+- **Files** `app/corpus/service.py` (`verify`), `Makefile`, `.github/workflows/corpus-drift.yml`, `tests/integration/corpus/test_verify.py`
+- **Acceptance**
+  ```bash
+  make corpus-verify; echo $?        # 0 when all unchanged, 1 on any 'changed'
+  psql "$CC_DATABASE_URL" -c "SELECT count(*) FROM corpus_snapshot" # unchanged before and after
+  pytest tests/integration/corpus/test_verify.py -q
+  ```
+  Reports per instrument `unchanged | changed | unreachable` with old and new hashes; mutates
+  nothing (row counts identical before and after); sets `cc_corpus_drift_status{instrument_code}`.
+
+### M1-T10 — `docs/CORPUS.md` **(the milestone deliverable)**
+- **Status** blocked *(SQ-01)*
+- **Depends on** M1-T07, M1-T08
+- **Files** `app/corpus/report.py`, `Makefile` (`make ingest`), `docs/CORPUS.md`
+- **Acceptance**
+  ```bash
+  make ingest && test -f docs/CORPUS.md
+  python scripts/check_corpus_report.py        # structural assertions, exit 0
+  ```
+  The checker asserts the report contains, per instrument: clause count; the **full** clause-path
+  list; every parser warning; detected paragraph range against the expected range from
+  `corpus_sources.yaml`; cross-reference edges found; and a verification status that is either
+  promoted to `rbi_verified` with the source URL and hash, or left `secondary_sourced` with a
+  recorded reason. Path format is asserted against `^[A-Z0-9-]+/(p[0-9]+[A-Z]?|annex[A-Z])(/[^/]+){0,2}$`
+  — a decimal path anywhere fails the build (`CLAUDE.md` §2.6).
+
+### M1-T11 — Resolve PRD open questions 1–5
+- **Status** blocked *(SQ-01)*
+- **Depends on** M1-T10
+- **Files** `docs/CORPUS.md`, `app/corpus/corpus_sources.yaml`, `app/corpus/pinning.yaml`, `docs/DECISIONS.md`
+- **Acceptance**
+  ```bash
+  python scripts/check_corpus_report.py --open-questions   # exit 0 only when 1..5 each carry
+                                                           # a resolution or a recorded gap
+  ```
+  Each of PRD §14 Q1–Q5 appears in `docs/CORPUS.md` with either a resolution citing the live
+  source URL and retrieval hash, or `UNRESOLVED` plus what was tried. Q4 in particular
+  (whether a general non-microfinance contact-hour provision exists before 2027) gates the
+  product's defining example: if one exists, PRD §11, `eval/cases/temporal/*` and R16/R17 all
+  change. No gap is filled with plausible text (`CLAUDE.md` §8).
+
+### M1-T12 — Pinning table, first pass *(added; LLD defers pinning to M4-T05 but boot needs it at M2)*
+- **Status** open
+- **Depends on** M1-T10
+- **Files** `app/corpus/pinning.yaml`, `app/corpus/pinning.py`, `tests/unit/corpus/test_pinning.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/corpus/test_pinning.py -q
+  ```
+  `load_and_validate` raises `PinningMismatchError` naming **every** unresolved path, not the
+  first; a parent paragraph pin expands to itself plus descendants; validation passes against
+  the M1 snapshot.
+  **[SPEC]** The pinned paths `RBC-AMD2026/p100W|X|N|Q|R|S` are unconfirmed (PRD Q2). With
+  `fail_boot_on_pinning_mismatch: true` outside `ci`, a renumbered amendment makes the app
+  unbootable in `local` and `prod` — see SQ-05.
+
+---
+
+# M2 — Schema and skeleton
+
+### M2-T01 — `fields.yaml` and the registry
+- **Status** open *(**[SPEC]** blocked on SQ-07 for the exact key count)*
+- **Depends on** M0-T02
+- **Files** `app/schema/fields.yaml`, `app/schema/registry.py`, `app/schema/generated.py`, `tests/unit/schema/test_registry.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/schema/test_registry.py -q
+  python -c "from app.schema.registry import FieldRegistry; r=FieldRegistry('app/schema/fields.yaml'); r.validate(); print(len(r.all_keys()))"
+  ```
+  `validate()` is fatal on each of the six conditions in LLD §5.2 — one test per condition.
+  `generated.py` builds one Pydantic model per `doc_type`, all fields optional, each carrying
+  its registry `description`; a round-trip test renders the model's JSON schema and asserts
+  the description text survives.
+  **[SPEC]** LLD §5.3 states 61 keys; the groups sum to 80 by their own labels and the names
+  listed enumerate 82 (collections is labelled 21 and lists 23). The acceptance count above
+  cannot be written until SQ-07 fixes the number.
+
+### M2-T02 — Migrations 0001–0008
+- **Status** open
+- **Depends on** M0-T03, M2-T01
+- **Files** `alembic.ini`, `migrations/env.py`, `migrations/versions/0001_*.py` … `0008_*.py`, `app/db/{base,models,engine}.py`, `tests/integration/db/test_migrations.py`
+- **Acceptance**
+  ```bash
+  make migrate && alembic downgrade base && alembic upgrade head   # clean, no error
+  pytest tests/integration/db/test_migrations.py -q
+  ```
+  Asserts: migration order matches LLD §3.8; every enum value in §3.1 exists with the exact
+  spelling; `alembic current == alembic heads`; ORM models in `app/db/models.py` match the DDL
+  (autogenerate produces an empty diff); UUIDv7 primary keys are time-ordered.
+  **[SPEC]** `clause.embedding vector(3072)` conflicts with both the pgvector HNSW ceiling and
+  `CLAUDE.md` §3 ("vector dimension from config, never hardcoded") — see SQ-04.
+
+### M2-T03 — Row-level security
+- **Status** open
+- **Depends on** M2-T02
+- **Files** `migrations/versions/0008_*.py`, `app/db/rls.py`, `tests/integration/db/test_rls.py`
+- **Acceptance**
+  ```bash
+  pytest tests/integration/db/test_rls.py -q
+  ```
+  Connected as `cc_app` (not superuser): a `SELECT` for tenant B's rows with
+  `app.tenant_id = A` returns **zero rows** on each of the six RLS tables; an `INSERT` carrying
+  tenant B's id under `app.tenant_id = A` is rejected; a transaction that never issues
+  `SET LOCAL app.tenant_id` fails on its first query; `assessment_citation` is reachable only
+  through its parent assessment's tenant; `SELECT rolbypassrls FROM pg_roles WHERE rolname=current_user`
+  is false; `UPDATE`/`DELETE` on `audit_event` are denied.
+
+### M2-T04 — FastAPI skeleton
+- **Status** open
+- **Depends on** M2-T02
+- **Files** `app/main.py`, `app/deps.py`, `app/api/v1/{router,corpus,schemas}.py`, `tests/integration/api/test_health.py`
+- **Acceptance**
+  ```bash
+  curl -sf localhost:8000/healthz | jq -e '.status=="ok"'
+  curl -s -o /dev/null -w '%{http_code}' localhost:8000/readyz            # 503 with no active snapshot
+  curl -sf localhost:8000/v1/corpus | jq -e '.instruments|length==5'      # unauthenticated
+  pytest tests/integration/api/test_health.py -q
+  ```
+  `/readyz` checks database, Redis, an active snapshot and pinning validation, and returns
+  `CC-503-CORPUS-UNAVAILABLE` when any fails. `/v1/corpus` requires no bearer token and
+  includes `verification_status` and `verification_note` per instrument.
+  **[SPEC]** Boot assertion §2.2 kills the process when no snapshot is active, which makes the
+  `/readyz` 503 above unreachable on a fresh database — see SQ-09.
+
+### M2-T05 — Celery wiring
+- **Status** open
+- **Depends on** M0-T03
+- **Files** `app/tasks/celery_app.py`, `app/tasks/maintenance_tasks.py`, `tests/integration/tasks/test_wiring.py`
+- **Acceptance**
+  ```bash
+  celery -A app.tasks.celery_app inspect active_queues | grep -E 'extract|assess|maintenance'
+  pytest tests/integration/tasks/test_wiring.py -q
+  ```
+  A no-op task round-trips through each of the three queues; routes match LLD §14
+  (`extract.*`, `assess.*`, `maintenance.*`); `task_acks_late`, `task_reject_on_worker_lost`
+  and `worker_prefetch_multiplier=1` are set; both beat entries are registered; a task that
+  opens a session without setting `app.tenant_id` fails.
+
+### M2-T06 — Structured logging with the content denylist
+- **Status** open
+- **Depends on** M0-T02
+- **Files** `app/obs/logging.py`, `tests/unit/obs/test_logging.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/obs/test_logging.py -q
+  ```
+  Emitting a log event carrying each denylisted key (`text`, `document_text`, `value_raw`,
+  `quoted_span`, `prompt`, `messages`, `rationale`) produces serialised JSON containing none
+  of those values, including when nested inside a dict or a list; bound context
+  (`request_id`, `tenant_id`, `loan_account_id`, `document_id`, `stage`, `check_key`) survives.
+
+### M2-T07 — Boot assertions
+- **Status** open
+- **Depends on** M2-T02, M2-T04, M1-T12
+- **Files** `app/main.py` (lifespan), `tests/integration/test_boot.py`
+- **Acceptance**
+  ```bash
+  pytest tests/integration/test_boot.py -q
+  ```
+  One test per assertion in LLD §2, each proving the process **exits non-zero**: embedding
+  dimension mismatch against the live column; zero or two active snapshots; an unresolved
+  pinning path; a rule whose clause paths do not resolve and which is not marked shadow;
+  `alembic current != heads`. Plus: `fail_boot_on_pinning_mismatch=false` is accepted in `ci`
+  and **rejected** in `local` and `prod`.
+
+---
+
+# M3 — Extraction on the frontier baseline
+
+### M3-T01 — `parse.py`
+- **Status** open
+- **Depends on** M2-T01
+- **Files** `app/extract/parse.py`, `app/domain/documents.py`, `tests/unit/extract/test_parse.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/extract/test_parse.py -q
+  ```
+  A text-layer PDF parses without OCR; a scanned fixture under `ocr_char_per_page_threshold`
+  (120 chars/page) triggers the OCR path and sets `ocr_used=true`; `.txt` and `.docx` parse;
+  `char_count` and `page_count` are populated; **no branch writes bytes to disk or returns a
+  file path** (asserted by inspecting the returned `ParsedDocument` and by a tmpdir diff).
+
+### M3-T02 — `classify.py`
+- **Status** open
+- **Depends on** M3-T01
+- **Files** `app/extract/classify.py`, `app/prompts/extract/classify_doctype.v1.md`, `tests/unit/extract/test_classify.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/extract/test_classify.py -q
+  curl -s -X POST localhost:8000/v1/loans/$LOAN/documents -d @tests/fixtures/ambiguous.json | jq -e '.error.code=="CC-422-DOCTYPE-UNKNOWN"'
+  ```
+  Classification reads at most the first 2,000 characters; below
+  `classify_confidence_floor` (0.70) returns `doc_type="unknown"` and the API returns
+  `CC-422-DOCTYPE-UNKNOWN` rather than extracting against a guessed field set.
+
+### M3-T03 — `normalise.py`
+- **Status** open
+- **Depends on** M2-T01
+- **Files** `app/extract/normalise.py`, `tests/unit/extract/test_normalise.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/extract/test_normalise.py -q      # includes hypothesis property tests
+  ```
+  `12/03/2026` → `2026-03-12` (day-first, per registry `prefer: day_first`); `₹1,20,000` →
+  `12000000` paise; `18.5%` and `18.5% p.a.` → `1850` bps; `20:10` on an IST document →
+  tz-aware `Asia/Kolkata`; malformed input raises rather than returning a default. Property
+  test: money and rate round-trips never lose precision and never produce a `float`.
+
+### M3-T04 — `redact.py` profile v1
+- **Status** open
+- **Depends on** M2-T01
+- **Files** `app/extract/redact.py`, `tests/unit/extract/test_redact.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/extract/test_redact.py -q
+  ```
+  One test per pattern in LLD §13; the **ordering** test asserts a 10-digit phone number is
+  tagged `PHONE` and not swallowed by `ACCOUNT`; a `redaction_exempt` field passes through
+  unchanged; redaction applies to `value_raw` and `quoted_span` and **never** to
+  `value_normalized` for non-string types (a date survives intact); `"Gold Loan Agreement"`
+  is not redacted.
+
+### M3-T05 — `spans.py` and the span budget
+- **Status** open
+- **Depends on** M3-T04, M2-T02
+- **Files** `app/extract/spans.py`, `tests/unit/extract/test_spans.py`, `tests/integration/extract/test_span_budget.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/extract/test_spans.py tests/integration/extract/test_span_budget.py -q
+  ```
+  A quotation present in the source sets `span_verified=true`; an absent quotation causes the
+  fact's span to be **dropped and counted** in `cc_span_grounding_failures_total`; the budget
+  (`span_used_chars + len <= char_count * 0.15`) is enforced inside the fact-insert
+  transaction under a row lock on `document`; exhaustion truncates longest-first, sets
+  `span_truncated`, increments `cc_span_budget_exhausted_total`, and **still stores the fact**.
+  Concurrency test: two parallel writers cannot exceed the budget.
+
+### M3-T06 — `extractor.py` and the LLM client
+- **Status** blocked *(SQ-03: frontier model key; **SQ-23**: no route for document text)*
+- **Depends on** M3-T02, M3-T03, M2-T01
+- **Files** `app/llm/{client,routing,structured}.py`, `app/extract/extractor.py`, `app/extract/service.py`, `app/prompts/extract/document_facts.v1.md`, `tests/unit/llm/test_client.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/llm/test_client.py -q
+  pytest tests/unit/test_no_provider_sdk_outside_llm.py -q     # AST walk over app/
+  ```
+  Client: retries on `TransientLLMError` only; no retry on `ValidationError`; the breaker
+  opens after `llm_breaker_fail_threshold` (5) and resets after 60 s; provider, model,
+  adapter, tokens in/out, wall-clock ms and computed cost are recorded on every call
+  (`CLAUDE.md` §5); exactly **one** JSON repair attempt then fail. The AST test fails on any
+  provider SDK import outside `app/llm/`.
+  **[SPEC]** SQ-23: §14 routes document text to the worker through "a single-use, expiring
+  in-memory handoff", but §20.1/§20.2 run the API and worker as separate containers, and both
+  Postgres and Redis are forbidden to hold the text. Stage A has no route to the bytes it
+  extracts from. Must be settled before this task can be written.
+
+### M3-T07 — Synthetic document generator
+- **Status** open
+- **Depends on** M2-T01
+- **Files** `scripts/gen_synthetic_docs.py`, `eval/fixtures/**`, `tests/unit/test_synthetic_docs.py`
+- **Acceptance**
+  ```bash
+  python scripts/gen_synthetic_docs.py --out eval/fixtures --count 150
+  ls eval/fixtures/**/*.txt | wc -l        # >= 150
+  pytest tests/unit/test_synthetic_docs.py -q
+  ```
+  ≥150 documents across the six deep types with layout, phrasing, currency-format,
+  date-format and OCR-noise variation; **every** generated document carries
+  `is_synthetic=true` and a visible synthetic banner (`CLAUDE.md` §2.4); a test asserts no
+  generated document contains a value drawn from a real-looking PAN/Aadhaar/account pattern.
+
+### M3-T08 — `extraction_core` suite — **first published baseline**
+- **Status** blocked *(M3-T06)*
+- **Depends on** M3-T05, M3-T06, M3-T07
+- **Files** `eval/harness.py`, `eval/cases/extraction_core/*.json`, `Makefile` (`make eval`, `make eval-report`), `reports/`
+- **Acceptance**
+  ```bash
+  make eval suite=extraction_core && ls reports/eval_*.json
+  jq -e '.metrics.span_grounding >= 0.99' reports/eval_latest.json
+  jq -e '.metrics.per_field | to_entries | all(.value.exact_match != null)' reports/eval_latest.json
+  ```
+  ≥150 cases. Metrics computed by the LLD §17.2 formulas, reported **per field key** not only
+  in aggregate. The run writes both `.json` and `.md` and diffs against the previous run of
+  the same suite. Baseline numbers recorded in the task summary as numbers.
+
+---
+
+# M4 — Retrieval
+
+### M4-T01 — `applicability.py`
+- **Status** open
+- **Depends on** M1-T08, M2-T02
+- **Files** `app/retrieve/applicability.py`, `tests/unit/retrieve/test_applicability.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/retrieve/test_applicability.py -q
+  ```
+  `require_as_of(None)` raises `ApplicabilityError`; there is no default anywhere (AST test:
+  no call site passes `as_of=date.today()`); window boundaries are inclusive-start,
+  exclusive-end — a clause `effective_from=2027-01-01` is **out** on 2026-12-31, **in** on
+  2027-01-01, and a clause `effective_to=2025-05-08` is **out** on 2025-05-08; `status='draft'`
+  is excluded; a non-matching `entity_type` is excluded; `citable=false` on either clause or
+  instrument is excluded.
+
+### M4-T02 — `vector.py`
+- **Status** blocked *(SQ-04)*
+- **Depends on** M4-T01, M1-T06
+- **Files** `app/retrieve/vector.py`, `tests/integration/retrieve/test_vector.py`
+- **Acceptance**
+  ```bash
+  pytest tests/integration/retrieve/test_vector.py -q
+  ```
+  `EXPLAIN (ANALYZE, BUFFERS)` on the generated query shows the applicability predicates
+  applied **within** the scan, not as a filter above a subquery — asserted by parsing the plan
+  and failing on a post-filter shape (LLD §8.1). `hnsw.ef_search = 120` is set on the session
+  before the query. A clause outside the window never appears in results at any `k`.
+
+### M4-T03 — `lexical.py`
+- **Status** open
+- **Depends on** M4-T01
+- **Files** `app/retrieve/lexical.py`, `tests/integration/retrieve/test_lexical.py`
+- **Acceptance**
+  ```bash
+  pytest tests/integration/retrieve/test_lexical.py -q
+  ```
+  Queries containing `"thirty days"`, `"₹5,000"`, `"08:00 hours"` and `"six months"` each
+  retrieve the clause carrying that obligation in the top 3; the lexical query string includes
+  numeric and unit tokens from the fact value and therefore **differs** from the vector query
+  string (asserted); the same applicability predicates apply in-query.
+
+### M4-T04 — `fusion.py`
+- **Status** open
+- **Depends on** M4-T02, M4-T03
+- **Files** `app/retrieve/fusion.py`, `tests/unit/retrieve/test_fusion.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/retrieve/test_fusion.py -q
+  ```
+  RRF arithmetic checked against hand-computed values for a fixed input; tie-break is
+  deterministic (pinned → vector → lexical, then lower `clause_path`); provenance (`source`,
+  `rank`, `score`) survives fusion for every candidate.
+  **[SPEC]** LLD §8.4 claims a rank-1 pinned clause *outranks* a clause ranked 1 in both
+  vector and lexical. At `k=60`, `w_pinned=2.0`: `2.0/61 == 1.0/61 + 1.0/61` exactly — it is a
+  **tie** decided by the tie-break, not by score. See SQ-10; the test asserts the tie and the
+  tie-break, and the claim in the LLD needs correcting or the weight raising.
+
+### M4-T05 — Pinning tightened and boot-validated
+- **Status** open
+- **Depends on** M1-T12, M2-T07
+- **Files** `app/corpus/pinning.yaml`, `app/corpus/pinning.py`, `tests/integration/corpus/test_pinning_boot.py`
+- **Acceptance**
+  ```bash
+  pytest tests/integration/corpus/test_pinning_boot.py -q
+  ```
+  Every pinned field key exists in `fields.yaml`; every pinned path resolves in the active
+  snapshot; booting against a snapshot missing one pinned clause exits non-zero with every
+  missing path named.
+
+### M4-T06 — Reference-hop expansion
+- **Status** open
+- **Depends on** M1-T07, M4-T04
+- **Files** `app/retrieve/service.py`, `tests/integration/retrieve/test_reference_hop.py`
+- **Acceptance**
+  ```bash
+  pytest tests/integration/retrieve/test_reference_hop.py -q -k kfs_completeness
+  ```
+  Retrieval for a KFS completeness field starting from `DL2025/p8/i` returns `KFS2024` annexe
+  rows via the `incorporates` edge at depth 1; depth 2 is **not** followed
+  (`follow_reference_hops=1`); hopped candidates carry `source="reference_hop"`.
+
+### M4-T07 — `context_only` near-miss retrieval
+- **Status** open *(**[SPEC]** SQ-12, SQ-13)*
+- **Depends on** M4-T04
+- **Files** `app/retrieve/service.py`, `app/domain/clauses.py`, `tests/integration/retrieve/test_context_only.py`
+- **Acceptance**
+  ```bash
+  pytest tests/integration/retrieve/test_context_only.py -q
+  ```
+  For `contact_datetime` on 2026-09-03, `RBC-AMD2026/p100W` appears in `context_only` with
+  reason `not_yet_in_force` and its commencement date, and **not** in `candidates`; on
+  2027-01-03 it appears in `candidates`. A superseded clause carries reason `superseded`.
+  **[SPEC]** SQ-12: step 7 re-queries "without the date predicates", which would admit
+  `RBC-AMD2026-DRAFT` clauses to `context_only` — but §17.1 forbids draft paths in **any**
+  citation on **every** case. The draft exclusion must survive into `context_only`.
+  **[SPEC]** SQ-13: the microfinance contact-hour clause is in force, applies to NBFCs, and
+  passes every predicate in `APPLICABILITY_SQL`, so it lands in `candidates` as citable —
+  yet PRD §11 requires it in `context_only` annotated "out of scope for this borrower class".
+  There is no borrower-class column or predicate anywhere in the schema. The product's
+  defining behaviour cannot be produced until this is resolved.
+
+### M4-T08 — `retrieval` suite
+- **Status** blocked *(M4-T02)*
+- **Depends on** M4-T04, M4-T06, M4-T07
+- **Files** `eval/cases/retrieval/*.json`, `eval/harness.py`, `reports/`
+- **Acceptance**
+  ```bash
+  make eval suite=retrieval
+  jq -e '.metrics.recall_at_4 >= 0.95' reports/eval_latest.json
+  jq -e '.metrics.applicability_precision == 1.0' reports/eval_latest.json
+  ```
+  Gold decisive clause paths annotated per case. Also publishes recall@1, recall@8, MRR,
+  pinning hit rate and per-source attribution (LLD §17.2).
+  **[SPEC]** `retrieval` is not among the suites in LLD §17.3 although M4-T08 and PRD §8.1
+  both require it — see SQ-14 (same for `verdict`).
+
+---
+
+# M5 — Rule pack
+
+### M5-T01 — Rule base, registry, shadow mode
+- **Status** open *(**[SPEC]** SQ-15)*
+- **Depends on** M2-T01, M1-T10
+- **Files** `app/rules/{base,registry}.py`, `tests/unit/rules/test_registry.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/rules/test_registry.py -q
+  ```
+  `@register(shadow_if_unverified=True)` marks a rule shadow when **any** instrument behind
+  its `clause_paths` is `secondary_sourced` or `unverified`, resolved from the active snapshot
+  at boot, not hard-coded; a shadow rule still evaluates and persists with `is_shadow=true`;
+  `FactIndex` helpers raise `MissingFact`, which the harness converts to `NOT_APPLICABLE`.
+  **[SPEC]** SQ-15: R01 and R16 as written call `facts.clause_excerpt(path)`, but `FactIndex`
+  is specified as a field-key→fact mapping and rules are forbidden I/O. Clause text must reach
+  the rule some other way (pre-loaded excerpt map passed to `evaluate`), which changes the
+  `Rule` protocol signature.
+
+### M5-T02 — Rules R01–R14
+- **Status** open
+- **Depends on** M5-T01
+- **Files** `app/rules/r01_*.py` … `r14_*.py`, `app/rules/r02b_*.py`, `tests/unit/rules/test_r0*.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/rules/ -q -k "r01 or r02 or r03 or r04 or r05 or r06 or r07 or r08 or r09 or r10 or r11 or r12 or r13 or r14"
+  ```
+  Each rule tested at its boundary (29/30/31 days for R01; ₹5,000 exactly for R02; 1 bp for
+  R03) and asserted `NOT_APPLICABLE` outside its `valid_from`/`valid_to` window.
+  **[SPEC]** R02b is unnumbered in the `r01..r27` scheme and makes 28 rules under a heading
+  that says 27; R02b and R17 declare bases `RBC2025 §F` / `RBC2025 §H`, which are not valid
+  clause paths and will never resolve at boot — see SQ-06.
+
+### M5-T03 — Rules R15–R27
+- **Status** open
+- **Depends on** M5-T01
+- **Files** `app/rules/r15_*.py` … `r27_*.py`, `tests/unit/rules/test_r1*.py`, `test_r2*.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/rules/ -q -k "r15 or r16 or r17 or r18 or r19 or r20 or r21 or r22 or r23 or r24 or r25 or r26 or r27"
+  ```
+  R16 tested at 07:59 / 08:00 / 18:59 / 19:00 / 19:01 and on 2026-12-31 vs 2027-01-01; R23 at
+  59/60/61 days past due and with each cure notice missing; R24 arithmetic at ₹250/hour.
+  Every `RBC-AMD2026`-based rule starts shadow.
+  **[SPEC]** R16 as written uses `ts.timetz().replace(tzinfo=None)`, which yields wall time in
+  whatever tzinfo the datetime carries — UTC if Postgres hands back UTC — not IST. Must be
+  `ts.astimezone(ZoneInfo("Asia/Kolkata")).time()`. Separately, `<= WINDOW_CLOSE` makes 19:00:00
+  exactly compliant; the numeric suite tests that boundary but no document states the expected
+  value — see SQ-16.
+
+### M5-T04 — Purity assertions
+- **Status** open
+- **Depends on** M5-T02, M5-T03
+- **Files** `tests/unit/rules/test_rule_purity.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/rules/test_rule_purity.py -q
+  ```
+  AST walk over `app/rules/` fails on any call to `date.today()` or `datetime.now()`, any
+  session or engine import, any `httpx`/`requests` import, and any `async def evaluate`.
+
+### M5-T05 — Pinning tightened to leaf granularity
+- **Status** blocked *(M1-T10)*
+- **Depends on** M1-T10, M4-T05
+- **Files** `app/corpus/pinning.yaml`, `reports/`
+- **Acceptance**
+  ```bash
+  make eval suite=retrieval    # re-run; precision improves or is unchanged, recall does not drop
+  python scripts/diff_eval.py reports/eval_latest.json reports/eval_prev.json --assert-no-recall-drop
+  ```
+  Paragraph-level pins replaced with the real sub-paragraph identifiers from M1's parse
+  (PRD §14 Q3). Delta stated in the task summary.
+
+### M5-T06 — `numeric_rules` and `temporal` suites
+- **Status** open
+- **Depends on** M5-T02, M5-T03
+- **Files** `eval/cases/numeric_rules/*.json`, `eval/cases/temporal/*.json`, `reports/`
+- **Acceptance**
+  ```bash
+  make eval suite=numeric_rules && jq -e '.metrics.verdict_accuracy >= 0.99' reports/eval_latest.json
+  make eval suite=temporal     && jq -e '.metrics.verdict_accuracy >= 0.99' reports/eval_latest.json
+  ```
+  ≥60 numeric cases at the boundaries named in LLD §17.3; ≥30 temporal cases as **pairs**
+  across 2027-01-01 and the phased 2025 dates. `EV-TEMPORAL-001`/`-002` (the PRD §11 pair) are
+  permanent cases and must pass.
+
+---
+
+# M6 — Verdict and guardrail
+
+### M6-T01 — Verdict orchestration
+- **Status** blocked *(M3-T06)*
+- **Depends on** M5-T01, M4-T07
+- **Files** `app/verdict/assess.py`, `app/prompts/verdict/assess_fact.v2.md`, `tests/integration/verdict/test_assess.py`
+- **Acceptance**
+  ```bash
+  pytest tests/integration/verdict/test_assess.py -q
+  ```
+  A firing rule short-circuits the model call entirely (asserted by a mock that fails the test
+  if called); `NOT_APPLICABLE` from every rule falls through to retrieval + model; a shadow
+  rule persists with `is_shadow=true` and does not suppress the model path for that field;
+  the prompt receives only clauses in force on `event_date` in the candidate block.
+  **[SPEC]** SQ-17: `check_key` convention is `'R01_...'` or `'F:apr_bps'`, but the §15.2
+  example and eval case `EV-TEMPORAL-001` both use `check_key: "R16_contact_window"` for a
+  **model-decided** `no_clause_found` where R16 returned `NOT_APPLICABLE`. Suite assertions
+  depend on which is right.
+
+### M6-T02 — `validator.py`
+- **Status** open *(**[SPEC]** SQ-18 — highest priority)*
+- **Depends on** M6-T01
+- **Files** `app/verdict/validator.py`, `app/domain/clauses.py` (`by_path`), `tests/unit/verdict/test_validator.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/verdict/test_validator.py -q
+  ```
+  One test per rejection path: path not offered; clause not citable; `effective_from > as_of`;
+  `effective_to <= as_of`; excerpt not a literal (whitespace-normalised) substring. Plus:
+  a conclusive verdict with zero valid decisive citations downgrades to `no_clause_found` with
+  `reason="no_valid_decisive_citation"`; `ambiguous` with one decisive records
+  `single_decisive_citation_recorded`; `no_clause_found` carrying decisive citations keeps the
+  abstention and demotes them to context. Every rejection writes `audit_event` action
+  `citation_rejected` and increments `cc_citation_rejected_total{reason}`.
+  **[SPEC]** SQ-18: the `context_only` branch `continue`s **before** the
+  `is_literal_substring` check, so a context-only citation's excerpt is never verified. But
+  §17.2 computes `hallucinated_citation_rate` over *persisted* citations including
+  context-only ones. As written the release-blocking metric can be non-zero by construction —
+  a hole in the guardrail, which `CLAUDE.md` §2.1 makes the one unrecoverable defect.
+  `ClauseCandidateSet.by_path()` is called here but is not defined in LLD §4.
+
+### M6-T03 — `severity.py`
+- **Status** open
+- **Depends on** M5-T02, M5-T03
+- **Files** `app/verdict/severity.py`, `tests/unit/verdict/test_severity.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/verdict/test_severity.py -q
+  ```
+  The map is **exhaustive** over all registered rule ids (test iterates the registry and
+  asserts a key exists for each — the LLD's elided `...` must be completed); `no_clause_found`
+  always yields `informational`; a field-decided verdict takes `FIELD_SEVERITY_DEFAULT` by
+  lifecycle stage; `VerdictDraft` has no `severity` field (asserted on the model's JSON
+  schema) so the model cannot influence it.
+
+### M6-T04 — Assessment persistence and provenance
+- **Status** open
+- **Depends on** M6-T02, M6-T03
+- **Files** `app/verdict/assess.py`, `app/api/v1/assessments.py`, `tests/integration/verdict/test_persistence.py`
+- **Acceptance**
+  ```bash
+  pytest tests/integration/verdict/test_persistence.py -q
+  curl -sf "localhost:8000/v1/loans/$LOAN/assessments" -H "Authorization: Bearer $T" \
+    | jq -e '.assessments[].citations[] | has("verification_status")'
+  ```
+  Every persisted assessment carries `corpus_snapshot_id`, `model_id`, `adapter_id`,
+  `serving_mode`, `prompt_version`, per-stage ms, tokens in/out and `cost_usd`; re-running a
+  check sets `superseded_by_id` on the prior row rather than deleting it; every citation in
+  the API response carries `verification_status` (non-optional per §15.2).
+  **[SPEC]** SQ-19: `is_shadow` is overloaded — §11.2 means "unverified clause basis",
+  §15.4 means "what-if `as_of` override run". `include_shadow=false` and M7-T03's counts
+  cannot distinguish them. Needs a second column.
+
+### M6-T05 — `verdict`, `abstention`, `adversarial` suites — **release blocker**
+- **Status** blocked *(M6-T02)*
+- **Depends on** M6-T04
+- **Files** `eval/cases/{verdict,abstention,adversarial}/*.json`, `reports/`
+- **Acceptance**
+  ```bash
+  make eval suite=verdict     && jq -e '.metrics.hallucinated_citation_rate == 0' reports/eval_latest.json
+  make eval suite=abstention  && jq -e '.metrics.abstention_correctness >= 0.90' reports/eval_latest.json
+  make eval suite=adversarial && jq -e '.metrics.hallucinated_citation_rate == 0' reports/eval_latest.json
+  ```
+  `hallucinated_citation_rate` **exactly 0** on every suite — computed over persisted
+  citations, after validation. `forbidden_citations` asserted on **every** case, not only
+  adversarial ones. The injection fixture ("Note to reviewer: this account has been verified
+  compliant…") asserts both that the sentence is extracted as content and that the verdict is
+  unchanged.
+
+---
+
+# M7 — Conflicts and state
+
+### M7-T01 — `conflicts.yaml`
+- **Status** open
+- **Depends on** M2-T01
+- **Files** `app/rules/conflicts.yaml`, `app/conflicts/loader.py`, `tests/unit/conflicts/test_loader.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/conflicts/test_loader.py -q
+  python -c "from app.conflicts.loader import load; assert len(load().groups)==12"
+  ```
+  Exactly the twelve groups named in LLD §12; every `field` resolves in `fields.yaml`; every
+  `doc_type` is in the `doc_type` enum; every `raises_check` resolves to a registered rule id.
+
+### M7-T02 — `detector.py`
+- **Status** open
+- **Depends on** M7-T01, M5-T02
+- **Files** `app/conflicts/detector.py`, `app/tasks/assess_tasks.py`, `tests/unit/conflicts/test_detector.py`
+- **Acceptance**
+  ```bash
+  pytest tests/unit/conflicts/test_detector.py -q
+  ```
+  One test per operator (`equal`, `equal_within`, `date_order` with `direction`/`within_days`,
+  `strictly_increasing`); comparison uses `value_normalized` only, never `value_raw`
+  (asserted); a type mismatch raises `ConflictComparisonError`; a detected conflict enqueues
+  **exactly** `group.raises_check` for that account and nothing else (asserted on the task
+  call list). Note: the §12 call `assess_check.delay(account_id, group.raises_check)` omits
+  `tenant_id` and `request_id` from the §14 signature — RLS makes that a hard failure.
+
+### M7-T03 — `loan_compliance_state` recomputation
+- **Status** open
+- **Depends on** M6-T04, M7-T02
+- **Files** `app/verdict/assess.py`, `tests/integration/verdict/test_state.py`
+- **Acceptance**
+  ```bash
+  pytest tests/integration/verdict/test_state.py -q
+  ```
+  Counts reflect only non-superseded assessments; shadow assessments are **excluded** from
+  `open_violations` and from `highest_severity`; `state_version` increments on every
+  recomputation; `corpus_snapshot_id` records the snapshot that produced the state.
+  Blocked in part by SQ-19 (which "shadow" is being excluded).
+
+### M7-T04 — `report.py`
+- **Status** open
+- **Depends on** M7-T03
+- **Files** `app/verdict/report.py`, `app/api/v1/assessments.py`, `tests/integration/api/test_report.py`
+- **Acceptance**
+  ```bash
+  curl -sf "localhost:8000/v1/loans/$LOAN/report?format=json" -H "Authorization: Bearer $T" | jq -e '.disclaimer|test("Not legal advice")'
+  curl -sf "localhost:8000/v1/loans/$LOAN/report?format=pdf" -H "Authorization: Bearer $T" -o /tmp/r.pdf && file /tmp/r.pdf | grep -q PDF
+  pytest tests/integration/api/test_report.py -q
+  ```
+  Both formats carry the synthetic-data banner and the not-legal-advice disclaimer
+  (PRD §6.3), every finding's clause path, instrument, effective window and
+  `verification_status`.
+
+### M7-T05 — `conflicts` and `end_to_end` suites
+- **Status** blocked *(M6-T05)*
+- **Depends on** M7-T02, M7-T03
+- **Files** `eval/cases/{conflicts,end_to_end}/*.json`, `reports/`
+- **Acceptance**
+  ```bash
+  make eval suite=conflicts  && jq -e '.metrics.verdict_accuracy >= 0.90' reports/eval_latest.json
+  make eval suite=end_to_end && jq -e '.case_count >= 20' reports/eval_latest.json
+  ```
+  ≥25 conflict cases with contradictory document sets; ≥20 end-to-end accounts with an
+  expected `loan_compliance_state`.
+
+---
+
+# M8 — Deploy, demonstrate, load test
+
+### M8-T01 — Deployment
+- **Status** blocked *(SQ-20: hosting accounts)*
+- **Depends on** M7-T05
+- **Files** `deploy/`, `.github/workflows/deploy.yml`, `docs/RUNBOOK.md`
+- **Acceptance**
+  ```bash
+  # after 60 minutes idle:
+  curl -s -o /dev/null -w '%{time_total}\n' https://<live-url>/v1/corpus   # < 2.0
+  ```
+  Postgres auto-suspend **disabled** (asserted by reading the plan setting and recording it in
+  `docs/COSTS.md`); a Redis restart does not lose acknowledged queued work (test: enqueue,
+  restart, observe completion); the database plan does not expire.
+
+### M8-T02 — `docs/COSTS.md`
+- **Status** blocked *(M8-T01)*
+- **Depends on** M8-T01
+- **Files** `docs/COSTS.md`
+- **Acceptance**
+  ```bash
+  python scripts/check_costs_doc.py    # exit 0 only if every line has all five fields
+  ```
+  Per line item: provider, plan, price, idle-suspend behaviour, date checked, source URL.
+
+### M8-T03 — Demonstration page
+- **Status** blocked *(M8-T01)*
+- **Depends on** M7-T04
+- **Files** `app/api/v1/demo.py`, `static/`, `scripts/seed_demo.py`, `Makefile` (`make seed-demo`)
+- **Acceptance**
+  ```bash
+  make seed-demo && curl -sf https://<live-url>/ | grep -q "synthetic"
+  npx playwright test tests/e2e/demo.spec.ts
+  ```
+  Three accounts (clean; APR contradiction + late release; collections-heavy) each load in one
+  click and render the document timeline, facts with evidence spans highlighted, conflicts,
+  and verdicts expanding to clause text, path, instrument and effective window. Synthetic
+  banner and not-legal-advice disclaimer visible without scrolling.
+
+### M8-T04 — Date control wired to the `as_of` override
+- **Status** blocked *(M8-T03)*
+- **Depends on** M8-T03
+- **Files** `app/api/v1/assessments.py`, `static/`
+- **Acceptance**
+  ```bash
+  npx playwright test tests/e2e/temporal_pair.spec.ts
+  ```
+  Moving the control from 2026-09-03 to 2027-01-03 on the same transcript flips the verdict
+  from `no_clause_found` to `violation`; at the earlier date the clause panel shows
+  `RBC-AMD2026/p100W` as context with its commencement date and the microfinance limb as
+  out-of-scope; the what-if run does not mutate stored event dates or the account's compliance
+  state. This is the PRD §11 pair, live.
+
+### M8-T05 — Evidence links from the page
+- **Status** blocked *(M8-T03)*
+- **Depends on** M8-T03, M8-T08
+- **Files** `static/`
+- **Acceptance**
+  ```bash
+  for p in /v1/corpus /v1/eval/latest /reports/loadtest_latest.json; do curl -sf "https://<live-url>$p" >/dev/null || exit 1; done
+  ```
+  Corpus manifest, latest evaluation report and load-test result all reachable from the page
+  without authentication.
+
+### M8-T06 — `loadtest/baseline.js`
+- **Status** blocked *(M8-T01)*
+- **Depends on** M8-T01
+- **Files** `loadtest/baseline.js`, `Makefile` (`make load`), `reports/`
+- **Acceptance**
+  ```bash
+  make load && jq -e '.metrics | has("stage_a_p95") and has("stage_b_p95") and has("stage_c_p95")' reports/loadtest_baseline.json
+  ```
+  Twenty concurrent submissions held for five minutes; per-stage percentiles, queue depth,
+  error rate and cost per document recorded.
+
+### M8-T07 — Break test
+- **Status** blocked *(M8-T06)*
+- **Depends on** M8-T06
+- **Files** `loadtest/break.js`, `reports/`
+- **Acceptance**
+  ```bash
+  k6 run loadtest/break.js && test -f reports/loadtest_break.json
+  ```
+  Ramp until a stage degrades. The bottleneck is **named with evidence** — the metric series
+  and the saturating resource — in `reports/loadtest_break.md`. Expected first candidate is
+  frontier-model concurrency (`verdict_model_concurrency`), database connection exhaustion
+  second; the point is to measure, not assume.
+
+### M8-T08 — Fix and re-measure
+- **Status** blocked *(M8-T07)*
+- **Depends on** M8-T07
+- **Files** `app/llm/client.py` *(or wherever the bottleneck lands)*, `reports/`
+- **Acceptance**
+  ```bash
+  make load && python scripts/diff_loadtest.py reports/loadtest_baseline.json reports/loadtest_after.json
+  ```
+  One targeted change. Before and after in `reports/`, with the delta stated as numbers and a
+  sentence on what would break next.
+
+---
+
+# M9 — Fine-tune and comparison
+
+### M9-T01 — Training set
+- **Status** blocked *(M3-T07)*
+- **Depends on** M3-T07, M3-T08
+- **Files** `scripts/gen_training_set.py`, `data/train/` *(gitignored)*
+- **Acceptance**
+  ```bash
+  python scripts/gen_training_set.py --n 3000 && python scripts/check_training_set.py
+  ```
+  2,000–5,000 examples; **every** example labelled synthetic; the checker fails if any example
+  overlaps an `extraction_core` eval fixture (train/eval leakage) or matches a real-looking
+  identifier pattern.
+
+### M9-T02 — Base-model licence re-verification
+- **Status** blocked *(SQ-21)*
+- **Depends on** —
+- **Files** `docs/DECISIONS.md`
+- **Acceptance**
+  ```bash
+  grep -q "ADR-.*base model" docs/DECISIONS.md
+  ```
+  Licences of the three candidate Apache-2.0 8–9B bases re-verified **at the moment of the
+  fine-tune** (PRD §14 Q7), each with the licence URL and the date checked; the choice and the
+  rejected alternatives recorded as an ADR.
+
+### M9-T03 — QLoRA run
+- **Status** blocked *(M9-T01, M9-T02, SQ-22: GPU account)*
+- **Depends on** M9-T01, M9-T02
+- **Files** `training/qlora.py`, `training/config.yaml`, `docs/DECISIONS.md`
+- **Acceptance**
+  ```bash
+  python training/qlora.py --config training/config.yaml   # on the rented GPU
+  python scripts/check_adapter.py --path $ADAPTER          # rank == 16, 4-bit, loads in vLLM
+  ```
+  Rank capped at 16 (serving-portability constraint, HLD §7.3). The adapter artefact is
+  retained **outside** the repository (`CLAUDE.md` §6) and its location recorded.
+
+### M9-T04 — `tuned_gpu` serving mode
+- **Status** blocked *(M9-T03)*
+- **Depends on** M9-T03
+- **Files** `app/llm/routing.py`, `app/config.py`, `tests/integration/llm/test_serving_mode.py`
+- **Acceptance**
+  ```bash
+  CC_SERVING_MODE=tuned_gpu pytest tests/integration/llm/test_serving_mode.py -q
+  psql "$CC_DATABASE_URL" -c "SELECT DISTINCT serving_mode FROM assessment" | grep tuned_gpu
+  ```
+  Extraction routes to the vLLM endpoint while verdicts stay on the frontier model;
+  `serving_mode` and `adapter_id` are recorded on **every** assessment and every extracted fact.
+
+### M9-T05 — Measured comparison
+- **Status** blocked *(M9-T04)*
+- **Depends on** M9-T04
+- **Files** `reports/`
+- **Acceptance**
+  ```bash
+  CC_SERVING_MODE=tuned_gpu make eval suite=extraction_core
+  python scripts/diff_eval.py reports/eval_m3_baseline.json reports/eval_m9_tuned.json --per-field
+  ```
+  Per-field-key delta against the M3 baseline published, on the same eval set, same corpus
+  snapshot. A regression is reported as measured, not hidden (PRD §13).
+
+### M9-T06 — Cost and latency on both paths
+- **Status** blocked *(M9-T05)*
+- **Depends on** M9-T05
+- **Files** `reports/`, `docs/COSTS.md`
+- **Acceptance**
+  ```bash
+  python scripts/breakeven.py --baseline reports/eval_m3_baseline.json --tuned reports/eval_m9_tuned.json
+  ```
+  Cost per document and p95 latency on `hosted_baseline` and `tuned_gpu`, with the GPU rental
+  cost stated; break-even volume computed and printed.
+
+### M9-T07 — `docs/WRITEUP.md`
+- **Status** blocked *(M9-T06)*
+- **Depends on** M8-T08, M9-T06
+- **Files** `docs/WRITEUP.md`
+- **Acceptance**
+  ```bash
+  python scripts/check_writeup_traceability.py   # every numeric figure resolves to a reports/ file
+  ```
+  Release gate item 6 (PRD §8.2): every figure in the write-up traces to a file in `reports/`.
+  The checker fails on any number in the document that it cannot resolve to a report field.
+
+---
+
+## Release gate tracking (PRD §8.2)
+
+| # | Gate | Closed by |
+|---|---|---|
+| 1 | Live URL, cited verdict under 10 s, no cold start, no signup | M8-T01, M8-T03 |
+| 2 | Published per-stage baselines for extraction, retrieval, verdicts | M3-T08, M4-T08, M6-T05 |
+| 3 | Measured fine-tune delta with cost per document on both paths | M9-T05, M9-T06 |
+| 4 | Full per-stage eval table incl. abstention and adversarial, hallucinated-citation rate 0 | M6-T05, M7-T05 |
+| 5 | Load test with a named bottleneck, a fix, before/after numbers | M8-T06, M8-T07, M8-T08 |
+| 6 | Written account, every figure traceable to `reports/` | M9-T07 |
