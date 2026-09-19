@@ -1,0 +1,48 @@
+name: nightly
+
+on:
+  schedule:
+    - cron: "0 2 * * 1"  # weekly corpus-drift, Monday 02:00 UTC (LLD §14 beat schedule)
+    - cron: "0 3 * * *"  # nightly full eval suite
+
+jobs:
+  corpus-drift:
+    if: github.event.schedule == '0 2 * * 1'
+    runs-on: ubuntu-latest
+    env:
+      CC_ENV: ci
+      CC_DATABASE_URL: postgresql+asyncpg://postgres:dev@localhost:5432/clausecheck
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -e ".[dev]"
+      - run: make corpus-verify
+
+  eval-full:
+    if: github.event.schedule == '0 3 * * *'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env: { POSTGRES_PASSWORD: dev, POSTGRES_DB: clausecheck }
+        ports: ["5432:5432"]
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+    env:
+      CC_ENV: ci
+      CC_DATABASE_URL: postgresql+asyncpg://postgres:dev@localhost:5432/clausecheck
+      CC_REDIS_URL: redis://localhost:6379/0
+      CC_LLM_API_KEY: ${{ secrets.CC_LLM_API_KEY }}
+      CC_EMBEDDING_API_KEY: ${{ secrets.CC_EMBEDDING_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -e ".[dev]"
+      - run: alembic upgrade head
+      - run: |
+          for suite in extraction_core numeric_rules temporal abstention conflicts adversarial end_to_end retrieval verdict; do
+            make eval suite=$suite
+          done

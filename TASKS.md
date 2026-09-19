@@ -39,7 +39,7 @@ package, a Makefile, and a container. That scaffolding has no owning task in the
 is given one here rather than smuggled into M1-T01.
 
 ### M0-T01 — Project skeleton and tooling
-- **Status** open
+- **Status** done
 - **Depends on** —
 - **Files** `pyproject.toml`, `Makefile`, `.gitignore`, `.env.example`, `.pre-commit-config.yaml`, `app/__init__.py`
 - **Acceptance**
@@ -52,7 +52,7 @@ is given one here rather than smuggled into M1-T01.
   (`CLAUDE.md` §6).
 
 ### M0-T02 — `app/config.py` Settings
-- **Status** open
+- **Status** done — `tests/unit/test_config.py`, 6/6 passing
 - **Depends on** M0-T01
 - **Files** `app/config.py`, `tests/unit/test_config.py`
 - **Acceptance**
@@ -67,7 +67,7 @@ is given one here rather than smuggled into M1-T01.
   placeholders `<frontier-model-id>` / `<small-model-id>`; real ids required — see SQ-11.
 
 ### M0-T03 — Docker Compose and the `cc_app` role
-- **Status** open
+- **Status** done — grants moved to migration 0008 per ADR-008; verified against real Postgres 16 + pgvector 0.6
 - **Depends on** M0-T01
 - **Files** `Dockerfile`, `docker-compose.yml`, `scripts/db_bootstrap.sql`, `Makefile`
 - **Acceptance**
@@ -81,7 +81,7 @@ is given one here rather than smuggled into M1-T01.
   `ALTER DEFAULT PRIVILEGES` (or re-grant post-migration) — see SQ-08.
 
 ### M0-T04 — CI pipeline
-- **Status** open
+- **Status** done — `.github/workflows/ci.yml`, `nightly.yml`; not executed on a runner in this session, workflow only
 - **Depends on** M0-T01
 - **Files** `.github/workflows/ci.yml`
 - **Acceptance**
@@ -306,7 +306,7 @@ is `docs/CORPUS.md`, not working code.
   cannot be written until SQ-07 fixes the number.
 
 ### M2-T02 — Migrations 0001–0008
-- **Status** open
+- **Status** done — ran against real Postgres 16 + pgvector 0.6.0 in this session; full `downgrade base` → `upgrade head` round-trip clean; `tests/integration/db/test_migrations.py` 5/5. Vector dimension resolved per ADR-004 (1536, read from Settings at migration time, not hardcoded).
 - **Depends on** M0-T03, M2-T01
 - **Files** `alembic.ini`, `migrations/env.py`, `migrations/versions/0001_*.py` … `0008_*.py`, `app/db/{base,models,engine}.py`, `tests/integration/db/test_migrations.py`
 - **Acceptance**
@@ -321,7 +321,7 @@ is `docs/CORPUS.md`, not working code.
   `CLAUDE.md` §3 ("vector dimension from config, never hardcoded") — see SQ-04.
 
 ### M2-T03 — Row-level security
-- **Status** open
+- **Status** done — `tests/integration/db/test_rls.py` 5/5 against real Postgres as `cc_app` (non-superuser, `rolbypassrls=false`)
 - **Depends on** M2-T02
 - **Files** `migrations/versions/0008_*.py`, `app/db/rls.py`, `tests/integration/db/test_rls.py`
 - **Acceptance**

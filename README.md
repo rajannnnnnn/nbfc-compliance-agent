@@ -1,8 +1,53 @@
-# ClauseCheck — Document Set v1.0
+# ClauseCheck
 
-RBI-grounded lending compliance auditor for Indian NBFCs. Handoff package for build.
+RBI-grounded lending compliance auditor for Indian NBFCs.
 
-**Owner** N Rajan · **Date** 19 September 2026 · **Status** approved for build
+**Owner** N Rajan · **Date** 19 September 2026 · **Status** building against `TASKS.md`
+
+## Build status
+
+Code is under active build against the LLD. Progress, milestone by milestone, is tracked in
+`TASKS.md`. Every point where the specification was ambiguous, inconsistent, or silent is in
+`docs/SPEC_QUERIES.md`; the resolution actually built is recorded as an ADR in
+`docs/DECISIONS.md` — read that before either of the others if you only have time for one.
+
+## Bringing your own RBI corpus
+
+This repository does not ship real RBI regulatory text. `app/corpus/corpus_sources.yaml`
+points at local files under `data/raw/instruments/`; see
+`data/raw/instruments/README.md` for the exact format. Until real source documents are placed
+there, the system runs against clearly-labelled placeholder text (`verification_status:
+unverified`), which puts every rule in shadow mode automatically — it computes and is
+measured, but never emits a citable finding. See `docs/DECISIONS.md` ADR-001.
+
+To go live: replace the files in `data/raw/instruments/`, set each instrument's
+`verification_status` honestly in `corpus_sources.yaml`, then:
+
+```bash
+make ingest          # parses, chunks, embeds, activates a new snapshot; writes docs/CORPUS.md
+make corpus-verify   # re-fetches sources, reports drift, mutates nothing
+```
+
+## Quickstart (local, no Docker required)
+
+```bash
+pip install -e ".[dev]"
+cp .env.example .env                    # fill in CC_LLM_API_KEY / CC_EMBEDDING_API_KEY when ready
+sudo -u postgres psql -f scripts/db_bootstrap.sql -d <your-db>
+alembic upgrade head
+make test-unit                          # no external services needed
+CC_ENV=ci make test-integration         # needs Postgres + Redis reachable at CC_DATABASE_URL / CC_REDIS_URL
+uvicorn app.main:app --reload           # http://localhost:8000/healthz, /readyz, /v1/corpus
+```
+
+Or via Docker Compose: `make dev`.
+
+---
+
+# Document Set v1.0
+
+The original handoff package this build was driven from. Kept for reference — everything it
+describes is now either built (see `TASKS.md`) or explicitly deferred with a reason.
 
 ## Documents, in reading order
 

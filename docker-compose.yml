@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: clausecheck
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/db_bootstrap.sql:/docker-entrypoint-initdb.d/01_bootstrap.sql:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  api:
+    build: .
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    env_file: .env
+    environment:
+      CC_DATABASE_URL: postgresql+asyncpg://cc_app:dev@postgres:5432/clausecheck
+      CC_REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_started }
+    ports: ["8000:8000"]
+    volumes:
+      - ./:/srv
+
+  worker:
+    build: .
+    command: celery -A app.tasks.celery_app worker -Q extract,assess,maintenance -c 4
+    env_file: .env
+    environment:
+      CC_DATABASE_URL: postgresql+asyncpg://cc_app:dev@postgres:5432/clausecheck
+      CC_REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_started }
+    volumes:
+      - ./:/srv
+
+volumes:
+  pgdata:
