@@ -3,6 +3,7 @@ docs/DECISIONS.md applied: vector(1536) not 3072 (ADR-004), clause.applies_to_bo
 (ADR-005), assessment.is_whatif (ADR-006)."""
 
 from datetime import date, datetime
+from typing import Any
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
@@ -35,7 +36,7 @@ def _uuid() -> object:
     return uuid7()
 
 
-def enum_col(name: str, *values: str, **kw):
+def enum_col(name: str, *values: str, **kw: Any) -> Any:
     return mapped_column(PGEnum(*values, name=name, create_type=False), **kw)
 
 
@@ -66,7 +67,9 @@ class LoanAccount(Base, TimestampMixin):
     external_ref: Mapped[str] = mapped_column(Text, nullable=False)
     product_type: Mapped[str] = mapped_column(Text, nullable=False)
     is_microfinance: Mapped[bool] = mapped_column(nullable=False, server_default=sa_text("false"))
-    is_digital_lending: Mapped[bool] = mapped_column(nullable=False, server_default=sa_text("false"))
+    is_digital_lending: Mapped[bool] = mapped_column(
+        nullable=False, server_default=sa_text("false")
+    )
     device_financed: Mapped[bool] = mapped_column(nullable=False, server_default=sa_text("false"))
     sanctioned_at: Mapped[date | None] = mapped_column(Date)
     disbursed_at: Mapped[date | None] = mapped_column(Date)
@@ -97,18 +100,42 @@ class Document(Base):
     )
     doc_type: Mapped[str] = enum_col(
         "doc_type",
-        "kfs", "loan_agreement", "sanction_letter", "mitc", "call_transcript",
-        "closure_statement", "noc", "docs_release_ack", "charge_satisfaction",
-        "loan_application", "kyc_set", "income_proof", "bureau_report", "valuation_report",
-        "field_investigation", "disbursement_memo", "payment_confirmation",
-        "account_statement", "rate_reset_notice", "penal_charge_notice",
-        "reminder_notice", "field_visit_report", "demand_notice", "settlement_letter",
-        "possession_notice", "unknown",
+        "kfs",
+        "loan_agreement",
+        "sanction_letter",
+        "mitc",
+        "call_transcript",
+        "closure_statement",
+        "noc",
+        "docs_release_ack",
+        "charge_satisfaction",
+        "loan_application",
+        "kyc_set",
+        "income_proof",
+        "bureau_report",
+        "valuation_report",
+        "field_investigation",
+        "disbursement_memo",
+        "payment_confirmation",
+        "account_statement",
+        "rate_reset_notice",
+        "penal_charge_notice",
+        "reminder_notice",
+        "field_visit_report",
+        "demand_notice",
+        "settlement_letter",
+        "possession_notice",
+        "unknown",
         nullable=False,
     )
     lifecycle_stage: Mapped[str] = enum_col(
         "lifecycle_stage",
-        "origination", "sanction", "disbursement", "servicing", "collections", "closure",
+        "origination",
+        "sanction",
+        "disbursement",
+        "servicing",
+        "collections",
+        "closure",
         nullable=False,
     )
     event_date: Mapped[date] = mapped_column(Date, nullable=False)
@@ -125,8 +152,14 @@ class Document(Base):
     classify_confidence: Mapped[float | None] = mapped_column(Numeric(4, 3))
     extraction_version: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = enum_col(
-        "job_status", "queued", "running", "succeeded", "failed", "partial",
-        nullable=False, server_default="queued",
+        "job_status",
+        "queued",
+        "running",
+        "succeeded",
+        "failed",
+        "partial",
+        nullable=False,
+        server_default="queued",
     )
     submitted_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=sa_text("now()")
@@ -154,11 +187,19 @@ class ExtractedFact(Base, TimestampMixin):
     field_key: Mapped[str] = mapped_column(Text, nullable=False)
     value_type: Mapped[str | None] = enum_col(
         "value_type",
-        "date", "datetime", "time", "money", "rate_bps", "integer", "duration_days",
-        "boolean", "enum", "string",
+        "date",
+        "datetime",
+        "time",
+        "money",
+        "rate_bps",
+        "integer",
+        "duration_days",
+        "boolean",
+        "enum",
+        "string",
     )
     value_raw: Mapped[str | None] = mapped_column(Text)
-    value_normalized: Mapped[dict | None] = mapped_column(JSONB)
+    value_normalized: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     is_absent: Mapped[bool] = mapped_column(nullable=False, server_default=sa_text("false"))
     confidence: Mapped[float | None] = mapped_column(Numeric(4, 3))
     char_span_start: Mapped[int | None] = mapped_column(Integer)
@@ -201,10 +242,14 @@ class FactConflict(Base):
         PGUUID(as_uuid=True), ForeignKey("extracted_fact.id", ondelete="CASCADE"), nullable=False
     )
     conflict_type: Mapped[str] = enum_col(
-        "conflict_type", "value_mismatch", "date_order", "tolerance_breach",
-        "missing_counterpart", nullable=False,
+        "conflict_type",
+        "value_mismatch",
+        "date_order",
+        "tolerance_breach",
+        "missing_counterpart",
+        nullable=False,
     )
-    delta: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    delta: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     operator: Mapped[str] = mapped_column(Text, nullable=False)
     resolved_status: Mapped[str] = mapped_column(Text, nullable=False, server_default="open")
     detected_at: Mapped[datetime] = mapped_column(
@@ -224,7 +269,7 @@ class CorpusSnapshot(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=sa_text("now()")
     )
-    instrument_manifest: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    instrument_manifest: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     embedding_model: Mapped[str] = mapped_column(Text, nullable=False)
     embedding_dimension: Mapped[int] = mapped_column(Integer, nullable=False)
     parser_version: Mapped[str] = mapped_column(Text, nullable=False)
@@ -248,7 +293,11 @@ class RegulationInstrument(Base):
     effective_from: Mapped[date | None] = mapped_column(Date)
     effective_to: Mapped[date | None] = mapped_column(Date)
     status: Mapped[str] = enum_col(
-        "instrument_status", "in_force", "notified_not_yet_effective", "draft", "superseded",
+        "instrument_status",
+        "in_force",
+        "notified_not_yet_effective",
+        "draft",
+        "superseded",
         nullable=False,
     )
     applies_to_entity_types: Mapped[list[str]] = mapped_column(
@@ -279,7 +328,8 @@ class RegulationSupersession(Base):
         PGUUID(as_uuid=True), ForeignKey("corpus_snapshot.id", ondelete="CASCADE"), nullable=False
     )
     superseding_instrument_id: Mapped[object] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("regulation_instrument.id", ondelete="CASCADE"),
+        PGUUID(as_uuid=True),
+        ForeignKey("regulation_instrument.id", ondelete="CASCADE"),
         nullable=False,
     )
     superseded_circular_number: Mapped[str] = mapped_column(Text, nullable=False)
@@ -295,7 +345,8 @@ class Clause(Base):
         PGUUID(as_uuid=True), ForeignKey("corpus_snapshot.id", ondelete="CASCADE"), nullable=False
     )
     instrument_id: Mapped[object] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("regulation_instrument.id", ondelete="CASCADE"),
+        PGUUID(as_uuid=True),
+        ForeignKey("regulation_instrument.id", ondelete="CASCADE"),
         nullable=False,
     )
     instrument_code: Mapped[str] = mapped_column(Text, nullable=False)
@@ -313,8 +364,13 @@ class Clause(Base):
     text_with_stem: Mapped[str] = mapped_column(Text, nullable=False)
     token_count: Mapped[int] = mapped_column(Integer, nullable=False)
     chunk_kind: Mapped[str] = enum_col(
-        "chunk_kind", "clause", "table_row", "illustration", "definition",
-        nullable=False, server_default="clause",
+        "chunk_kind",
+        "clause",
+        "table_row",
+        "illustration",
+        "definition",
+        nullable=False,
+        server_default="clause",
     )
     chunk_strategy: Mapped[str] = mapped_column(Text, nullable=False)
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -349,9 +405,7 @@ class ClauseReference(Base):
     reference_kind: Mapped[str] = mapped_column(Text, nullable=False)
 
     __table_args__ = (
-        CheckConstraint(
-            "reference_kind IN ('incorporates','amends','repeals','see_also')"
-        ),
+        CheckConstraint("reference_kind IN ('incorporates','amends','repeals','see_also')"),
         Index("ix_ref_from", "from_clause_id", "reference_kind"),
     )
 
@@ -490,26 +544,45 @@ class EvalCase(Base):
     stage: Mapped[str] = mapped_column(Text, nullable=False)
     doc_type: Mapped[str | None] = enum_col(
         "doc_type",
-        "kfs", "loan_agreement", "sanction_letter", "mitc", "call_transcript",
-        "closure_statement", "noc", "docs_release_ack", "charge_satisfaction",
-        "loan_application", "kyc_set", "income_proof", "bureau_report", "valuation_report",
-        "field_investigation", "disbursement_memo", "payment_confirmation",
-        "account_statement", "rate_reset_notice", "penal_charge_notice",
-        "reminder_notice", "field_visit_report", "demand_notice", "settlement_letter",
-        "possession_notice", "unknown",
+        "kfs",
+        "loan_agreement",
+        "sanction_letter",
+        "mitc",
+        "call_transcript",
+        "closure_statement",
+        "noc",
+        "docs_release_ack",
+        "charge_satisfaction",
+        "loan_application",
+        "kyc_set",
+        "income_proof",
+        "bureau_report",
+        "valuation_report",
+        "field_investigation",
+        "disbursement_memo",
+        "payment_confirmation",
+        "account_statement",
+        "rate_reset_notice",
+        "penal_charge_notice",
+        "reminder_notice",
+        "field_visit_report",
+        "demand_notice",
+        "settlement_letter",
+        "possession_notice",
+        "unknown",
     )
     input_ref: Mapped[str] = mapped_column(Text, nullable=False)
     event_date: Mapped[date] = mapped_column(Date, nullable=False)
-    account_profile: Mapped[dict] = mapped_column(JSONB, nullable=False)
-    expected: Mapped[dict] = mapped_column(JSONB, nullable=False)
-    tolerance: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=sa_text("'{}'"))
+    account_profile: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    expected: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    tolerance: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, server_default=sa_text("'{}'")
+    )
     is_adversarial: Mapped[bool] = mapped_column(nullable=False, server_default=sa_text("false"))
     notes: Mapped[str | None] = mapped_column(Text)
 
     __table_args__ = (
-        CheckConstraint(
-            "stage IN ('extraction','retrieval','verdict','end_to_end')"
-        ),
+        CheckConstraint("stage IN ('extraction','retrieval','verdict','end_to_end')"),
     )
 
 
@@ -525,13 +598,13 @@ class EvalRun(Base):
     corpus_snapshot_id: Mapped[object] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("corpus_snapshot.id"), nullable=False
     )
-    model_config_json: Mapped[dict] = mapped_column("model_config", JSONB, nullable=False)
+    model_config_json: Mapped[dict[str, Any]] = mapped_column("model_config", JSONB, nullable=False)
     serving_mode: Mapped[str] = enum_col(
         "serving_mode", "hosted_baseline", "tuned_gpu", "on_prem", nullable=False
     )
     suite: Mapped[str] = mapped_column(Text, nullable=False)
     case_count: Mapped[int] = mapped_column(Integer, nullable=False)
-    metrics: Mapped[dict | None] = mapped_column(JSONB)
+    metrics: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     cost_usd: Mapped[float | None] = mapped_column(Numeric(10, 6))
 
 
@@ -546,8 +619,8 @@ class EvalResult(Base):
         PGUUID(as_uuid=True), ForeignKey("eval_case.id"), nullable=False
     )
     passed: Mapped[bool] = mapped_column(nullable=False)
-    actual: Mapped[dict] = mapped_column(JSONB, nullable=False)
-    diff: Mapped[dict | None] = mapped_column(JSONB)
+    actual: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    diff: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     latency_ms: Mapped[int | None] = mapped_column(Integer)
 
 
@@ -555,15 +628,15 @@ class AuditEvent(Base):
     __tablename__ = "audit_event"
 
     id: Mapped[object] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=_uuid)
-    tenant_id: Mapped[object | None] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("tenant.id")
-    )
+    tenant_id: Mapped[object | None] = mapped_column(PGUUID(as_uuid=True), ForeignKey("tenant.id"))
     actor: Mapped[str] = mapped_column(Text, nullable=False)
     action: Mapped[str] = mapped_column(Text, nullable=False)
     entity_type: Mapped[str] = mapped_column(Text, nullable=False)
     entity_id: Mapped[object | None] = mapped_column(PGUUID(as_uuid=True))
     request_id: Mapped[str | None] = mapped_column(Text)
-    detail: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=sa_text("'{}'"))
+    detail: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, server_default=sa_text("'{}'")
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=sa_text("now()")
     )

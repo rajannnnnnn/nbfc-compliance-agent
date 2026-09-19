@@ -1,0 +1,33 @@
+⚠ PLACEHOLDER TEXT — NOT OFFICIAL RBI TEXT — see data/raw/instruments/README.md
+⚠ Stands in for the revised draft of the RBC Amendment Directions circulated 20 May 2026.
+⚠ Ingested deliberately, marked non-citable (status: draft) so the evaluation suite can
+⚠ assert that draft text never reaches a citation, in any role (PRD §10, ADR-012).
+
+CHAPTER V - RECOVERY OF LOANS AND ENGAGEMENT OF RECOVERY AGENTS (DRAFT)
+
+100W. Permitted contact hours (draft). A regulated entity or its recovery agent shall contact
+a borrower for recovery purposes only between 0700 hours and 2000 hours, a wider window than
+proposed in the version reported as notified.
+
+100X. Third-party contact (draft). A regulated entity or its recovery agent shall not contact
+any relative, friend, colleague or employer of the borrower for the purpose of intimidating
+or shaming the borrower into payment, in terms materially similar to the notified text but
+retained here only for forward-looking review, never for citation.
+
+100Y. Grievance officer details (draft). Every notice, letter or other communication issued
+in connection with recovery shall disclose the name, telephone number and email address of
+the grievance officer, a narrower disclosure requirement than the notified text's additional
+requirement of a postal address.
+
+100Z. Review clause (draft). These provisions shall be reviewed two years after commencement
+and may be revised having regard to representations received from regulated entities,
+recovery agents, and consumer protection bodies during the public comment period that
+preceded the notified version of this Chapter.
+
+Explanatory note (draft only, not part of the operative text). This draft was circulated for
+comment on 20 May 2026 and differs from the notified text in the contact-hour window, the
+scope of the third-party contact prohibition, and the grievance-officer disclosure
+requirement. It is retained in this corpus solely so that forward-looking review can compare
+the draft against the notified and final text side by side; the evaluation suite asserts that
+no path under this instrument is ever cited in a persisted finding, in any citation role.
+

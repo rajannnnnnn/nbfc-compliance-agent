@@ -2,7 +2,7 @@
 arithmetic in a compliance rule is a defect waiting to be found."""
 
 from datetime import date, datetime, time
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
@@ -73,7 +73,16 @@ class StringValue(BaseModel):
 
 
 FactValue = Annotated[
-    DateValue | DateTimeValue | TimeValue | MoneyValue | RateValue | IntValue | DaysValue | BoolValue | EnumValue | StringValue,
+    DateValue
+    | DateTimeValue
+    | TimeValue
+    | MoneyValue
+    | RateValue
+    | IntValue
+    | DaysValue
+    | BoolValue
+    | EnumValue
+    | StringValue,
     Field(discriminator="kind"),
 ]
 
@@ -101,6 +110,6 @@ class ExtractedFactOut(ExtractedFactIn):
     loan_account_id: UUID
 
 
-def value_to_jsonable(value: FactValue) -> dict:
+def value_to_jsonable(value: FactValue) -> dict[str, Any]:
     """Renders a FactValue as the {"kind": ..., ...} shape stored in extracted_fact.value_normalized."""
     return value.model_dump(mode="json")

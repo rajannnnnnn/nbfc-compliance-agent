@@ -1,0 +1,47 @@
+⚠ PLACEHOLDER TEXT — NOT OFFICIAL RBI TEXT — see data/raw/instruments/README.md
+⚠ Stands in for the RBI (NBFC – Responsible Business Conduct) Directions, 2025.
+⚠ verification_status: unverified — dependent rules run in shadow mode.
+
+CHAPTER III - DISCLOSURE
+
+29. Annual Percentage Rate. The Annual Percentage Rate disclosed in the sanction letter and
+loan agreement shall be identical to the Annual Percentage Rate disclosed in the Key Facts
+Statement, computed on the same basis.
+
+CHAPTER IV - FAIR PRACTICE IN SERVICING AND RECOVERY
+
+30. Penal charges.
+(1) Penal charges for non-compliance with material terms and conditions of the loan contract
+shall not be levied in the form of penal interest that is added to the rate of interest
+charged on the advance.
+(2) Penal charges shall not be capitalised, and no further interest shall be computed on such
+charges.
+
+35. Release of documents. The regulated entity shall release all original movable or
+immovable property documents and remove charges registered with any registry within a period
+of 30 days after full repayment or settlement of the loan.
+
+36. Manner of release. Original documents shall be released either at the branch where the
+loan account was serviced or at any other office of the regulated entity chosen by the
+borrower.
+
+37. Notice of release. The regulated entity shall provide the borrower a notice of the date
+and place of release along with the return of the documents.
+
+38. Joint borrowers. Where there are joint borrowers, the regulated entity shall release
+documents to any of the joint borrowers authorised to receive them.
+
+39. Compensation for delay. In case of delay in releasing original documents or removing
+charges beyond the period specified in paragraph 35, the regulated entity shall compensate
+the borrower at the rate of ₹5,000 for each day of delay attributable to the regulated entity.
+
+40. Lost documents. Where original documents are lost or damaged, the regulated entity shall
+assist the borrower in obtaining duplicate documents, and the additional time so taken, not
+exceeding thirty days over and above the period specified in paragraph 35, shall not be
+counted towards the delay for the purpose of compensation under paragraph 39.
+
+H. Microfinance conduct requirements
+
+45. Contact hours for microfinance borrowers. Recovery agents and staff of the regulated
+entity shall not contact microfinance borrowers otherwise than between 0800 hours and 1900
+hours.

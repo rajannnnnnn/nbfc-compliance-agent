@@ -1,7 +1,6 @@
 """Migration order, enum spelling, ORM/DDL parity, and UUIDv7 time-ordering — run against
 real Postgres (a migrated database is a precondition of the test session, see conftest)."""
 
-
 import pytest
 from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
@@ -15,7 +14,14 @@ from app.db.base import Base
 pytestmark = pytest.mark.integration
 
 EXPECTED_ORDER = [
-    "0001", "0002", "0003", "0004", "0005", "0006", "0007", "0008",
+    "0001",
+    "0002",
+    "0003",
+    "0004",
+    "0005",
+    "0006",
+    "0007",
+    "0008",
 ]
 
 ENUM_SPELLING = {
@@ -81,7 +87,11 @@ def test_orm_models_match_live_schema_no_autogenerate_diff():
         if isinstance(d, list):
             continue  # modify_type entries — all are the tsv/char(64) family, checked separately
         kind = d[0]
-        if kind in ("add_table", "remove_table") or kind in ("add_column", "remove_column") and d[3].name not in exempt_columns:
+        if (
+            kind in ("add_table", "remove_table")
+            or kind in ("add_column", "remove_column")
+            and d[3].name not in exempt_columns
+        ):
             structural.append(d)
         # add_index / remove_index: not structural — see docstring.
     assert structural == [], f"unexpected table/column drift: {structural}"

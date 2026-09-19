@@ -46,7 +46,9 @@ async def two_tenants(cc_app_engine):
     su = create_async_engine(get_settings().database_url)
     async with su.begin() as conn:
         for tid in (tenant_a, tenant_b):
-            await conn.execute(text("DELETE FROM loan_account WHERE tenant_id = :id"), {"id": str(tid)})
+            await conn.execute(
+                text("DELETE FROM loan_account WHERE tenant_id = :id"), {"id": str(tid)}
+            )
         for tid in (tenant_a, tenant_b):
             await conn.execute(text("DELETE FROM tenant WHERE id = :id"), {"id": str(tid)})
     await su.dispose()
@@ -64,7 +66,9 @@ async def _insert_loan_account(engine, tenant_id, external_ref: str) -> None:
     """Setup helper — inserts as the owning tenant, scope set correctly, so the row exists
     for the actual test to probe under a *different* scoping condition."""
     async with engine.begin() as conn:
-        await conn.execute(text("SELECT set_config('app.tenant_id', :tid, true)"), {"tid": str(tenant_id)})
+        await conn.execute(
+            text("SELECT set_config('app.tenant_id', :tid, true)"), {"tid": str(tenant_id)}
+        )
         await conn.execute(
             text(
                 "INSERT INTO loan_account (id, tenant_id, external_ref, product_type) "
@@ -92,8 +96,12 @@ async def test_cross_tenant_select_returns_zero_rows(cc_app_engine, two_tenants)
     await _insert_loan_account(cc_app_engine, tenant_a, "LN-2")
 
     async with cc_app_engine.connect() as conn:
-        await conn.execute(text("SELECT set_config('app.tenant_id', :tid, true)"), {"tid": str(tenant_b)})
-        result = await conn.execute(text("SELECT * FROM loan_account WHERE tenant_id = :tid"), {"tid": str(tenant_a)})
+        await conn.execute(
+            text("SELECT set_config('app.tenant_id', :tid, true)"), {"tid": str(tenant_b)}
+        )
+        result = await conn.execute(
+            text("SELECT * FROM loan_account WHERE tenant_id = :tid"), {"tid": str(tenant_a)}
+        )
         assert result.fetchall() == []
 
 
@@ -101,7 +109,9 @@ async def test_cross_tenant_insert_rejected(cc_app_engine, two_tenants):
     tenant_a, tenant_b = two_tenants
     with pytest.raises(DBAPIError):
         async with cc_app_engine.begin() as conn:
-            await conn.execute(text("SELECT set_config('app.tenant_id', :tid, true)"), {"tid": str(tenant_a)})
+            await conn.execute(
+                text("SELECT set_config('app.tenant_id', :tid, true)"), {"tid": str(tenant_a)}
+            )
             await conn.execute(
                 text(
                     "INSERT INTO loan_account (id, tenant_id, external_ref, product_type) "

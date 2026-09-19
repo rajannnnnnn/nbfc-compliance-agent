@@ -37,7 +37,7 @@ eval-report:
 lint:
 	ruff check app/ eval/ tests/
 	black --check app/ eval/ tests/
-	mypy app/
+	python3 -m mypy app/
 
 fmt:
 	ruff check --fix app/ eval/ tests/

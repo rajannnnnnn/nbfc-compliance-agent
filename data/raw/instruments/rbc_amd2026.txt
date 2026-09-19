@@ -1,0 +1,51 @@
+⚠ PLACEHOLDER TEXT — NOT OFFICIAL RBI TEXT — see data/raw/instruments/README.md
+⚠ Stands in for the reported RBC Amendment Directions, 2026 (recovery of loans and
+⚠ engagement of recovery agents). verification_status: secondary_sourced in
+⚠ corpus_sources.yaml (PRD §10: "Secondary-sourced — unconfirmed against a regulator-hosted
+⚠ page") — dependent rules run in shadow mode until confirmed.
+
+CHAPTER V - RECOVERY OF LOANS AND ENGAGEMENT OF RECOVERY AGENTS
+
+100E. Applicability. This Chapter applies to the recovery of loans and the engagement of
+recovery agents by every regulated entity, in addition to and not in derogation of the
+general fair practice obligations elsewhere in these Directions.
+
+100F. Certification of recovery agents. Every recovery agent engaged by a regulated entity
+shall hold a valid certification recognised for the purpose, subject to a transition
+allowance for agents already engaged as on the date these provisions commence.
+
+100I. Prior intimation before a visit. A regulated entity or its recovery agent shall provide
+the borrower at least one day's prior intimation before the first visit to the borrower's
+residence or place of work for the purpose of recovery.
+
+100N. Recording and retention of calls. Every call made to a borrower for collection or
+recovery purposes shall be recorded, and the recording shall be preserved for a period of not
+less than six months from the date of the call.
+
+100Q. Preconditions for device restriction. A regulated entity shall not restrict access to a
+device financed under the loan agreement unless the device was itself financed by that loan,
+the account is sixty days or more past due, and the borrower has been given a cure notice of
+twenty-one days followed, on continued non-payment, by a further cure notice of seven days.
+
+100R. Cure notice sequence. The twenty-one day cure notice and the seven day cure notice
+referred to in paragraph 100Q shall be issued strictly in that order, each after the
+preceding notice period has run its course without payment.
+
+100S. Compensation for wrongful restriction. Where a device is restricted in breach of
+paragraph 100Q, or restoration of access is wrongfully delayed after the borrower has
+remedied the default, the regulated entity shall compensate the borrower at the rate of ₹250
+for every hour of wrongful delay in restoration.
+
+100W. Permitted contact hours. Save as otherwise provided for microfinance borrowers, a
+regulated entity or its recovery agent shall contact a borrower for recovery purposes only
+between 0800 hours and 1900 hours.
+
+100X. Third-party contact and social media. A regulated entity or its recovery agent shall
+not contact any relative, friend, colleague or employer of the borrower for the purpose of
+intimidating or shaming the borrower into payment, and shall not make any disclosure about
+the borrower's account on a social media platform.
+
+100Y. Grievance officer details on recovery communications. Every notice, letter or other
+communication issued in connection with recovery shall disclose the name, telephone number,
+email address and postal address of the grievance officer to whom the borrower may address a
+complaint.

@@ -1,0 +1,39 @@
+⚠ PLACEHOLDER TEXT — NOT OFFICIAL RBI TEXT — see data/raw/instruments/README.md
+⚠ Stands in for the Key Facts Statement for Loans & Advances circular pending real text.
+⚠ verification_status: unverified — dependent rules run in shadow mode.
+
+CHAPTER I - KEY FACTS STATEMENT
+
+1. Validity of the Key Facts Statement. The Key Facts Statement shall bear a unique proposal
+number and shall remain valid for a period of not less than three working days for loans with
+a tenor of seven days or more.
+
+2. Reproduction in the loan agreement. The particulars contained in the Key Facts Statement
+shall be reproduced as a summary box forming part of the loan agreement, and shall not merely
+be referenced.
+
+3. Language and format. The Key Facts Statement shall be provided in a standardised format,
+in a language understood by the borrower, and shall be furnished free of cost before the
+execution of the loan agreement.
+
+4. Machine-readability. Where the loan is sanctioned through a digital channel, the Key Facts
+Statement shall additionally be furnished in a machine-readable format to support
+verification by the borrower and by supervisory functions.
+
+=== ANNEX A ===
+Sl No    Item    Description
+1. Loan proposal / account number    Unique identifier assigned by the lender for this loan
+2. Type of loan    Personal, gold, vehicle, business, consumer durable or other
+3. Sanctioned loan amount    Amount sanctioned under the loan agreement, in rupees
+4. Disbursal schedule    Manner and stages in which the sanctioned amount is disbursed
+5. Loan term    Tenor of the loan expressed in months or days
+6. Cooling off / look-up period    Period during which the borrower may exit without penalty, not less than one day
+7. Instalment details    Amount and periodicity of instalments payable by the borrower
+8. Interest rate type and reset periodicity    Fixed or floating, and frequency of reset if floating
+9. Annual Percentage Rate    All-in annualised cost of credit inclusive of all fees and charges
+10. Details of contingent charges    Charges that may become payable in specified contingencies
+
+Sl No    Item    Description
+1. Grievance officer name    Name of the officer designated to handle borrower grievances
+2. Grievance officer contact    Escalation contact for unresolved grievances
+3. Grievance officer phone and email    Telephone number and email address of the grievance officer

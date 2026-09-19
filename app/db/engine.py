@@ -43,9 +43,7 @@ async def dispose_engine() -> None:
     _sessionmaker = None
 
 
-async def tenant_session(
-    settings: Settings, tenant_id: UUID
-) -> AsyncGenerator[AsyncSession, None]:
+async def tenant_session(settings: Settings, tenant_id: UUID) -> AsyncGenerator[AsyncSession, None]:
     """Yields a session with app.tenant_id set for the transaction's lifetime. Every RLS-scoped
     query must go through this or an equivalent — a session that never sets the variable fails
     on its first query against a policy-protected table (LLD §3.7), which is the point."""
@@ -58,4 +56,6 @@ async def tenant_session(
 async def set_tenant(session: AsyncSession, tenant_id: UUID) -> None:
     from sqlalchemy import text
 
-    await session.execute(text("SELECT set_config('app.tenant_id', :tid, true)"), {"tid": str(tenant_id)})
+    await session.execute(
+        text("SELECT set_config('app.tenant_id', :tid, true)"), {"tid": str(tenant_id)}
+    )
