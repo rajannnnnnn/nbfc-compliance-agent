@@ -289,7 +289,7 @@ is `docs/CORPUS.md`, not working code.
 # M2 — Schema and skeleton
 
 ### M2-T01 — `fields.yaml` and the registry
-- **Status** open *(**[SPEC]** blocked on SQ-07 for the exact key count)*
+- **Status** done — 82 keys per ADR-016 (the enumerated LLD §5.3 names, not its "sixty-one" prose); 15/15 registry tests, 3/3 generated-model tests.
 - **Depends on** M0-T02
 - **Files** `app/schema/fields.yaml`, `app/schema/registry.py`, `app/schema/generated.py`, `tests/unit/schema/test_registry.py`
 - **Acceptance**
@@ -398,7 +398,7 @@ is `docs/CORPUS.md`, not working code.
 # M3 — Extraction on the frontier baseline
 
 ### M3-T01 — `parse.py`
-- **Status** open
+- **Status** done — 7/7 tests, including a real synthetic PDF (via reportlab) and docx; OCR fallback raises rather than silently returning empty text since no OCR engine is wired yet.
 - **Depends on** M2-T01
 - **Files** `app/extract/parse.py`, `app/domain/documents.py`, `tests/unit/extract/test_parse.py`
 - **Acceptance**
@@ -411,7 +411,7 @@ is `docs/CORPUS.md`, not working code.
   file path** (asserted by inspecting the returned `ParsedDocument` and by a tmpdir diff).
 
 ### M3-T02 — `classify.py`
-- **Status** open
+- **Status** done — 3/3 tests against a mocked client; untested against a real model (no LLM key in this environment, SQ-03).
 - **Depends on** M3-T01
 - **Files** `app/extract/classify.py`, `app/prompts/extract/classify_doctype.v1.md`, `tests/unit/extract/test_classify.py`
 - **Acceptance**
@@ -424,7 +424,7 @@ is `docs/CORPUS.md`, not working code.
   `CC-422-DOCTYPE-UNKNOWN` rather than extracting against a guessed field set.
 
 ### M3-T03 — `normalise.py`
-- **Status** open
+- **Status** done — 20/20 tests including two Hypothesis property tests (money and rate round-trips never lose precision, never produce a float).
 - **Depends on** M2-T01
 - **Files** `app/extract/normalise.py`, `tests/unit/extract/test_normalise.py`
 - **Acceptance**
@@ -437,7 +437,7 @@ is `docs/CORPUS.md`, not working code.
   test: money and rate round-trips never lose precision and never produce a `float`.
 
 ### M3-T04 — `redact.py` profile v1
-- **Status** open
+- **Status** done — 10/10 tests. Found and fixed a real bug the LLD's own prose warned about but its literal pattern order didn't avoid: ACCOUNT ahead of PHONE swallowed 10-digit phone numbers. See ADR-022.
 - **Depends on** M2-T01
 - **Files** `app/extract/redact.py`, `tests/unit/extract/test_redact.py`
 - **Acceptance**
@@ -451,7 +451,7 @@ is `docs/CORPUS.md`, not working code.
   is not redacted.
 
 ### M3-T05 — `spans.py` and the span budget
-- **Status** open
+- **Status** done — 6/6 unit tests, 4/4 integration tests against real Postgres including a concurrent-writers-under-row-lock case.
 - **Depends on** M3-T04, M2-T02
 - **Files** `app/extract/spans.py`, `tests/unit/extract/test_spans.py`, `tests/integration/extract/test_span_budget.py`
 - **Acceptance**
@@ -466,7 +466,7 @@ is `docs/CORPUS.md`, not working code.
   Concurrency test: two parallel writers cannot exceed the budget.
 
 ### M3-T06 — `extractor.py` and the LLM client
-- **Status** blocked *(SQ-03: frontier model key; **SQ-23**: no route for document text)*
+- **Status** done per ADR-017 (synchronous extraction in the API request resolves SQ-23) — 9/9 LLM client tests, 4/4 integration tests for the full `extract_document` orchestration against real Postgres with a mocked model response. Untested against a real provider (SQ-03, no key in this environment).
 - **Depends on** M3-T02, M3-T03, M2-T01
 - **Files** `app/llm/{client,routing,structured}.py`, `app/extract/extractor.py`, `app/extract/service.py`, `app/prompts/extract/document_facts.v1.md`, `tests/unit/llm/test_client.py`
 - **Acceptance**

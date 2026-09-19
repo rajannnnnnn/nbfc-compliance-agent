@@ -296,3 +296,34 @@ for M8/M9 exists yet (SQ-20, SQ-21, SQ-22). `Dockerfile`, `docker-compose.yml`,
 `loadtest/baseline.js` and the `tuned_gpu`/`on_prem` serving-mode plumbing are built and unit
 tested so M8/M9 are a provisioning step away, not a coding one, but no attempt is made to
 actually deploy or fine-tune. `docs/COSTS.md` is not fabricated with guessed prices.
+
+---
+
+## ADR-022 — `redact.py`'s pattern order: PHONE before ACCOUNT, not as literally listed in the LLD
+
+The LLD's own prose (§13) says "ACCOUNT before PHONE would swallow ten-digit phone numbers,
+so the list order above is normative" — but its literal list puts ACCOUNT (a 9-18 digit
+pattern) ahead of PHONE anyway. Running the ordering test caught it immediately: a bare
+10-digit mobile number matched ACCOUNT first, and the PHONE pattern had nothing left to match
+by the time it ran, so every phone number was tagged ACCOUNT instead. Swapped so PHONE runs
+before ACCOUNT, matching the stated intent rather than the literal list. `CLAUDE.md` §2 has
+no non-negotiable this touches, so this is a plain bug fix, not a spec deviation needing a
+sign-off — noted here only because it is the kind of thing that looks like a typo until you
+actually run it, which is exactly why every module in this build was run for real rather than
+only unit-tested against mocks.
+
+---
+
+## ADR-023 — extraction never persists `is_absent=false` with no typed value
+
+Found by mypy, not by a test: `app/extract/service.py`'s per-field loop only set `is_absent =
+True` when normalisation *raised*. A model response with `is_absent: false` and an empty or
+whitespace-only `value_raw` fell through with `typed_value` still `None` while `is_absent`
+stayed `False` — which would have violated `extracted_fact`'s own CHECK constraint
+(`is_absent OR value_normalized IS NOT NULL`) at insert time, or worse, silently written a
+`NULL` "present" fact if the constraint were ever loosened. Fixed by treating `typed_value is
+None` as absent unconditionally, regardless of why it ended up `None`. `CLAUDE.md` §2.1's
+citation guarantee and this fact-table invariant are the same kind of defect class: a
+`None`/`False` combination that should be structurally impossible was reachable at runtime
+and only mypy's strict optional-type checking surfaced it, which is the case for running
+`mypy --strict` on every commit rather than treating it as a formality.
