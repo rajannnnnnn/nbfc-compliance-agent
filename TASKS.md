@@ -631,22 +631,25 @@ is `docs/CORPUS.md`, not working code.
   missing path named.
 
 ### M4-T03b — FTS numeral/word synonym dictionary *(new — found while testing M4-T03)*
-- **Status** open
+- **Status** done — see docs/DECISIONS.md ADR-037. A real Postgres `numbers_syn` TEXT SEARCH
+  DICTIONARY (from `scripts/tsearch/numbers.syn`, digit↔word 0–100) and a `clausecheck_en`
+  TEXT SEARCH CONFIGURATION are created by `scripts/db_bootstrap.sql` (mounted into
+  `docker-compose.yml`'s postgres service) and wired into both `clause.tsv`'s generation
+  expression (migration `0010`) and `app/retrieve/lexical.py`'s query. Verified against the
+  real ingested corpus: `test_digit_form_does_not_recall_a_word_spelled_clause` is now
+  `test_digit_form_recalls_a_word_spelled_clause` and asserts both `"24"` and `"twenty-four"`
+  recall `DL2025/p13`. Full regression: 299/299 passing after `alembic upgrade head`.
 - **Depends on** M4-T03
-- **Files** `app/retrieve/lexical.py`, likely a Postgres text search configuration/dictionary
-  migration
+- **Files** `app/retrieve/lexical.py`, `migrations/versions/0010_clause_tsv_numeral_synonyms.py`,
+  `scripts/db_bootstrap.sql`, `scripts/tsearch/numbers.syn`, `docker-compose.yml`,
+  `tests/integration/retrieve/test_lexical_numeric_recall.py`,
+  `tests/integration/db/test_migrations.py`
 - **Acceptance**
   ```bash
-  pytest tests/integration/retrieve/test_lexical_numeric_recall.py::test_digit_form_does_not_recall_a_word_spelled_clause -q
+  pytest tests/integration/retrieve/test_lexical_numeric_recall.py::test_digit_form_recalls_a_word_spelled_clause -q
   ```
-  should assert the digit-form query **does** recall `DL2025/p13` once fixed (the test's
-  current assertion, documenting today's gap, gets inverted at that point).
-  A digit token ("24") and its spelled-word form ("twenty-four") should both match a clause
-  stating the same number, regardless of which form the clause or the query uses. Needs a
-  numeral synonym dictionary (e.g. a small custom Postgres text search dictionary mapping
-  1-99 digit forms to word forms and back) wired into the `tsv` generation and query path —
-  not solved in this pass because it changes the tsvector/tsquery pipeline shared by every
-  field, not just one test's fixture.
+  A digit token ("24") and its spelled-word form ("twenty-four") both match a clause stating
+  the same number, regardless of which form the clause or the query uses.
 
 ### M4-T06 — Reference-hop expansion
 - **Status** done — `tests/integration/retrieve/test_reference_hop.py` proves DL2025/p8/i --incorporates--> KFS2024 is followed at depth 1 against the real ingested corpus, tagged `source="reference_hop"`.

@@ -695,3 +695,49 @@ that suite would mean fabricating the very numbers CLAUDE.md forbids inventing. 
 therefore stated qualitatively (rule citations and pins now agree; verified by direct corpus
 query) rather than as an invented metric — a retrieval-stage suite is the correct trigger to
 re-open this ADR with real numbers, not a guess made to fill the acceptance template.
+
+## ADR-037 — Lexical FTS numeral synonym dictionary (M4-T03b)
+
+**Context.** `tests/integration/retrieve/test_lexical_numeric_recall.py`, written for M4-T03
+against the real ingested corpus, proved that `clause.tsv` (`to_tsvector('english', ...)`)
+and `websearch_to_tsquery('english', :q)` never match a digit-form query ("24") against a
+clause that spells the same number as words ("twenty-four") — `DL2025/p13`'s "twenty-four
+hours" deadline was the concrete case. Plain PostgreSQL FTS has no numeral/word synonym
+mapping in the `english` configuration; `english_stem` operates on tokens, not on their
+numeric value.
+
+**Decision.** Add a real Postgres TEXT SEARCH DICTIONARY/CONFIGURATION, not an
+application-layer query-rewrite hack:
+
+- `scripts/tsearch/numbers.syn` — a synonym-template source file mapping digit and word
+  forms of 0–100 to a single canonical digit token (both hyphenated and space-separated word
+  forms, e.g. `ninety-nine 99`, `ninety nine 99`, `hundred 100`), committed to the repo as the
+  source of truth and mounted read-only into the Postgres container's
+  `tsearch_data/numbers.syn` (`docker-compose.yml`).
+- `scripts/db_bootstrap.sql` — idempotently creates the `numbers_syn` TEXT SEARCH DICTIONARY
+  (`TEMPLATE = synonym, SYNONYMS = numbers`) and the `clausecheck_en` TEXT SEARCH
+  CONFIGURATION (`COPY = english`, word-token mappings routed through `numbers_syn` before
+  `english_stem`). Runs before Alembic on a fresh container, same pattern as the `cc_app`
+  role bootstrap already there.
+- Migration `0010` switches `clause.tsv`'s generation expression from
+  `to_tsvector('english', ...)` to `to_tsvector('clausecheck_en', ...)`. A `GENERATED ALWAYS
+  AS (...) STORED` column's expression cannot be altered in place, so the column and its
+  `ix_clause_tsv` GIN index are dropped and recreated identically apart from the
+  configuration name; existing rows recompute automatically. `downgrade()` reverses to
+  `'english'` symmetrically.
+- `app/retrieve/lexical.py`'s `_QUERY` now calls `websearch_to_tsquery('clausecheck_en', :q)`
+  so both sides of the `@@` match use the same configuration.
+
+**Why not an app-layer fix.** Expanding `numeric_tokens()`/`build_lexical_query()` to inject
+both spellings into every query would duplicate the mapping the database already needs to
+express for `clause.tsv` itself, and would still miss a clause whose *own* text mixes forms
+inconsistently. A single dictionary shared by both the generated column and the query is the
+one-mapping-not-two solution and is the standard PostgreSQL mechanism for this exact problem
+(a synonym dictionary ahead of the stemmer in a text search configuration).
+
+**Verification.** `test_digit_form_does_not_recall_a_word_spelled_clause` (documenting the
+pre-fix gap) is now `test_digit_form_recalls_a_word_spelled_clause`, asserting both `"24"`
+and `"twenty-four"` recall `DL2025/p13` — proven against the real corpus after
+`alembic upgrade head` applied migration 0010 to the sandbox's live Postgres. Full regression
+(299 tests, including `tests/integration/db/test_migrations.py`'s migration-order and
+single-head assertions updated for the new `0010` head) passes.

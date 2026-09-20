@@ -8,6 +8,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./scripts/db_bootstrap.sql:/docker-entrypoint-initdb.d/01_bootstrap.sql:ro
+      - ./scripts/tsearch/numbers.syn:/usr/share/postgresql/16/tsearch_data/numbers.syn:ro
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 5s

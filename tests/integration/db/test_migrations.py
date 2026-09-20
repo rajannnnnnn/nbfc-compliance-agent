@@ -23,6 +23,7 @@ EXPECTED_ORDER = [
     "0007",
     "0008",
     "0009",
+    "0010",
 ]
 
 ENUM_SPELLING = {
@@ -115,4 +116,4 @@ def test_downgrade_base_then_upgrade_head_is_idempotent(tmp_path):
     script = ScriptDirectory.from_config(cfg)
     heads = script.get_heads()
     assert len(heads) == 1
-    assert heads[0] == "0009"
+    assert heads[0] == "0010"

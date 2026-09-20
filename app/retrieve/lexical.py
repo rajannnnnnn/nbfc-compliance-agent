@@ -2,6 +2,12 @@
 
 Lexical search carries the numeric obligations. "thirty days", "Rs 5,000", "08:00 hours" and
 "six months" survive lexical matching and are frequently missed by embeddings.
+
+Queries use the `clausecheck_en` text search configuration (migration 0010, ADR-037), not
+bare `'english'` — it folds digit and word forms of the same number ("24" / "twenty-four")
+to the same token via a synonym dictionary before stemming, so a query built from either
+spelling recalls a clause written in the other. `clause.tsv` is generated with the same
+configuration, so both sides of the `@@` match agree.
 """
 
 import re
@@ -17,11 +23,11 @@ from app.retrieve.applicability import APPLICABILITY_SQL
 _QUERY = f"""
 SELECT c.id, c.clause_path, c.instrument_code, c.heading, c.text,
        c.effective_from, c.effective_to, c.citable,
-       ts_rank_cd(c.tsv, websearch_to_tsquery('english', :q)) AS score
+       ts_rank_cd(c.tsv, websearch_to_tsquery('clausecheck_en', :q)) AS score
 FROM   clause c
 JOIN   regulation_instrument i ON i.id = c.instrument_id
 WHERE  {APPLICABILITY_SQL}
-  AND  c.tsv @@ websearch_to_tsquery('english', :q)
+  AND  c.tsv @@ websearch_to_tsquery('clausecheck_en', :q)
 ORDER  BY score DESC
 LIMIT  :k
 """

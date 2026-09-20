@@ -7,15 +7,16 @@ Building this test surfaced two real gaps, fixed/documented rather than dodged:
 1. `numeric_tokens`'s number-word list was missing "six", "four", "twenty-four", etc. — it
    only recognised {one, two, three, thirty, sixty, ninety}. Fixed in `app/retrieve/
    lexical.py` to a full one-to-ninety word list.
-2. A *digit* token ("24") never matches a clause that spells the same number as *words*
-   ("twenty-four") under `websearch_to_tsquery`, which has no numeral/word synonym
-   dictionary — isolated and proven directly (bare "24" vs "twenty-four" against the real
-   corpus) in `test_digit_form_does_not_recall_a_word_spelled_clause`, rather than silently
-   choosing test values that avoid it. A real fix needs a synonym dictionary in the FTS
-   configuration, tracked as follow-up; DL2025/p13 also uses "outside India" where a
-   field label naturally says "offshore" — a vocabulary gap lexical search is not expected
-   to close on its own, which is exactly why retrieval fuses it with vector search (LLD
-   §8.4) rather than relying on lexical alone.
+2. A *digit* token ("24") never matched a clause that spelled the same number as *words*
+   ("twenty-four") under bare `websearch_to_tsquery('english', ...)` — isolated and proven
+   directly (bare "24" vs "twenty-four" against the real corpus). Fixed in M4-T03b
+   (docs/DECISIONS.md ADR-037) with a `numbers_syn` synonym dictionary and a `clausecheck_en`
+   text search configuration (migration 0010) that both `clause.tsv` and this module's
+   queries now use; `test_digit_form_recalls_a_word_spelled_clause` proves both spellings
+   recall `DL2025/p13`. DL2025/p13 also uses "outside India" where a field label naturally
+   says "offshore" — a vocabulary gap lexical search is not expected to close on its own,
+   which is exactly why retrieval fuses it with vector search (LLD §8.4) rather than relying
+   on lexical alone.
 """
 
 from datetime import date
@@ -89,16 +90,16 @@ async def test_numeric_obligation_clause_is_a_top_lexical_hit(
     ), f"query {query!r} did not surface {expected_clause_path} in top-5: {paths}"
 
 
-async def test_digit_form_does_not_recall_a_word_spelled_clause(snapshot_id):
-    """Documented gap, not a passing feature: DL2025/p13 spells its deadline as "twenty-four
-    hours"; a bare digit-form query ("24") does not match it under `websearch_to_tsquery`,
-    which has no numeral/word synonym dictionary, while the word-form query ("twenty-four")
-    does. Isolated to the numeral alone (no other query terms) so the result is attributable
-    to the digit/word mismatch specifically, not to an unrelated vocabulary gap (DL2025/p13
-    also says "outside India" where a field label naturally says "offshore" — a separate,
-    expected reason lexical search alone would miss it, which is why retrieval fuses lexical
-    with vector search rather than relying on either alone). A real fix for the digit/word
-    gap needs a synonym dictionary in the FTS configuration — tracked as follow-up."""
+async def test_digit_form_recalls_a_word_spelled_clause(snapshot_id):
+    """M4-T03b (docs/DECISIONS.md ADR-037): DL2025/p13 spells its deadline as "twenty-four
+    hours"; a bare digit-form query ("24") now matches it too, because `clause.tsv` and this
+    query both use the `clausecheck_en` text search configuration, which folds digit and word
+    forms of the same number to the same token via a synonym dictionary before stemming.
+    Isolated to the numeral alone (no other query terms) so the result is attributable to the
+    digit/word fix specifically, not to an unrelated vocabulary gap (DL2025/p13 also says
+    "outside India" where a field label naturally says "offshore" — a separate, expected
+    reason lexical search alone would miss it, which is why retrieval fuses lexical with
+    vector search rather than relying on either alone)."""
     settings = get_settings()
     sm = get_sessionmaker(settings)
 
@@ -122,5 +123,5 @@ async def test_digit_form_does_not_recall_a_word_spelled_clause(snapshot_id):
             k=5,
         )
 
-    assert "DL2025/p13" not in [c.clause_path for c in digit_hits]
+    assert "DL2025/p13" in [c.clause_path for c in digit_hits]
     assert "DL2025/p13" in [c.clause_path for c in word_hits]
