@@ -918,6 +918,34 @@ is `docs/CORPUS.md`, not working code.
 
 ---
 
+# SESSION CHECKPOINT (resume here)
+
+As of commit `1f15bc2`, M0–M7 (minus M7-T01b, M7-T04, M7-T05) are done: 234 tests passing,
+ruff/black/mypy --strict clean on `app/`. Nothing is checked out uncommitted.
+
+**Next up, in order**: M2-T04 (FastAPI skeleton — `app/main.py`, `app/deps.py`,
+`app/api/v1/{router,corpus,schemas}.py`, `/healthz`, `/readyz`, unauthenticated `/v1/corpus`),
+M2-T05 (Celery wiring — `app/tasks/celery_app.py`, queue routing per LLD §14), M2-T06
+(structured logging with the content denylist), M2-T07 (boot assertions). None of these have
+any files yet.
+
+Two spec gaps to resolve with an ADR when this work starts, same pattern as ADR-025/026/029
+(document the choice, don't guess silently):
+1. **Auth**: LLD §15 says "Bearer token; tenant resolved from the token" but the DDL (§3) has
+   no `api_key`/token column anywhere. Needs a new migration adding a hashed
+   `tenant.api_key_hash` column (never store the raw token) plus a FastAPI dependency that
+   hashes the incoming bearer token and looks up the tenant.
+2. **Idempotency**: §15 requires `Idempotency-Key` "stored for 24 hours against the request
+   hash" but no such table exists in the DDL. Needs a new migration for an `idempotency_key`
+   table (tenant_id, key, request_hash, response body, status code, expiry) and RLS on it
+   consistent with migration 0008's pattern.
+
+After that: M7-T04 (`report.py` + `/v1/loans/{id}/report`), M7-T05 (`conflicts`/`end_to_end`
+eval suites — depends on M6-T05's eval harness existing first), then M8 (deploy — mostly
+blocked on hosting account decisions, SQ-20) and M9 (fine-tune comparison).
+
+---
+
 # M8 — Deploy, demonstrate, load test
 
 ### M8-T01 — Deployment
