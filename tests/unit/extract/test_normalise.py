@@ -52,6 +52,14 @@ def test_malformed_money_raises():
         normalise_money_to_paise("a lot of money")
 
 
+def test_money_with_trailing_slash_dash_suffix():
+    """'/-' is a common Indian currency notation (and scripts/gen_synthetic_docs.py's own
+    `_CURRENCY_FORMATS` produces it) — live-discovered against a real KFS extraction where
+    this raised NormalisationError, silently turning a present fees_total into is_absent."""
+    assert normalise_money_to_paise("₹7,500/-") == 750000
+    assert normalise_money_to_paise("7,500/-") == 750000
+
+
 def test_rate_plain_percent():
     assert normalise_rate_to_bps("18.5%") == 1850
 

@@ -70,8 +70,12 @@ def parse_full_datetime(raw: str) -> datetime:
 
 
 def normalise_money_to_paise(raw: str) -> int:
-    """'₹1,20,000' -> 12000000 paise. Rejects anything that isn't a plain numeral."""
+    """'₹1,20,000' -> 12000000 paise. '₹7,500/-' -> 750000 paise (the trailing "/-" is a
+    common Indian currency notation, live-discovered against a real extraction where it made
+    this function reject an otherwise well-formed value as unparseable). Rejects anything
+    that isn't a plain numeral once currency symbols/suffixes are stripped."""
     cleaned = raw.replace("₹", "").replace("Rs.", "").replace("Rs", "").strip()
+    cleaned = cleaned.removesuffix("/-").strip()
     cleaned = cleaned.replace(",", "")
     m = re.fullmatch(r"(\d+)(?:\.(\d{1,2}))?", cleaned)
     if not m:

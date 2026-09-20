@@ -842,3 +842,27 @@ once a non-rate-limited key is configured) — no further code changes needed.
 **Verification.** `tests/unit/llm/`, `tests/unit/test_synthetic_docs.py`, and the full 303-test
 deterministic regression all pass with the new extraction-stage code paths in place. The one
 live case that quota permitted is documented above as a genuine (if partial) real-data point.
+
+## ADR-040 — `normalise_money_to_paise` rejected the "/-" Indian currency suffix (M3-T08)
+
+**Context.** With Gemini billing enabled (ADR-039's blocker resolved), a live smoke test of
+`EV-EXTRACT-KFS-0001` came back with `fees_total` present but wildly wrong (75000000 paise
+instead of the expected 750000 — 100x) alongside a separately-run direct call to
+`normalise_money_to_paise("₹7,500/-")` raising `NormalisationError` outright. The document's
+own fixture text (and `scripts/gen_synthetic_docs.py`'s own `_CURRENCY_FORMATS`, which
+generates `f"₹{rupees:,}/-"` as one of three currency renderings) uses the trailing `/-`
+notation common in Indian financial documents. `normalise_money_to_paise` stripped `₹`,
+`Rs.`, `Rs`, and commas, but not `/-`, so the regex `\d+(?:\.\d{1,2})?` never matched and the
+function raised — which `app/extract/service.py` catches and silently downgrades to
+`is_absent=True` for that field. (The separate 100x error on the same run was not this bug —
+a direct call confirmed `normalise_money_to_paise("Rs. 100,000")` returns the correct
+10000000 paise; that appears to be a one-off LLM sampling error on `sanctioned_amount`,
+tracked as a real accuracy data point for the eval suite rather than a code defect.)
+
+**Decision.** `normalise_money_to_paise` now strips a trailing `/-` (via `removesuffix`)
+before the numeral regex runs. This is a targeted fix for a specific, real notation the
+project's own synthetic corpus produces — not a broader "accept anything" relaxation.
+
+**Verification.** New unit test `test_money_with_trailing_slash_dash_suffix` in
+`tests/unit/extract/test_normalise.py` asserts both `"₹7,500/-"` and `"7,500/-"` normalise to
+750000 paise. Full regression (304 tests) passes.
