@@ -915,7 +915,11 @@ is `docs/CORPUS.md`, not working code.
 - **Depends on** M6-T04, M7-T02
 
 ### M7-T04 — `report.py`
-- **Status** open
+- **Status** done — `GET /v1/loans/{id}/report?format=json|pdf` assembles the same
+  citation-joined data as `/assessments` (clause path, instrument, effective window,
+  `verification_status` per finding), rendered as JSON or a `reportlab`-built PDF; both
+  formats carry the not-legal-advice disclaimer, and a visible synthetic-data banner
+  whenever any of the loan's documents is `is_synthetic = true`.
 - **Depends on** M7-T03
 - **Files** `app/verdict/report.py`, `app/api/v1/assessments.py`, `tests/integration/api/test_report.py`
 - **Acceptance**

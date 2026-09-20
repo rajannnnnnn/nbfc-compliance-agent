@@ -10,12 +10,13 @@ anything cached on the citation row itself.
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_tenant_id, get_tenant_session
 from app.api.errors import APIError
+from app.verdict.report import assemble_report, report_to_json, report_to_pdf
 
 router = APIRouter(prefix="/v1/loans", tags=["assessments"])
 
@@ -129,3 +130,23 @@ async def get_assessments(
         "assessments": assessments,
         "disclaimer": "Cited compliance findings for internal review. Not legal advice.",
     }
+
+
+@router.get("/{loan_id}/report")
+async def get_report(
+    loan_id: UUID,
+    format: str = Query(default="json", pattern="^(json|pdf)$"),
+    tenant_id: UUID = Depends(get_tenant_id),
+    session: AsyncSession = Depends(get_tenant_session),
+) -> Any:
+    report = await assemble_report(session, loan_id)
+    if format == "pdf":
+        pdf_bytes = report_to_pdf(report)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="clausecheck-{report.loan_external_ref}.pdf"'
+            },
+        )
+    return report_to_json(report)
