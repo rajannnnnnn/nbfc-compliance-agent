@@ -141,15 +141,17 @@ async def test_abstention_suite_correctly_abstains(snapshot_id):
 
 
 async def test_temporal_suite_verdicts_correct_even_with_a_dumb_stub(snapshot_id):
-    """PRD §11 temporal pair as a first-class eval case, plus five more pairs added across
+    """PRD §11 temporal pair as a first-class eval case, plus six more pairs added across
     this pass: three across the 2027-01-01 RBC-AMD2026 commencement date (R18 recording
-    retention, R22 prior-visit intimation, R24 restoration compensation), and two across
-    DL2025's own 2025-05-08 phased commencement date (R13 offshore deletion, R12 grievance
-    escalation disclosure) — closing part of the "no 2025 phased-date coverage" gap noted in
-    TASKS.md M5-T06. The *verdict* on both sides of each commencement date is correct
-    regardless of model quality (one side is a rule-level fact or corpus-applicability fact,
-    never a model judgement call) — only the citation on the abstention side depends on model
-    judgement, which this dumb stub doesn't attempt."""
+    retention, R22 prior-visit intimation, R24 restoration compensation), two across DL2025's
+    own 2025-05-08 phased commencement date (R13 offshore deletion, R12 grievance escalation
+    disclosure), and one across RBC2025's own 2025-11-28 commencement date (R05 penal charge
+    not levied as interest) — three distinct real commencement dates now covered, closing
+    more of the "no 2025 phased-date coverage" gap noted in TASKS.md M5-T06. The *verdict* on
+    both sides of each commencement date is correct regardless of model quality (one side is
+    a rule-level fact or corpus-applicability fact, never a model judgement call) — only the
+    citation on the abstention side depends on model judgement, which this dumb stub doesn't
+    attempt."""
     settings = get_settings()
     sm = get_sessionmaker(settings)
     registry = FieldRegistry("app/schema/fields.yaml")
@@ -165,7 +167,7 @@ async def test_temporal_suite_verdicts_correct_even_with_a_dumb_stub(snapshot_id
             client=client,
         )
 
-    assert report["case_count"] == 12
+    assert report["case_count"] == 14
     by_ref = {r["case_ref"]: r for r in report["results"]}
     for before_ref, after_ref in [
         ("EV-TEMPORAL-001", "EV-TEMPORAL-002"),
@@ -174,6 +176,7 @@ async def test_temporal_suite_verdicts_correct_even_with_a_dumb_stub(snapshot_id
         ("EV-TEMPORAL-007", "EV-TEMPORAL-008"),
         ("EV-TEMPORAL-009", "EV-TEMPORAL-010"),
         ("EV-TEMPORAL-011", "EV-TEMPORAL-012"),
+        ("EV-TEMPORAL-013", "EV-TEMPORAL-014"),
     ]:
         assert "verdict" not in by_ref[before_ref]["diff"]  # no_clause_found, correct
         assert by_ref[after_ref]["passed"]  # violation, decisive citation from the rule

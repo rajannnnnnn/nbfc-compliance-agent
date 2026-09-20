@@ -824,15 +824,18 @@ is `docs/CORPUS.md`, not working code.
   test_harness.py::test_numeric_rules_suite_boundaries_are_exact`). Still short of the LLD's
   ≥60 minimum — same honest-scope-reduction pattern as ADR-034/ADR-035, not a fabricated
   count.
-  12 temporal cases (6 pairs, up from 4 pairs/8 cases): the PRD §11 pair (`EV-TEMPORAL-001`/
+  14 temporal cases (7 pairs, up from 4 pairs/8 cases): the PRD §11 pair (`EV-TEMPORAL-001`/
   `-002`, R16 contact window), 3 pairs across the 2027-01-01 RBC-AMD2026 commencement date
-  (R18 recording retention, R22 prior-visit intimation, R24 restoration compensation), and 2
-  new pairs across **DL2025's own 2025-05-08 phased commencement date** (R13 offshore
-  deletion, R12 grievance escalation disclosure) — the first phased-2025-date coverage this
-  suite has had. Each pair holds the underlying fact constant and varies only the event date,
-  so the verdict flip (`no_clause_found` → the rule's verdict) is attributable to clause
-  commencement alone, not a confound. Still short of the LLD's ≥30 minimum, and the DL2025
-  1 Nov / 15 Jun phased dates (`DL2025/p6`, `DL2025/p17`) remain uncovered.
+  (R18 recording retention, R22 prior-visit intimation, R24 restoration compensation), 2
+  pairs across DL2025's own 2025-05-08 phased commencement date (R13 offshore deletion, R12
+  grievance escalation disclosure), and 1 new pair across **RBC2025's own 2025-11-28
+  commencement date** (R05 penal charge not levied as interest) — three distinct real
+  commencement dates now covered. Each pair holds the underlying fact constant and varies
+  only the event date, so the verdict flip (`no_clause_found` → the rule's verdict) is
+  attributable to clause commencement alone, not a confound. Still short of the LLD's ≥30
+  minimum, and the DL2025 1 Nov / 15 Jun phased dates (`DL2025/p6`, `DL2025/p17`) remain
+  uncovered — both map to clauses no implemented rule cites, so closing them would need
+  actual LLM judgment for the "after" side, blocked on SQ-03.
 - **Depends on** M5-T02, M5-T03
 - **Files** `eval/cases/numeric_rules/*.json`, `eval/cases/temporal/*.json`, `reports/`
 - **Acceptance**
