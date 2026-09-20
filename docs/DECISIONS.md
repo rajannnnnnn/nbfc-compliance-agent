@@ -1267,3 +1267,44 @@ accuracy gap. Ground truth stays `ambiguous`, matching the system's own document
 independently outside the harness (`retrieve_candidates()` called standalone with the exact
 case parameters), not inferred from the diff alone. `reports/eval_verdict_latest.json` holds
 the full per-case results (gitignored per CLAUDE.md §6, not committed).
+
+---
+
+## ADR-048 — Real fix for the corpus's dead vector search: `clause.embedding` was never insertable
+
+**Context.** ADR-047 found that `retrieve_candidates()` returns zero vector candidates for
+every field, in every case, because `clause.embedding` was `NULL` for all 56 clauses in the
+corpus. Turning on `CC_EMBEDDING_API_KEY` and re-running `make ingest` to fix that (with
+explicit user authorization) hit a second, previously-latent bug: the ingest INSERT bound the
+plain Python `list[float]` returned by `embed_texts()` straight to `:embedding` in a raw
+`text()` SQL statement. asyncpg has no bind adapter for a bare list against pgvector's
+`vector` column type and rejects it outright:
+`invalid input for query argument $25: [...] (expected str, got list)`.
+
+This had never fired before today because `settings.embedding_api_key` has always been unset
+in dev (`app/corpus/service.py` only calls `embed_texts()` when it's set, per M1-T06's
+graceful-degradation design) — the insert's embedding branch is old code that had simply
+never executed end to end until this session's live run.
+
+**Fix.** pgvector's Python client type (`pgvector.Vector`) knows how to render a vector as its
+own text literal (`Vector(v).to_text()` -> `"[0.1,0.2,...]"`); the SQL now `CAST`s that literal
+to `vector` explicitly (`CAST(:embedding AS vector)`), and the Python side passes the text
+form instead of the raw list, `None` for an unembedded corpus passing through unchanged. This
+is the same pattern SQLAlchemy's own `Vector` column type (already used correctly in
+`app/db/models.py` via the ORM's ordinary type-coercion path) would produce automatically —
+the bug was specific to this one raw-SQL insert bypassing that machinery, not a gap in
+pgvector support generally.
+
+**Live re-ingest.** Ran `make ingest` live (explicit authorization) with the fix in place:
+56/56 clauses in the new active snapshot now carry a real, non-null embedding, confirmed
+directly (`SELECT count(*) FROM clause WHERE embedding IS NULL` over the active snapshot
+= 0). Re-ran `make eval suite=verdict` after: [pending — see follow-up entry once the
+suite finishes].
+
+**Verification (no live call for the regression test).**
+`tests/integration/corpus/test_ingest_stores_real_vector_embeddings_when_api_key_set`
+monkeypatches `embed_texts` to a stub returning fixed-dimension fake vectors and asserts every
+clause in the resulting snapshot has a non-null `embedding` — this exercises exactly the
+insert/CAST path that broke, with zero API cost, so the bug cannot silently regress. Full
+regression (236 unit + 11 corpus integration tests) and `make lint` (ruff, black, mypy
+strict) pass.

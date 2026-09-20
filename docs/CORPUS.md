@@ -1,6 +1,6 @@
 # Corpus Ingest Report
 
-Snapshot: `01a0ba97-a9ca-722b-9e27-5eda7149776e`
+Snapshot: `01a0c002-facf-74b7-b9ef-7c79fe736def`
 Parser: `continuous_para/1.0+annex_table/1.0`
 
 ## DL2025 — Reserve Bank of India (Digital Lending) Directions, 2025 [PLACEHOLDER]

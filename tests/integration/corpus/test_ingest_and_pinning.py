@@ -4,6 +4,7 @@ M1-T08 (snapshot), M1-T09 (verify), M1-T12 (pinning)."""
 import pytest
 from sqlalchemy import text as sqltext
 
+import app.corpus.service as corpus_service
 from app.config import get_settings
 from app.corpus.pinning import PinningMismatchError, load_and_validate
 from app.corpus.service import ingest
@@ -129,6 +130,38 @@ async def test_pinning_mismatch_names_every_missing_path(tmp_path):
     assert "DL2025/p999" in msg
     assert "DL2025/p998" in msg
     assert "RBC2025/pDOESNOTEXIST" in msg
+
+
+async def test_ingest_stores_real_vector_embeddings_when_api_key_set(monkeypatch):
+    """Regression for a real bug found live (docs/DECISIONS.md ADR-048): the raw INSERT bound
+    a bare Python list to pgvector's `vector` column, which asyncpg rejects outright
+    ("expected str, got list"). No live embedding call here — `embed_texts` is stubbed so
+    this exercises only the insert/CAST path, not the API."""
+
+    async def _fake_embed_texts(texts, *, client, settings):
+        return [[0.1] * settings.embedding_dimension for _ in texts]
+
+    monkeypatch.setattr(corpus_service, "embed_texts", _fake_embed_texts)
+
+    settings = get_settings().model_copy(update={"embedding_api_key": "test-key-not-real"})
+    await ingest(settings=settings, activate=True)
+
+    sm = get_sessionmaker(settings)
+    async with sm() as session:
+        rows = await session.execute(
+            sqltext(
+                "SELECT count(*) FROM clause "
+                "WHERE snapshot_id = (SELECT id FROM corpus_snapshot WHERE is_active = true) "
+                "AND embedding IS NOT NULL"
+            )
+        )
+        total = await session.execute(
+            sqltext(
+                "SELECT count(*) FROM clause "
+                "WHERE snapshot_id = (SELECT id FROM corpus_snapshot WHERE is_active = true)"
+            )
+        )
+        assert rows.scalar_one() == total.scalar_one() > 0
 
 
 async def test_no_decimal_clause_paths_anywhere(tmp_path):

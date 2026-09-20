@@ -29,14 +29,15 @@ def test_case_trigger_field_falls_through_every_consuming_rule(case):
         "check_key (expected 'F:<field_key>') -- this suite only holds genuine fallthrough "
         "cases, not rule-decided ones."
     )
-    assert trigger_field in case.expected.facts, (
-        f"{case.case_ref}: trigger field {trigger_field!r} must be the one fact provided"
-    )
+    assert (
+        trigger_field in case.expected.facts
+    ), f"{case.case_ref}: trigger field {trigger_field!r} must be the one fact provided"
 
     facts = FactIndex(
         facts={
-            key: FactRecord(field_key=key, value_type="enum", value_normalized={"v": value},
-                             is_absent=False)
+            key: FactRecord(
+                field_key=key, value_type="enum", value_normalized={"v": value}, is_absent=False
+            )
             for key, value in case.expected.facts.items()
         }
     )

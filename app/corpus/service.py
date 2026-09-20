@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
+from pgvector import Vector
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid6 import uuid7
@@ -304,14 +305,17 @@ async def ingest(
                          :chapter_title, :section_letter, :section_title, :para_number, :para_sort,
                          :level2_label, :level3_label, :heading, :text, :text_with_stem, :token_count,
                          :chunk_kind, :chunk_strategy, :chunk_index, :effective_from, :effective_to,
-                         :citable, :borrower_classes, :embedding)
+                         :citable, :borrower_classes, CAST(:embedding AS vector))
                     """),
                 {
                     **meta,
                     "sid": str(snapshot_id),
                     "instrument_id": str(meta["instrument_id"]),
                     "id": str(meta["id"]),
-                    "embedding": vec,
+                    # asyncpg has no bind adapter for a bare Python list -> pgvector's `vector`
+                    # type; it needs the type's own text representation ("[0.1,0.2,...]"),
+                    # which the SQL then CASTs. NULL survives the round trip unchanged.
+                    "embedding": Vector(vec).to_text() if vec is not None else None,
                 },
             )
 
