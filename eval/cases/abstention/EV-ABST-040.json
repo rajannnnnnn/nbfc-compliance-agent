@@ -1,0 +1,27 @@
+{
+  "case_ref": "EV-ABST-040",
+  "suite": "abstention",
+  "stage": "verdict",
+  "doc_type": "sanction_letter",
+  "input_ref": null,
+  "event_date": "2026-05-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "processing_fee": "250000"
+    },
+    "check_key": "F:processing_fee",
+    "verdict": "no_clause_found",
+    "decisive_citations": [],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Same unconsumed field as EV-ABST-009 but sourced from sanction_letter rather than kfs (a doc_type processing_fee is also declared against) and a different fee amount \u2014 still no rule or clause governs it."
+}

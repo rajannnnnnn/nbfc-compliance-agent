@@ -934,12 +934,14 @@ is `docs/CORPUS.md`, not working code.
 ### M6-T05 — eval harness + `numeric_rules`, `temporal`, `abstention` suites — **shipped, partial**
 - **Status** done for the harness itself and 3 of 7 LLD §17.3 suites; `verdict`,
   `adversarial`, `conflicts`, `end_to_end`, `extraction_core` still open — see ADR-034
-  (`docs/DECISIONS.md`) for the honest-scope-reduction rationale. `abstention` is now at the
-  LLD's ≥40 minimum's near-ceiling for this build: 37 cases (up from 2), one per field in
-  `app/schema/fields.yaml` that no registered rule consumes — checked directly against
-  `app.rules.registry.all_rules()`, not assumed — each a real abstention scenario since no
-  rule can fire and no ingested clause governs the field directly. `numeric_rules` (31) and
-  `temporal` (12) remain short of their 60/30 minimums (see M5-T06).
+  (`docs/DECISIONS.md`) for the honest-scope-reduction rationale. `abstention` now **meets**
+  the LLD's ≥40 minimum — the first suite in this build to reach its literal target: 40 cases
+  (up from 2), 37 covering every field in `app/schema/fields.yaml` that no registered rule
+  consumes (checked directly against `app.rules.registry.all_rules()`, not assumed — each a
+  real abstention scenario since no rule can fire and no ingested clause governs the field
+  directly), plus 3 more varying doc_type/account_profile/value on fields declared against
+  more than one doc_type (genuinely distinct scenarios, not a repeated case).
+  `numeric_rules` (31) and `temporal` (12) remain short of their 60/30 minimums (see M5-T06).
 - **Depends on** M6-T04
 - **Files** `eval/loader.py`, `eval/metrics.py`, `eval/runner.py`, `eval/harness.py`,
   `eval/cases/{numeric_rules,temporal,abstention}/*.json`,

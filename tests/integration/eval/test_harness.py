@@ -101,10 +101,13 @@ async def test_numeric_rules_suite_boundaries_are_exact(snapshot_id):
 
 
 async def test_abstention_suite_correctly_abstains(snapshot_id):
-    """37 cases (up from 2): every field in `app/schema/fields.yaml` that no registered rule
-    consumes (checked directly with `app.rules.registry.all_rules()`, not assumed) is a real
-    abstention scenario — no rule can fire for it and no clause in the ingested corpus
-    governs it directly, so the correct verdict is `no_clause_found`."""
+    """40 cases (up from 2) — the LLD §17.3 minimum for this suite, the first one this build
+    reaches. 37 cover every field in `app/schema/fields.yaml` that no registered rule
+    consumes (checked directly with `app.rules.registry.all_rules()`, not assumed), each a
+    real abstention scenario since no rule can fire and no clause in the ingested corpus
+    governs the field directly. 3 more vary doc_type/account_profile/value on fields that
+    are declared against more than one doc_type, still genuinely distinct scenarios rather
+    than a repeated case."""
     settings = get_settings()
     sm = get_sessionmaker(settings)
     registry = FieldRegistry("app/schema/fields.yaml")
@@ -120,7 +123,7 @@ async def test_abstention_suite_correctly_abstains(snapshot_id):
             client=client,
         )
 
-    assert report["case_count"] == 37
+    assert report["case_count"] == 40
     assert report["metrics"]["abstention_correctness"] == 1.0
     assert report["metrics"]["hallucinated_citation_rate"] == 0.0
 
@@ -190,7 +193,7 @@ async def test_run_persists_eval_run_and_eval_result_rows(snapshot_id):
         ).first()
         assert run_row is not None
         assert run_row.suite == "abstention"
-        assert run_row.case_count == 37
+        assert run_row.case_count == 40
         stored_metrics = (
             json.loads(run_row.metrics) if isinstance(run_row.metrics, str) else run_row.metrics
         )
@@ -202,7 +205,7 @@ async def test_run_persists_eval_run_and_eval_result_rows(snapshot_id):
                 {"id": report["eval_run_id"]},
             )
         ).scalar_one()
-        assert result_count == 37
+        assert result_count == 40
 
 
 async def test_run_writes_a_report_file(snapshot_id, tmp_path, monkeypatch):
