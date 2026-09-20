@@ -217,7 +217,17 @@ class LLMClient:
             _record_metrics(record)
             llm_breaker_state.labels(provider=provider).set(1 if breaker.is_open else 0)
             raise TransientLLMError(str(exc)) from exc
-        except litellm.APIError as exc:  # type: ignore[attr-defined]
+        except (
+            litellm.APIError,  # type: ignore[attr-defined]
+            litellm.BadRequestError,  # type: ignore[attr-defined]
+        ) as exc:
+            # `litellm.BadRequestError` (a 400 — e.g. a schema the provider's structured-
+            # output mode rejects outright, ADR-041) does not subclass `litellm.APIError` in
+            # this litellm version — live-discovered when it propagated as a raw, unwrapped
+            # litellm exception instead of PermanentLLMError, silently escaping every caller
+            # that only catches this module's own error taxonomy (eval/harness.py's per-case
+            # catch included). Caught explicitly alongside APIError so no permanent-error
+            # class from the provider can leak past this module's boundary.
             record = CallRecord(
                 provider=provider,
                 model=model,
@@ -346,6 +356,9 @@ class LLMClient:
             litellm.APIConnectionError,  # type: ignore[attr-defined]
         ) as exc:
             raise TransientLLMError(str(exc)) from exc
-        except litellm.APIError as exc:  # type: ignore[attr-defined]
+        except (
+            litellm.APIError,  # type: ignore[attr-defined]
+            litellm.BadRequestError,  # type: ignore[attr-defined]
+        ) as exc:
             raise PermanentLLMError(str(exc)) from exc
         return [item["embedding"] for item in resp.data]

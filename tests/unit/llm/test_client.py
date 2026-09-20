@@ -81,6 +81,27 @@ async def test_no_retry_on_permanent_error():
     assert client.call_log[-1].outcome == "permanent_error"
 
 
+async def test_bad_request_error_is_wrapped_as_permanent():
+    """ADR-041: `litellm.BadRequestError` (e.g. a 400 from a provider rejecting a structured-
+    output schema outright) does not subclass `litellm.APIError` in this litellm version —
+    live-discovered when it propagated unwrapped past every caller that only catches this
+    module's own error taxonomy. Must be wrapped into PermanentLLMError like any other
+    permanent provider failure."""
+    client = LLMClient(_settings())
+    assert not issubclass(litellm.BadRequestError, litellm.APIError)
+    with (
+        patch(
+            "litellm.acompletion",
+            new=AsyncMock(
+                side_effect=litellm.BadRequestError("schema too complex", "gpt-4o", "openai")
+            ),
+        ),
+        pytest.raises(PermanentLLMError),
+    ):
+        await client.complete(model="openai/gpt-4o", messages=[], stage="extract")
+    assert client.call_log[-1].outcome == "permanent_error"
+
+
 async def test_breaker_opens_and_blocks_further_calls():
     client = LLMClient(_settings(llm_breaker_fail_threshold=2))
     with patch("litellm.acompletion", new=AsyncMock(side_effect=litellm.Timeout("t", "m", "p"))):

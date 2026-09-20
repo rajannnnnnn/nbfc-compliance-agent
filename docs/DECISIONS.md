@@ -906,7 +906,22 @@ whatever field-count threshold Gemini's serving stack enforces (empirically stri
 25 and 34 fields for this schema shape) — a genuine design change to `app/extract/extractor.py`,
 not an eval-harness workaround.
 
-**Verification.** `eval/harness.py`'s new per-case catch is exercised by the live
-`extraction_core` run itself (loan_agreement cases fail and are recorded; kfs/sanction_letter/
-call_transcript/closure_statement cases succeed and are scored normally). Full regression
-(304 tests) passes.
+**Follow-up (same ADR): `litellm.BadRequestError` was never wrapped.** The first attempt to
+run the resilient harness against `loan_agreement` still crashed the whole suite — the 400
+propagated as a raw `litellm.exceptions.BadRequestError`, not `PermanentLLMError`, because
+`litellm.BadRequestError` does not subclass `litellm.APIError` in this litellm version
+(confirmed directly: `issubclass(litellm.BadRequestError, litellm.APIError) is False`).
+`LLMClient.complete()`/`embed()`'s exception handling only caught `litellm.APIError` for the
+permanent-error path, so this specific 400 class silently escaped this module's own error
+taxonomy entirely — a real gap independent of the schema-size issue itself, since any caller
+relying on `TransientLLMError`/`PermanentLLMError` (including `eval/harness.py`'s new
+per-case catch) never saw it. Fixed by catching `litellm.BadRequestError` explicitly
+alongside `litellm.APIError` in both methods. New unit test
+`test_bad_request_error_is_wrapped_as_permanent` in `tests/unit/llm/test_client.py` asserts
+the non-subclass relationship directly (so a future litellm upgrade that changes it is
+caught) and that the error still wraps to `PermanentLLMError`.
+
+**Verification.** `eval/harness.py`'s per-case catch, now actually reachable, is exercised by
+the live `extraction_core` run itself (loan_agreement cases fail and are recorded;
+kfs/sanction_letter/call_transcript/closure_statement cases succeed and are scored normally).
+Full regression (305 tests) passes.
