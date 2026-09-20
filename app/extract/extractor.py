@@ -13,8 +13,8 @@ from app.llm.client import LLMClient
 from app.schema.generated import build_model_for_doc_type, build_model_for_field_group
 from app.schema.registry import FieldRegistry, FieldSpec
 
-PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "extract" / "document_facts.v1.md"
-PROMPT_VERSION = "document_facts.v1"
+PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "extract" / "document_facts.v2.md"
+PROMPT_VERSION = "document_facts.v2"
 
 # ADR-041: Gemini's structured-output mode rejected loan_agreement's 34-field schema outright
 # ("too many states for serving") while kfs's 25-field schema, same nested shape, works fine

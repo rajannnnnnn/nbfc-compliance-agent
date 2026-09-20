@@ -1013,3 +1013,34 @@ outlier once the schema-size failure itself is fixed. `extraction_core`'s full-s
 aggregate across all 125 cases (combining these `loan_agreement` numbers with ADR-042's 100)
 is now real for every doc_type with registered fields — no case in the suite produces zero
 data anymore.
+
+## ADR-044 — Extraction prompt v2: boolean fields must return literal `true`/`false`
+
+**Context.** ADR-042's baseline showed several boolean fields scoring badly —
+`recovery_agent_identity_notified_before_contact_flag`, `agent_id_disclosed_flag`, and
+`call_recorded_flag` all at `exact_match=0.32`. Live-verified against
+`eval/fixtures/call_transcript/call_transcript_0001.txt`: the model correctly identified
+each fact but returned `value_raw` as a full descriptive sentence (e.g. `"Agent identified
+themself and the agency before proceeding with the call."`) instead of a boolean token.
+`app/extract/service.py::_typed_value`'s boolean branch is
+`BoolValue(v=value_raw.strip().lower() in ("true", "yes", "1"))` — any other string,
+including a correct descriptive sentence, silently normalises to `False`. Nothing in
+`document_facts.v1.md` told the model that `value_raw` for a boolean field must be a literal
+token rather than the evidencing text (that job already belongs to `quoted_span`).
+
+**Decision.** New prompt version `document_facts.v2.md` (bumping `PROMPT_VERSION` in
+`app/extract/extractor.py` per CLAUDE.md §5 — every prompt change gets a new file and a
+version bump, editing in place is forbidded) adds an explicit rule: for `[boolean]` fields,
+`value_raw` must be exactly `true` or `false`, judged from the document (including correctly
+inverting a negated statement — "no third party was contacted" → `false` for a "was a third
+party contacted" field), with the evidencing sentence going in `quoted_span` instead. Fixing
+this in the prompt, not by loosening `_typed_value`'s boolean parser, keeps the normaliser's
+contract simple and avoids the false-positive risk a "any non-falsy text is truthy" heuristic
+would introduce on a negated sentence.
+
+**Verification.** Live-verified against the same fixture: all six boolean fields
+(`recovery_agent_identity_notified_before_contact_flag`, `agent_id_disclosed_flag`,
+`call_recorded_flag`, `third_party_contacted_flag`, `abusive_language_flag`,
+`threat_made_flag`) now return exactly `"true"` or `"false"`, correctly distinguishing the
+three true facts from the three negated ones in the same document. Full regression
+(308 tests) passes — no test asserted on the v1 prompt file or version string.
