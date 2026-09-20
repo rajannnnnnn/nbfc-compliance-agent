@@ -22,6 +22,9 @@ import random
 from datetime import date, datetime, timedelta
 from datetime import time as dtime
 from pathlib import Path
+from zoneinfo import ZoneInfo
+
+_IST = ZoneInfo("Asia/Kolkata")
 
 SYNTHETIC_BANNER = "*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***"
 
@@ -273,7 +276,7 @@ def _gen_call_transcript(rng: random.Random) -> tuple[str, dict[str, str]]:
         "No abusive language or threats were used during this call.\n"
     )
     facts = {
-        "contact_datetime": datetime.combine(base, dtime(contact_hour, 0)).isoformat(),
+        "contact_datetime": datetime.combine(base, dtime(contact_hour, 0), tzinfo=_IST).isoformat(),
         "contact_channel": "call",
         "agent_name": agent,
         "agency_name": agency,

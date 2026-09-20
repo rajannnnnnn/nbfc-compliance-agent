@@ -1,7 +1,7 @@
 {
   "doc_type": "call_transcript",
   "facts": {
-    "contact_datetime": "2026-08-23T11:00:00",
+    "contact_datetime": "2026-08-23T11:00:00+05:30",
     "contact_channel": "call",
     "agent_name": "Farha Sheikh",
     "agency_name": "Clearline Collections Pvt. Ltd.",
