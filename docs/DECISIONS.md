@@ -352,3 +352,84 @@ never says to add it for the pinned path specifically. The integration test
 (`tests/integration/retrieve/test_service.py`) now asserts both halves of the PRD §11 pair
 and the microfinance borrower-scope case against the real placeholder corpus, which is what
 caught this — a unit test with a hand-built `ClauseCandidateSet` would not have.
+
+---
+
+## ADR-025 — the citation validator checks `is_literal_substring` on every role, not just
+decisive/supporting (SQ-18)
+
+LLD §10.2's own pseudocode `continue`s a `context_only` citation into `kept` the moment its
+path is found in `ctx_ok`, before the `is_literal_substring` check that every other branch
+goes through. But §17.2 defines `hallucinated_citation_rate` over *all persisted citations*,
+context_only included, and CLAUDE.md §2.1 calls a fabricated-citation escape the one
+unrecoverable defect in this system. Implemented literally, the release-blocking metric could
+be non-zero by construction — a model could hallucinate a `context_only` excerpt and have it
+persist to `assessment_citation` untouched, and the guardrail's own eval suite would never
+catch it because nothing ever checked it.
+
+Fixed in `app/verdict/validator.py`: every citation, `context_only` included, is checked
+against `by_path(...).text` with the same whitespace-normalised substring test before being
+kept. A `context_only` citation whose path isn't offered is still rejected as `not_offered`
+(unchanged); one whose excerpt doesn't match now also gets rejected, as
+`excerpt_not_substring`, rather than being silently trusted. Covered by
+`test_context_only_excerpt_is_also_verified_adr025` in
+`tests/unit/verdict/test_validator.py`, which fails against the LLD's literal branch order.
+
+---
+
+## ADR-026 — a shadow rule firing does not count toward "a rule decided this field"
+
+LLD §10.1's own three-line summary is self-contradictory taken literally: "Rules run before
+any model call and a firing rule short-circuits it" reads as unconditional, but §11.2 also
+requires "a shadow rule ... does not suppress the model path for that field." Both cannot
+hold if every non-`NotApplicable` rule outcome counts as "firing" — a shadow rule is exactly
+a rule that fired (returned `violation`/`compliant`/`ambiguous`) but is not citable.
+
+Resolved by making the short-circuit conditional on the outcome being **non-shadow**:
+`app/verdict/assess.py`'s rule loop only sets `any_rule_decided = True` when
+`is_shadow(rule.id, ...)` is `False`. A shadow firing is still evaluated, still persisted
+(`decided_by="shadow"`, `is_shadow=true`), and still contributes its own `AssessmentResult` —
+it just doesn't stop the model from also being asked about the same field. Under the current
+placeholder corpus, where every instrument is `unverified` or `secondary_sourced`, this means
+**every** rule currently runs in shadow and the model is asked about every field regardless of
+which rules fired — which is the conservative, correct behaviour for a system that has not
+yet been given real RBI text (CLAUDE.md §8): nothing is short-circuited on an unverified
+basis. `tests/integration/verdict/test_assess.py` proves both halves: one test against the
+placeholder corpus as ingested (shadow fires, model still runs) and one that flips
+`RBC2025`'s `verification_status` to `rbi_verified` in-test to prove the short-circuit
+mechanism itself works once an instrument earns that status.
+
+---
+
+## ADR-027 — `assess_fact` takes `document_event_date` as an explicit parameter
+
+LLD §10.1's pseudocode signature is `assess_fact(*, fact: ExtractedFactOut, account, ...)`
+with `fact.event_date` used inside — but `ExtractedFactOut` (app/domain/facts.py) carries no
+`event_date` field, and `extracted_fact` (the table it's read from) has none either; only
+`document` does. Inferring it from the fact's own value (when the field happens to be a date)
+would silently produce the wrong `as_of` for the majority of fields, whose value has nothing
+to do with when the conduct occurred. Resolved by requiring the caller — which already holds
+the `DocumentRecord` it read to get this far — to pass `document_event_date` explicitly; `as_of`
+remains a separate, optional override for the what-if re-assessment path (§15.4).
+
+---
+
+## ADR-028 — every persisted citation resolves its `clause_id` from a real query, never a
+generated placeholder
+
+`Citation` (app/domain/verdicts.py) — both the model's own `VerdictDraft.citations` and a
+rule's `RuleOutcome.citations` — carries `clause_path`, not `clause_id`; `assessment_citation.
+clause_id` is a `NOT NULL` FK to `clause.id`. A first draft of `app/verdict/assess.py._persist`
+papered over the type mismatch with `uuid7()` when a citation had no `clause_id` attribute —
+which is always, since the field doesn't exist — meaning every persisted citation would have
+pointed at a clause row that does not exist. This is precisely the class of defect CLAUDE.md
+§2.1 exists to make structurally impossible, and it would have shipped past every test that
+only checks the in-memory `AssessmentResult` rather than the round-tripped database row.
+
+Fixed by threading a `clause_id_by_path: dict[str, UUID]` through to `_persist`, built from
+`_load_clause_refs` (a single `clause_path -> (id, text)` query used for both the rule path's
+`clause_excerpts` and the model path's candidate set) — and `_persist` now raises
+`AssertionError` rather than persisting a citation whose path isn't in that map, since that
+can only mean the validator kept a path it should have rejected. Caught by
+`tests/integration/verdict/test_assess.py`, which joins `assessment_citation` back to `clause`
+by id (not by path) to prove the FK actually resolves to the same row the path names.

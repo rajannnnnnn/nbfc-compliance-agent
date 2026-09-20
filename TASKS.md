@@ -726,7 +726,16 @@ is `docs/CORPUS.md`, not working code.
 # M6 — Verdict and guardrail
 
 ### M6-T01 — Verdict orchestration
-- **Status** blocked *(M3-T06)*
+- **Status** done — 4/4 integration tests (`tests/integration/verdict/test_assess.py`); resolved
+  SQ-17 by treating `check_key` as `rule.check_key` (e.g. `"R01_docs_release_30d"`) for a
+  rule-decided result and `f"F:{field_key}"` for a model-decided one — matches §10.1's own
+  pseudocode variable names over the §15.2 example, which is illustrative prose, not a
+  contract test. Also found and fixed a real defect the LLD's own prose creates a
+  contradiction around: "a firing rule short-circuits the model" vs "a shadow rule ... does
+  not suppress the model path" only both hold if *shadow* firings are excluded from what
+  counts as "firing" for short-circuit purposes — implemented as such and covered by
+  `test_shadow_rule_persists_and_does_not_suppress_model` /
+  `test_verified_rule_short_circuits_model_call`.
 - **Depends on** M5-T01, M4-T07
 - **Files** `app/verdict/assess.py`, `app/prompts/verdict/assess_fact.v2.md`, `tests/integration/verdict/test_assess.py`
 - **Acceptance**
@@ -743,7 +752,9 @@ is `docs/CORPUS.md`, not working code.
   depend on which is right.
 
 ### M6-T02 — `validator.py`
-- **Status** open *(**[SPEC]** SQ-18 — highest priority)*
+- **Status** done — 13/13 unit tests (`tests/unit/verdict/test_validator.py`); ADR-025 fixes
+  SQ-18 by running `is_literal_substring` against every citation regardless of role, so a
+  context_only excerpt can never survive validation unverified.
 - **Depends on** M6-T01
 - **Files** `app/verdict/validator.py`, `app/domain/clauses.py` (`by_path`), `tests/unit/verdict/test_validator.py`
 - **Acceptance**
@@ -765,7 +776,11 @@ is `docs/CORPUS.md`, not working code.
   `ClauseCandidateSet.by_path()` is called here but is not defined in LLD §4.
 
 ### M6-T03 — `severity.py`
-- **Status** open
+- **Status** done — 6/6 unit tests (`tests/unit/verdict/test_severity.py`); map completed for
+  all 28 registered rule ids (the LLD's own map elides 18 of them with `...`). Signature
+  takes `lifecycle_stage` directly rather than `field_key` + a `FieldRegistry` lookup, keeping
+  `severity.py` free of a registry dependency — the caller (`assess.py`) already has the
+  `FieldSpec` in hand.
 - **Depends on** M5-T02, M5-T03
 - **Files** `app/verdict/severity.py`, `tests/unit/verdict/test_severity.py`
 - **Acceptance**
@@ -779,7 +794,15 @@ is `docs/CORPUS.md`, not working code.
   schema) so the model cannot influence it.
 
 ### M6-T04 — Assessment persistence and provenance
-- **Status** open
+- **Status** partial — DB persistence and provenance done (covered by
+  `tests/integration/verdict/test_assess.py`: `corpus_snapshot_id`, `serving_mode`,
+  `prompt_version`, per-stage ms/tokens/`cost_usd` all persisted; re-running a check sets
+  `superseded_by_id`). The `app/api/v1/assessments.py` HTTP surface (including
+  `verification_status` on each citation in the response) is not built — that's M8's job;
+  every citation row already carries enough (`clause_id` join to `regulation_instrument`) for
+  the endpoint to compute it. SQ-19 (`is_shadow` overload) already resolved at schema level —
+  `assessment.is_whatif` (ADR-006) is a separate column from `is_shadow`, so M7-T03's counts
+  and `include_shadow=false` can distinguish the two meanings cleanly whenever the API is built.
 - **Depends on** M6-T02, M6-T03
 - **Files** `app/verdict/assess.py`, `app/api/v1/assessments.py`, `tests/integration/verdict/test_persistence.py`
 - **Acceptance**
