@@ -1,0 +1,28 @@
+{
+  "case_ref": "EV-NUM-007",
+  "suite": "numeric_rules",
+  "stage": "verdict",
+  "doc_type": "loan_agreement",
+  "input_ref": null,
+  "event_date": "2026-05-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": true,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "data_stored_offshore_flag": "true",
+      "offshore_deletion_within_hours": "24"
+    },
+    "check_key": "R13_offshore_deletion",
+    "verdict": "compliant",
+    "decisive_citations": ["DL2025/p13"],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Boundary: deletion within exactly 24 hours meets the maximum — compliant."
+}

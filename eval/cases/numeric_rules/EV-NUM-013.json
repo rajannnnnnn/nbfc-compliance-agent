@@ -1,0 +1,27 @@
+{
+  "case_ref": "EV-NUM-013",
+  "suite": "numeric_rules",
+  "stage": "verdict",
+  "doc_type": "field_visit_report",
+  "input_ref": null,
+  "event_date": "2027-03-15",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": true
+  },
+  "expected": {
+    "facts": {
+      "device_restoration_delay_hours": "0"
+    },
+    "check_key": "R24_restoration_compensation",
+    "verdict": "compliant",
+    "decisive_citations": ["RBC-AMD2026/p100S"],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Boundary: zero hours of wrongful restoration delay — compliant, no compensation owed."
+}

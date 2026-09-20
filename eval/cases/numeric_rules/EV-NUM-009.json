@@ -1,0 +1,28 @@
+{
+  "case_ref": "EV-NUM-009",
+  "suite": "numeric_rules",
+  "stage": "verdict",
+  "doc_type": "call_transcript",
+  "input_ref": null,
+  "event_date": "2027-03-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "call_recorded_flag": "true",
+      "recording_retention_days": "180"
+    },
+    "check_key": "R18_recording_retention",
+    "verdict": "compliant",
+    "decisive_citations": ["RBC-AMD2026/p100N"],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Boundary: exactly 180 days (six months) meets the minimum retention — compliant. Event date is after the 2027-01-01 amendment commencement so R18 is in force."
+}

@@ -583,7 +583,8 @@ trusting the code under test), `eval/metrics.py` (the exact §17.2 verdict-stage
 `eval/harness.py` (`run_suite`, persisting `eval_run`/`eval_result` rows and writing
 `reports/eval_<suite>_<ts>.json`, plus a `make eval suite=...`/`make eval-report` CLI) — and
 ship 3 suites (`numeric_rules`, `temporal`, `abstention`) with a small number of real cases
-each (3, 2, 2) rather than zero suites with the full minimums. `extraction_core`,
+each (3, 2, 2 at the time of this ADR; expanded to 15/8/2 in a later pass — M5-T06) rather
+than zero suites with the full minimums. `extraction_core`,
 `conflicts`, `adversarial` and `end_to_end` ship with no cases yet; `retrieval`-stage
 metrics (`recall@k`, `MRR`, `pinning_hit_rate`, etc.) are not implemented in `eval/metrics.py`
 for the same reason — no retrieval-stage suite exists to need them yet.

@@ -1,0 +1,27 @@
+{
+  "case_ref": "EV-NUM-015",
+  "suite": "numeric_rules",
+  "stage": "verdict",
+  "doc_type": "kfs",
+  "input_ref": null,
+  "event_date": "2026-04-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": true,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "grievance_mechanism_clause_ref": "Clause 9.2 of the Key Facts Statement"
+    },
+    "check_key": "R12_grievance_escalation_disclosed",
+    "verdict": "compliant",
+    "decisive_citations": ["DL2025/p11"],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "A grievance escalation mechanism is disclosed — compliant. (R12's violation side needs a fact recorded as explicitly absent, which the eval case format does not yet express — see eval/loader.py's own scope note.)"
+}

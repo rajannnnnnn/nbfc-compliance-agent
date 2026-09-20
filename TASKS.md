@@ -743,13 +743,32 @@ is `docs/CORPUS.md`, not working code.
   (PRD §14 Q3). Delta stated in the task summary.
 
 ### M5-T06 — `numeric_rules` and `temporal` suites
-- **Status** open
+- **Status** partial — 15 numeric cases (up from 3), covering boundary conditions for 7 of
+  the LLD §11's nine "pure date or money arithmetic" rules: R01 (30-day release window,
+  pre-existing), R02 (₹5,000/day compensation — violation/exact-payment/underpaid
+  boundaries), R12 (grievance mechanism disclosed — compliant side only; a violation case
+  needs a fact recorded as explicitly *absent*, which `eval/loader.py`'s case format does
+  not yet express), R13 (24-hour offshore deletion boundary), R18 (180-day recording
+  retention boundary), R22 (one-day prior-intimation boundary), R24 (restoration
+  compensation, any delay above zero hours). R03 and R16 are not yet covered by a dedicated
+  numeric case (R16 already has full coverage in the `temporal` suite below). All 15 verified
+  at `verdict_accuracy == 1.0` against the real corpus (`tests/integration/eval/
+  test_harness.py::test_numeric_rules_suite_boundaries_are_exact`). Still short of the LLD's
+  ≥60 minimum — same honest-scope-reduction pattern as ADR-034/ADR-035, not a fabricated
+  count.
+  8 temporal cases (4 pairs, up from 1 pair/2 cases): the PRD §11 pair (`EV-TEMPORAL-001`/
+  `-002`, R16 contact window) plus 3 new pairs across the same 2027-01-01 commencement date
+  for R18 (recording retention), R22 (prior-visit intimation), R24 (restoration
+  compensation) — each pair holds the underlying fact constant and varies only the event
+  date, so the verdict flip (`no_clause_found` → the rule's verdict) is attributable to
+  clause commencement alone, not a confound. Still short of the LLD's ≥30 minimum, and none
+  of the 2025 phased-date provisions (DL2025 8 May/1 Nov/15 Jun) are covered yet.
 - **Depends on** M5-T02, M5-T03
 - **Files** `eval/cases/numeric_rules/*.json`, `eval/cases/temporal/*.json`, `reports/`
 - **Acceptance**
   ```bash
-  make eval suite=numeric_rules && jq -e '.metrics.verdict_accuracy >= 0.99' reports/eval_latest.json
-  make eval suite=temporal     && jq -e '.metrics.verdict_accuracy >= 0.99' reports/eval_latest.json
+  make eval suite=numeric_rules && jq -e '.metrics.verdict_accuracy >= 0.99' reports/eval_numeric_rules_latest.json
+  make eval suite=temporal     && jq -e '.metrics.verdict_accuracy >= 0.99' reports/eval_temporal_latest.json
   ```
   ≥60 numeric cases at the boundaries named in LLD §17.3; ≥30 temporal cases as **pairs**
   across 2027-01-01 and the phased 2025 dates. `EV-TEMPORAL-001`/`-002` (the PRD §11 pair) are

@@ -1,0 +1,29 @@
+{
+  "case_ref": "EV-NUM-005",
+  "suite": "numeric_rules",
+  "stage": "verdict",
+  "doc_type": "docs_release_ack",
+  "input_ref": null,
+  "event_date": "2026-02-15",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "full_repayment_date": "2026-01-01",
+      "original_docs_released_date": "2026-02-15",
+      "release_delay_compensation_paid": "7500000"
+    },
+    "check_key": "R02_docs_release_compensation",
+    "verdict": "compliant",
+    "decisive_citations": ["RBC2025/p39"],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "45-day delay owes 15 days beyond the window at Rs 5,000/day = Rs 75,000 (7,500,000 paise); compensation paid exactly matches — compliant boundary."
+}

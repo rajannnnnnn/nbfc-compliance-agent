@@ -1,0 +1,28 @@
+{
+  "case_ref": "EV-NUM-004",
+  "suite": "numeric_rules",
+  "stage": "verdict",
+  "doc_type": "docs_release_ack",
+  "input_ref": null,
+  "event_date": "2026-02-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "full_repayment_date": "2026-01-01",
+      "original_docs_released_date": "2026-02-01"
+    },
+    "check_key": "R02_docs_release_compensation",
+    "verdict": "violation",
+    "decisive_citations": ["RBC2025/p39"],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Boundary: 31-day release delay (one day beyond R01's 30-day window) with no compensation on record — Rs 5,000 owed, violation."
+}

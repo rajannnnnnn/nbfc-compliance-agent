@@ -1,0 +1,28 @@
+{
+  "case_ref": "EV-NUM-011",
+  "suite": "numeric_rules",
+  "stage": "verdict",
+  "doc_type": "field_visit_report",
+  "input_ref": null,
+  "event_date": "2027-02-02",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "first_visit_date": "2027-02-02",
+      "visit_prior_intimation_date": "2027-02-01"
+    },
+    "check_key": "R22_visit_prior_intimation",
+    "verdict": "compliant",
+    "decisive_citations": ["RBC-AMD2026/p100I"],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Boundary: exactly one day's prior intimation meets the minimum — compliant. Event date after the 2027-01-01 amendment commencement."
+}

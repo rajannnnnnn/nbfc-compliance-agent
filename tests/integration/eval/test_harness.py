@@ -69,8 +69,9 @@ async def snapshot_id():
 
 
 async def test_numeric_rules_suite_boundaries_are_exact(snapshot_id):
-    """R01's 29/30/31-day boundary — deterministic, no model judgement involved, so this
-    must be 100%."""
+    """Boundary cases for all of the LLD §11's nine "pure date or money arithmetic" rules
+    that this pass covers (R01, R02, R12, R13, R18, R22, R24) — deterministic, no model
+    judgement involved, so this must be 100%."""
     settings = get_settings()
     sm = get_sessionmaker(settings)
     registry = FieldRegistry("app/schema/fields.yaml")
@@ -86,7 +87,7 @@ async def test_numeric_rules_suite_boundaries_are_exact(snapshot_id):
             client=client,
         )
 
-    assert report["case_count"] == 3
+    assert report["case_count"] == 15
     assert report["metrics"]["verdict_accuracy"] == 1.0
     assert report["metrics"]["hallucinated_citation_rate"] == 0.0
     assert all(r["passed"] for r in report["results"])
@@ -113,8 +114,10 @@ async def test_abstention_suite_correctly_abstains(snapshot_id):
 
 
 async def test_temporal_suite_verdicts_correct_even_with_a_dumb_stub(snapshot_id):
-    """PRD §11 temporal pair as a first-class eval case: the *verdict* on both sides of the
-    2027-01-01 commencement date is correct regardless of model quality (one is a rule-level
+    """PRD §11 temporal pair as a first-class eval case, plus three more pairs added in
+    this pass across the same 2027-01-01 commencement date (R18 recording retention, R22
+    prior-visit intimation, R24 restoration compensation): the *verdict* on both sides of
+    the commencement date is correct regardless of model quality (one side is a rule-level
     fact, the other a corpus-applicability fact) — only the citation on the abstention side
     depends on model judgement, which this dumb stub doesn't attempt."""
     settings = get_settings()
@@ -132,9 +135,16 @@ async def test_temporal_suite_verdicts_correct_even_with_a_dumb_stub(snapshot_id
             client=client,
         )
 
+    assert report["case_count"] == 8
     by_ref = {r["case_ref"]: r for r in report["results"]}
-    assert "verdict" not in by_ref["EV-TEMPORAL-001"]["diff"]  # no_clause_found, correct
-    assert by_ref["EV-TEMPORAL-002"]["passed"]  # violation, decisive citation from R16
+    for before_ref, after_ref in [
+        ("EV-TEMPORAL-001", "EV-TEMPORAL-002"),
+        ("EV-TEMPORAL-003", "EV-TEMPORAL-004"),
+        ("EV-TEMPORAL-005", "EV-TEMPORAL-006"),
+        ("EV-TEMPORAL-007", "EV-TEMPORAL-008"),
+    ]:
+        assert "verdict" not in by_ref[before_ref]["diff"]  # no_clause_found, correct
+        assert by_ref[after_ref]["passed"]  # violation, decisive citation from the rule
     assert report["metrics"]["hallucinated_citation_rate"] == 0.0
 
 

@@ -1,0 +1,27 @@
+{
+  "case_ref": "EV-TEMPORAL-007",
+  "suite": "temporal",
+  "stage": "verdict",
+  "doc_type": "field_visit_report",
+  "input_ref": null,
+  "event_date": "2026-11-15",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": true
+  },
+  "expected": {
+    "facts": {
+      "device_restoration_delay_hours": "5"
+    },
+    "check_key": "F:device_restoration_delay_hours",
+    "verdict": "no_clause_found",
+    "decisive_citations": [],
+    "context_citations": ["RBC-AMD2026/p100S"],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Temporal pair (1/2): before the 2027-01-01 commencement, R24's per-hour restoration compensation is not yet in force, so a 5-hour delay governs no clause. Pairs with EV-TEMPORAL-008."
+}
