@@ -1,0 +1,217 @@
+"""M6-T05/M7-T05 (eval harness): run_suite against the real stack for the three suites that
+ship with real cases in this pass — numeric_rules, temporal, abstention. See
+eval/loader.py's own docstring: the LLD §17.3 minimum suite sizes are not met here; this
+proves the harness itself (loader, runner, metrics, persistence, report writing) is correct
+against however many cases exist.
+"""
+
+import json
+
+import pytest
+from sqlalchemy import text as sqltext
+
+from app.config import get_settings
+from app.corpus.service import ingest
+from app.db.engine import get_sessionmaker
+from app.domain.verdicts import VerdictDraft
+from app.llm.client import CallRecord, LLMClient
+from app.schema.registry import FieldRegistry
+from eval.harness import run_suite
+
+pytestmark = pytest.mark.integration
+
+
+def _stub_client(settings) -> LLMClient:
+    """A deliberately dumb stub: always abstains with no citations. Good enough to prove the
+    harness mechanics (persistence, metrics, report writing) work end to end; not meant to
+    pass every case's exact citation expectations (e.g. EV-TEMPORAL-001's context citation),
+    which requires real model judgement — that's the suite's actual job when pointed at a
+    real model, not this test's."""
+    client = LLMClient(settings)
+
+    async def _structured(*, model_cls, model, messages, stage, adapter_id=None):
+        draft = VerdictDraft(
+            verdict="no_clause_found",
+            citations=[],
+            rationale="No candidate clause governs this fact.",
+            confidence_band="medium",
+        )
+        record = CallRecord(
+            provider="openai",
+            model=model,
+            adapter_id=adapter_id,
+            stage=stage,
+            tokens_in=5,
+            tokens_out=5,
+            wall_clock_ms=1,
+            cost_usd=0.0,
+            outcome="success",
+        )
+        return draft, record
+
+    async def _embed(texts, *, model, dimensions):
+        return [[0.001] * dimensions for _ in texts]
+
+    client.structured = _structured  # type: ignore[method-assign]
+    client.embed = _embed  # type: ignore[method-assign]
+    return client
+
+
+@pytest.fixture
+async def snapshot_id():
+    settings = get_settings()
+    sm = get_sessionmaker(settings)
+    async with sm() as session:
+        await session.execute(sqltext("TRUNCATE corpus_snapshot CASCADE"))
+        await session.commit()
+    report = await ingest(settings=settings, activate=True)
+    return report.snapshot_id
+
+
+async def test_numeric_rules_suite_boundaries_are_exact(snapshot_id):
+    """R01's 29/30/31-day boundary — deterministic, no model judgement involved, so this
+    must be 100%."""
+    settings = get_settings()
+    sm = get_sessionmaker(settings)
+    registry = FieldRegistry("app/schema/fields.yaml")
+    client = _stub_client(settings)
+
+    async with sm() as session:
+        report = await run_suite(
+            "numeric_rules",
+            session=session,
+            snapshot_id=snapshot_id,
+            settings=settings,
+            registry=registry,
+            client=client,
+        )
+
+    assert report["case_count"] == 3
+    assert report["metrics"]["verdict_accuracy"] == 1.0
+    assert report["metrics"]["hallucinated_citation_rate"] == 0.0
+    assert all(r["passed"] for r in report["results"])
+
+
+async def test_abstention_suite_correctly_abstains(snapshot_id):
+    settings = get_settings()
+    sm = get_sessionmaker(settings)
+    registry = FieldRegistry("app/schema/fields.yaml")
+    client = _stub_client(settings)
+
+    async with sm() as session:
+        report = await run_suite(
+            "abstention",
+            session=session,
+            snapshot_id=snapshot_id,
+            settings=settings,
+            registry=registry,
+            client=client,
+        )
+
+    assert report["metrics"]["abstention_correctness"] == 1.0
+    assert report["metrics"]["hallucinated_citation_rate"] == 0.0
+
+
+async def test_temporal_suite_verdicts_correct_even_with_a_dumb_stub(snapshot_id):
+    """PRD §11 temporal pair as a first-class eval case: the *verdict* on both sides of the
+    2027-01-01 commencement date is correct regardless of model quality (one is a rule-level
+    fact, the other a corpus-applicability fact) — only the citation on the abstention side
+    depends on model judgement, which this dumb stub doesn't attempt."""
+    settings = get_settings()
+    sm = get_sessionmaker(settings)
+    registry = FieldRegistry("app/schema/fields.yaml")
+    client = _stub_client(settings)
+
+    async with sm() as session:
+        report = await run_suite(
+            "temporal",
+            session=session,
+            snapshot_id=snapshot_id,
+            settings=settings,
+            registry=registry,
+            client=client,
+        )
+
+    by_ref = {r["case_ref"]: r for r in report["results"]}
+    assert "verdict" not in by_ref["EV-TEMPORAL-001"]["diff"]  # no_clause_found, correct
+    assert by_ref["EV-TEMPORAL-002"]["passed"]  # violation, decisive citation from R16
+    assert report["metrics"]["hallucinated_citation_rate"] == 0.0
+
+
+async def test_run_persists_eval_run_and_eval_result_rows(snapshot_id):
+    settings = get_settings()
+    sm = get_sessionmaker(settings)
+    registry = FieldRegistry("app/schema/fields.yaml")
+    client = _stub_client(settings)
+
+    async with sm() as session:
+        report = await run_suite(
+            "abstention",
+            session=session,
+            snapshot_id=snapshot_id,
+            settings=settings,
+            registry=registry,
+            client=client,
+        )
+
+    async with sm() as session:
+        run_row = (
+            await session.execute(
+                sqltext("SELECT case_count, suite, metrics FROM eval_run WHERE id = :id"),
+                {"id": report["eval_run_id"]},
+            )
+        ).first()
+        assert run_row is not None
+        assert run_row.suite == "abstention"
+        assert run_row.case_count == 2
+        stored_metrics = (
+            json.loads(run_row.metrics) if isinstance(run_row.metrics, str) else run_row.metrics
+        )
+        assert stored_metrics["abstention_correctness"] == 1.0
+
+        result_count = (
+            await session.execute(
+                sqltext("SELECT COUNT(*) FROM eval_result WHERE eval_run_id = :id"),
+                {"id": report["eval_run_id"]},
+            )
+        ).scalar_one()
+        assert result_count == 2
+
+
+async def test_run_writes_a_report_file(snapshot_id, tmp_path, monkeypatch):
+    import eval.harness as harness_module
+
+    monkeypatch.setattr(harness_module, "REPORTS_DIR", tmp_path)
+    settings = get_settings()
+    sm = get_sessionmaker(settings)
+    registry = FieldRegistry("app/schema/fields.yaml")
+    client = _stub_client(settings)
+
+    async with sm() as session:
+        await run_suite(
+            "abstention",
+            session=session,
+            snapshot_id=snapshot_id,
+            settings=settings,
+            registry=registry,
+            client=client,
+        )
+
+    latest = tmp_path / "eval_abstention_latest.json"
+    assert latest.exists()
+    body = json.loads(latest.read_text())
+    assert body["suite"] == "abstention"
+
+
+async def test_unknown_suite_raises():
+    from eval.harness import run_suite as _rs
+
+    with pytest.raises(FileNotFoundError, match="not_a_real_suite"):
+        await _rs(
+            "not_a_real_suite",
+            session=None,  # never reached — load_suite fails first
+            snapshot_id=None,
+            settings=get_settings(),
+            registry=FieldRegistry("app/schema/fields.yaml"),
+            client=None,
+        )

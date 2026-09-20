@@ -1,0 +1,25 @@
+{
+  "case_ref": "EV-ABST-002",
+  "suite": "abstention",
+  "stage": "verdict",
+  "doc_type": "rate_reset_notice",
+  "input_ref": null,
+  "event_date": "2026-06-15",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": { "reset_notice_sent_date": "2026-06-15" },
+    "check_key": "F:reset_notice_sent_date",
+    "verdict": "no_clause_found",
+    "decisive_citations": [],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "No rule consumes reset_notice_sent_date in this build and no ingested clause governs it directly — a correct abstention, not a stretch to an unrelated interest-reset provision."
+}

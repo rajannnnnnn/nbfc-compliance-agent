@@ -1,0 +1,25 @@
+{
+  "case_ref": "EV-TEMPORAL-002",
+  "suite": "temporal",
+  "stage": "verdict",
+  "doc_type": "call_transcript",
+  "input_ref": "eval/fixtures/transcripts/late_evening_call_nonmfi.txt",
+  "event_date": "2027-01-03",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": true,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": { "contact_datetime": "2027-01-03T20:10:00+05:30" },
+    "check_key": "R16_contact_window",
+    "verdict": "violation",
+    "decisive_citations": ["RBC-AMD2026/p100W"],
+    "context_citations": [],
+    "forbidden_citations": ["RBC-AMD2026-DRAFT/p100W"]
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "PRD §11 temporal pair, second half: same transcript, same time of day, but 2027-01-03 is after the 2027-01-01 commencement date, so the contact-hour rule now governs and a 20:10 call violates it. Pairs with EV-TEMPORAL-001."
+}

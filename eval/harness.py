@@ -1,0 +1,223 @@
+"""run_suite(...). LLD §17.4. `python -m eval.harness --suite <name>` is `make eval`'s entry
+point; `--report-latest` is `make eval-report`'s."""
+
+import argparse
+import asyncio
+import json
+import subprocess
+from dataclasses import asdict
+from datetime import UTC, date, datetime
+from pathlib import Path
+from typing import Any
+from uuid import UUID
+
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+from uuid6 import uuid7
+
+from app.config import Settings, get_settings
+from app.corpus.snapshot import get_active_snapshot_id
+from app.db.engine import get_sessionmaker
+from app.llm.client import LLMClient
+from app.schema.registry import FieldRegistry
+from eval.loader import load_suite
+from eval.metrics import compute_verdict_metrics
+from eval.runner import run_case
+
+REPORTS_DIR = Path("reports")
+
+
+def _git_sha() -> str:
+    try:
+        return (
+            subprocess.check_output(["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL)
+            .decode()
+            .strip()
+        )
+    except Exception:
+        return "unknown"
+
+
+async def run_suite(
+    suite: str,
+    *,
+    session: AsyncSession,
+    snapshot_id: UUID,
+    settings: Settings,
+    registry: FieldRegistry,
+    client: LLMClient,
+) -> dict[str, Any]:
+    cases = load_suite(suite)
+    if not cases:
+        raise ValueError(f"suite {suite!r} has zero cases in eval/cases/{suite}/")
+
+    started_at = datetime.now(UTC)
+    outcomes = []
+    for case in cases:
+        outcome = await run_case(
+            session,
+            case,
+            snapshot_id=snapshot_id,
+            settings=settings,
+            registry=registry,
+            client=client,
+        )
+        outcomes.append(outcome)
+
+    metrics = compute_verdict_metrics(cases, outcomes)
+    finished_at = datetime.now(UTC)
+
+    eval_run_id = uuid7()
+    await session.execute(
+        text("""
+            INSERT INTO eval_run
+                (id, started_at, finished_at, git_sha, corpus_snapshot_id, model_config,
+                 serving_mode, suite, case_count, metrics)
+            VALUES
+                (:id, :started, :finished, :sha, :snapshot_id, CAST(:model_config AS jsonb),
+                 :serving_mode, :suite, :case_count, CAST(:metrics AS jsonb))
+            """),
+        {
+            "id": str(eval_run_id),
+            "started": started_at,
+            "finished": finished_at,
+            "sha": _git_sha(),
+            "snapshot_id": str(snapshot_id),
+            "model_config": json.dumps(
+                {"verdict_model": settings.verdict_model, "extract_model": settings.extract_model}
+            ),
+            "serving_mode": settings.serving_mode,
+            "suite": suite,
+            "case_count": len(cases),
+            "metrics": json.dumps(asdict(metrics)),
+        },
+    )
+
+    for case, outcome in zip(cases, outcomes, strict=True):
+        eval_case_row = await session.execute(
+            text("""
+                INSERT INTO eval_case
+                    (id, case_ref, suite, stage, doc_type, input_ref, event_date,
+                     account_profile, expected, tolerance, is_adversarial, notes)
+                VALUES
+                    (:id, :ref, :suite, :stage, :doc_type, :input_ref, :event_date,
+                     CAST(:profile AS jsonb), CAST(:expected AS jsonb), CAST(:tolerance AS jsonb),
+                     :adversarial, :notes)
+                ON CONFLICT (case_ref) DO UPDATE SET
+                    expected = EXCLUDED.expected, tolerance = EXCLUDED.tolerance
+                RETURNING id
+                """),
+            {
+                "id": str(uuid7()),
+                "ref": case.case_ref,
+                "suite": case.suite,
+                "stage": case.stage,
+                "doc_type": case.doc_type,
+                "input_ref": case.input_ref or "",
+                "event_date": date.fromisoformat(case.event_date),
+                "profile": case.account_profile.model_dump_json(),
+                "expected": case.expected.model_dump_json(),
+                "tolerance": json.dumps(case.tolerance),
+                "adversarial": case.is_adversarial,
+                "notes": case.notes,
+            },
+        )
+        eval_case_id = eval_case_row.scalar_one()
+
+        await session.execute(
+            text("""
+                INSERT INTO eval_result (id, eval_run_id, eval_case_id, passed, actual, diff)
+                VALUES (:id, :run_id, :case_id, :passed, CAST(:actual AS jsonb), CAST(:diff AS jsonb))
+                """),
+            {
+                "id": str(uuid7()),
+                "run_id": str(eval_run_id),
+                "case_id": str(eval_case_id),
+                "passed": outcome.passed,
+                "actual": json.dumps(
+                    {
+                        "verdict": outcome.verdict,
+                        "check_key": outcome.check_key,
+                        "decisive_citations": outcome.decisive_citations,
+                        "context_citations": outcome.context_citations,
+                    }
+                ),
+                "diff": json.dumps(outcome.diff),
+            },
+        )
+    await session.commit()
+
+    report = {
+        "eval_run_id": str(eval_run_id),
+        "suite": suite,
+        "started_at": started_at.isoformat(),
+        "finished_at": finished_at.isoformat(),
+        "git_sha": _git_sha(),
+        "case_count": len(cases),
+        "metrics": asdict(metrics),
+        "results": [
+            {"case_ref": c.case_ref, "passed": o.passed, "diff": o.diff}
+            for c, o in zip(cases, outcomes, strict=True)
+        ],
+    }
+    REPORTS_DIR.mkdir(exist_ok=True)
+    ts = started_at.strftime("%Y%m%dT%H%M%SZ")
+    report_path = REPORTS_DIR / f"eval_{suite}_{ts}.json"
+    report_path.write_text(json.dumps(report, indent=2))
+    latest_path = REPORTS_DIR / f"eval_{suite}_latest.json"
+    latest_path.write_text(json.dumps(report, indent=2))
+
+    return report
+
+
+async def _cli_run_suite(suite: str) -> dict[str, Any]:
+    settings = get_settings()
+    sessionmaker = get_sessionmaker(settings)
+    registry = FieldRegistry("app/schema/fields.yaml")
+    client = LLMClient(settings)
+    async with sessionmaker() as session:
+        snapshot_id = await get_active_snapshot_id(session)
+        if snapshot_id is None:
+            raise SystemExit("no active corpus snapshot — run `make ingest` first")
+        return await run_suite(
+            suite,
+            session=session,
+            snapshot_id=snapshot_id,
+            settings=settings,
+            registry=registry,
+            client=client,
+        )
+
+
+def _report_latest() -> None:
+    latest_files = sorted(REPORTS_DIR.glob("eval_*_latest.json"))
+    if not latest_files:
+        print("no eval reports found in reports/")
+        return
+    for path in latest_files:
+        body = json.loads(path.read_text())
+        print(f"## {body['suite']} ({body['case_count']} cases, {body['git_sha'][:8]})")
+        for name, value in body["metrics"].items():
+            if name != "case_count":
+                print(f"- {name}: {value}")
+        print()
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--suite")
+    parser.add_argument("--report-latest", action="store_true")
+    args = parser.parse_args()
+
+    if args.report_latest:
+        _report_latest()
+        return
+    if not args.suite:
+        raise SystemExit("--suite is required unless --report-latest is passed")
+
+    report = asyncio.run(_cli_run_suite(args.suite))
+    print(json.dumps(report["metrics"], indent=2))
+
+
+if __name__ == "__main__":
+    main()

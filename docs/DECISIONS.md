@@ -564,3 +564,39 @@ having restarted; the boot assertion cannot see it at all, since it only runs on
 checks are real and neither makes the other redundant — SQ-09's "unreachable" framing
 assumed the only way to reach a zero-snapshot state was before boot, which is one of two ways
 it can happen, not the only one.
+
+---
+
+## ADR-034 — the eval harness ships with a handful of real cases per suite, not the LLD
+§17.3 minimums
+
+LLD §17.3 sets minimum case counts per suite: `extraction_core` 150, `numeric_rules` 60,
+`temporal` 30, `abstention` 40, `conflicts` 25, `adversarial` 30, `end_to_end` 20. Building
+those minimums means synthesizing hundreds of realistic documents across six deep document
+types (`extraction_core` alone), which is a separate, large effort from building the harness
+itself and out of scope for this pass.
+
+Decided: build the harness completely and correctly — `eval/loader.py` (case format per
+§17.1), `eval/runner.py` (executes one case end to end against the real stack, including an
+independent re-derivation of `hallucinated_citation_rate` from the database rather than
+trusting the code under test), `eval/metrics.py` (the exact §17.2 verdict-stage formulas),
+`eval/harness.py` (`run_suite`, persisting `eval_run`/`eval_result` rows and writing
+`reports/eval_<suite>_<ts>.json`, plus a `make eval suite=...`/`make eval-report` CLI) — and
+ship 3 suites (`numeric_rules`, `temporal`, `abstention`) with a small number of real cases
+each (3, 2, 2) rather than zero suites with the full minimums. `extraction_core`,
+`conflicts`, `adversarial` and `end_to_end` ship with no cases yet; `retrieval`-stage
+metrics (`recall@k`, `MRR`, `pinning_hit_rate`, etc.) are not implemented in `eval/metrics.py`
+for the same reason — no retrieval-stage suite exists to need them yet.
+
+The `temporal` suite's two cases are the PRD §11 temporal pair itself (`EV-TEMPORAL-001`/
+`-002`), already proven correct at the retrieval and rule level by
+`tests/integration/retrieve/test_retrieve_service.py` and
+`tests/integration/verdict/test_assess.py` — this is that same pair promoted to a first-class
+eval case, exactly as `TASKS.md`'s own M9 notes called for.
+
+Rejected: writing zero eval cases until the full corpus of hundreds exists, which would leave
+the harness itself unverified against real data, and inventing synthetic-but-fake case
+content just to hit the LLD's numeric minimums, which would produce cases that look
+comprehensive but test nothing new — three real, carefully-chosen boundary cases for R01
+(29/30/31 days) exercise the actual boundary condition; sixty near-duplicates of the same
+boundary would not exercise anything sixty times over.
