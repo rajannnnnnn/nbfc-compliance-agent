@@ -470,3 +470,51 @@ rules, and track the other nine as a new task, **M7-T01b**, in `TASKS.md` rather
 papering over them. `app/conflicts/loader.py`'s validation (every `field` in `fields.yaml`,
 every `doc_type` in the enum, every `raises_check` a registered rule id) already enforces
 this correctly — it's why the gap was caught at design time rather than at runtime.
+
+---
+
+## ADR-030 — `tenant.api_key_hash` and an `idempotency_key` table, added in migration 0009
+
+LLD §15 states two behaviours with no schema support anywhere in §3's DDL: "Bearer token;
+tenant resolved from the token" (no token/key column exists on `tenant` or anywhere else),
+and "`Idempotency-Key` header honoured on all POSTs, stored for 24 hours against the request
+hash" (no table to store it in). Both are needed before `app/api/` can do anything real —
+this isn't a stylistic gap like the severity map's elided `...`, it's a hole a working API
+cannot function without.
+
+Decided: migration 0009 adds `tenant.api_key_hash CHAR(64) UNIQUE` (SHA-256 of the raw
+token — never the token itself, the same pattern as every other content-hash column in this
+schema: `document.content_sha256`, `regulation_instrument.source_sha256`) and a new
+`idempotency_key` table (`tenant_id, key, route, request_hash, status_code, response_body,
+created_at`, unique on `(tenant_id, key, route)`, RLS enabled with the same `p_tenant` policy
+pattern migration 0008 established). The 24-hour TTL is enforced by the retention sweep
+(`maintenance.retention_sweep`, LLD §14), not a DB-level expiry — Postgres has no native
+row-TTL and a cron sweep is what the LLD already specifies for exactly this kind of cleanup.
+
+Rejected: storing the raw bearer token (defeats the entire point of hashing every other
+credential-adjacent value in this schema) or an in-memory/Redis idempotency cache (loses the
+record across a worker restart, and `Idempotency-Key` is specifically a durability guarantee
+against a client's retried POST, which a restart is one of the most likely reasons for).
+
+---
+
+## ADR-031 — Celery task bodies are thin wrappers around directly-testable async helpers
+
+LLD §14's task signatures (`assess.document`, `assess.check`, `assess.account`) are Celery
+tasks, which normally means testing them requires either a running worker+broker or
+`task_always_eager`, both of which make ordinary unit/integration testing slower and more
+fragile than every other module in this codebase. Every `@app.task` in
+`app/tasks/assess_tasks.py` is a one-line `asyncio.run(_run_...(...))` wrapper; the actual
+logic lives in an `async def _run_...` function that tests call directly, exactly like every
+other async module here (`app/verdict/assess.py`, `app/conflicts/detector.py`). The Celery
+wiring itself (queue routing, `task_acks_late`, beat schedule, task registration) is
+verified separately in `tests/integration/tasks/test_wiring.py` — it needs no broker to
+inspect `app.conf` and `app.tasks`, since those are populated at import time.
+
+Also decided here: `_run_assess_check`'s scoping for a rule-id `check_key` re-assesses only
+the *first* field in that rule's `consumes` list, since `assess_fact` re-evaluates every
+rule registered against whichever field it's given — re-entering through any one of a firing
+rule's consumed fields reaches the same rule. This is simpler than resolving all of a rule's
+consumed fields and re-running each (which would also work, but re-assesses fields a
+conflict didn't actually touch) and keeps `assess.check`'s own point — a *scoped*
+re-assessment — intact.

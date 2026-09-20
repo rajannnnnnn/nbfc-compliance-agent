@@ -353,18 +353,16 @@ is `docs/CORPUS.md`, not working code.
   `/readyz` 503 above unreachable on a fresh database — see SQ-09.
 
 ### M2-T05 — Celery wiring
-- **Status** open
+- **Status** done — 5/5 wiring tests (`tests/integration/tasks/test_wiring.py`) + 9/9 task
+  logic tests (`tests/integration/tasks/test_assess_tasks.py`, against real Postgres, real
+  Redis broker/backend). `app/tasks/celery_app.py` matches LLD §14's routes, reliability
+  settings and beat schedule. `assess.document`, `assess.check` and `assess.account`
+  (`app/tasks/assess_tasks.py`) are one-line `asyncio.run(...)` wrappers around directly
+  testable async helpers (ADR-031) — every session opened inside them sets `app.tenant_id`
+  first, same pattern as `assess.py`. New migration 0009 adds the auth (`tenant.api_key_hash`)
+  and idempotency (`idempotency_key` table) schema this and the coming API layer both need but
+  the LLD's own DDL never defines (ADR-030).
 - **Depends on** M0-T03
-- **Files** `app/tasks/celery_app.py`, `app/tasks/maintenance_tasks.py`, `tests/integration/tasks/test_wiring.py`
-- **Acceptance**
-  ```bash
-  celery -A app.tasks.celery_app inspect active_queues | grep -E 'extract|assess|maintenance'
-  pytest tests/integration/tasks/test_wiring.py -q
-  ```
-  A no-op task round-trips through each of the three queues; routes match LLD §14
-  (`extract.*`, `assess.*`, `maintenance.*`); `task_acks_late`, `task_reject_on_worker_lost`
-  and `worker_prefetch_multiplier=1` are set; both beat entries are registered; a task that
-  opens a session without setting `app.tenant_id` fails.
 
 ### M2-T06 — Structured logging with the content denylist
 - **Status** done — 7/7 unit tests (`tests/unit/obs/test_logging.py`). `drop_denylisted_keys`

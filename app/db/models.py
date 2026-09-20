@@ -53,6 +53,9 @@ class Tenant(Base, TimestampMixin):
     )
     retention_days: Mapped[int] = mapped_column(Integer, nullable=False, server_default="180")
     is_active: Mapped[bool] = mapped_column(nullable=False, server_default=sa_text("true"))
+    # ADR-030: bearer-token auth has no column anywhere in the LLD's own DDL. SHA-256 of the
+    # raw token only — never the token itself, matching every other content-hash column here.
+    api_key_hash: Mapped[str | None] = mapped_column(CHAR(64), unique=True)
 
     __table_args__ = (CheckConstraint("retention_days BETWEEN 30 AND 2555"),)
 
@@ -642,3 +645,28 @@ class AuditEvent(Base):
     )
 
     __table_args__ = (Index("ix_audit_entity", "entity_type", "entity_id", "created_at"),)
+
+
+class IdempotencyKey(Base):
+    """See migration 0009 / ADR-030. `Idempotency-Key` header replay storage, 24h TTL is
+    enforced by a retention sweep (maintenance.retention_sweep, LLD §14), not a DB constraint."""
+
+    __tablename__ = "idempotency_key"
+
+    id: Mapped[object] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=_uuid)
+    tenant_id: Mapped[object] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("tenant.id"), nullable=False
+    )
+    key: Mapped[str] = mapped_column(Text, nullable=False)
+    route: Mapped[str] = mapped_column(Text, nullable=False)
+    request_hash: Mapped[str] = mapped_column(CHAR(64), nullable=False)
+    status_code: Mapped[int | None] = mapped_column(Integer)
+    response_body: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=sa_text("now()")
+    )
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "key", "route"),
+        Index("ix_idempotency_created", "created_at"),
+    )
