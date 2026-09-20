@@ -367,17 +367,14 @@ is `docs/CORPUS.md`, not working code.
   opens a session without setting `app.tenant_id` fails.
 
 ### M2-T06 — Structured logging with the content denylist
-- **Status** open
+- **Status** done — 7/7 unit tests (`tests/unit/obs/test_logging.py`). `drop_denylisted_keys`
+  recurses into nested dicts/lists so a denylisted key buried inside a logged structure (e.g.
+  a list of per-field dicts) is scrubbed too, not just top-level keys. `configure_logging` is
+  idempotent and its `PrintLoggerFactory` resolves `sys.stdout` dynamically rather than
+  capturing it at configure time (found by a test failure: capturing it broke under pytest's
+  `capsys`, which swaps `sys.stdout` out between tests — the same class of bug in production
+  would appear if stdout were ever reopened, e.g. after a log-rotation signal).
 - **Depends on** M0-T02
-- **Files** `app/obs/logging.py`, `tests/unit/obs/test_logging.py`
-- **Acceptance**
-  ```bash
-  pytest tests/unit/obs/test_logging.py -q
-  ```
-  Emitting a log event carrying each denylisted key (`text`, `document_text`, `value_raw`,
-  `quoted_span`, `prompt`, `messages`, `rationale`) produces serialised JSON containing none
-  of those values, including when nested inside a dict or a list; bound context
-  (`request_id`, `tenant_id`, `loan_account_id`, `document_id`, `stage`, `check_key`) survives.
 
 ### M2-T07 — Boot assertions
 - **Status** open
