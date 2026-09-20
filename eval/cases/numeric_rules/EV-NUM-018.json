@@ -1,0 +1,31 @@
+{
+  "case_ref": "EV-NUM-018",
+  "suite": "numeric_rules",
+  "stage": "verdict",
+  "doc_type": "docs_release_ack",
+  "input_ref": null,
+  "event_date": "2026-04-02",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "full_repayment_date": "2026-03-02",
+      "original_docs_released_date": "2026-04-02",
+      "release_delay_compensation_paid": "500000"
+    },
+    "check_key": "R02_docs_release_compensation",
+    "verdict": "compliant",
+    "decisive_citations": [
+      "RBC2025/p39"
+    ],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Tightest compliant boundary: 31-day delay owes exactly one day beyond the window (Rs 5,000); paying exactly that amount is compliant. Pairs with EV-NUM-004, which is the same 31-day delay with no compensation paid at all \u2014 violation."
+}

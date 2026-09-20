@@ -787,26 +787,36 @@ is `docs/CORPUS.md`, not working code.
   (PRD §14 Q3) wherever the corpus actually has one.
 
 ### M5-T06 — `numeric_rules` and `temporal` suites
-- **Status** partial — 15 numeric cases (up from 3), covering boundary conditions for 7 of
-  the LLD §11's nine "pure date or money arithmetic" rules: R01 (30-day release window,
-  pre-existing), R02 (₹5,000/day compensation — violation/exact-payment/underpaid
-  boundaries), R12 (grievance mechanism disclosed — compliant side only; a violation case
-  needs a fact recorded as explicitly *absent*, which `eval/loader.py`'s case format does
-  not yet express), R13 (24-hour offshore deletion boundary), R18 (180-day recording
-  retention boundary), R22 (one-day prior-intimation boundary), R24 (restoration
-  compensation, any delay above zero hours). R03 and R16 are not yet covered by a dedicated
-  numeric case (R16 already has full coverage in the `temporal` suite below). All 15 verified
-  at `verdict_accuracy == 1.0` against the real corpus (`tests/integration/eval/
-  test_harness.py::test_numeric_rules_suite_boundaries_are_exact`). Still short of the LLD's
-  ≥60 minimum — same honest-scope-reduction pattern as ADR-034/ADR-035, not a fabricated
-  count.
-  8 temporal cases (4 pairs, up from 1 pair/2 cases): the PRD §11 pair (`EV-TEMPORAL-001`/
-  `-002`, R16 contact window) plus 3 new pairs across the same 2027-01-01 commencement date
-  for R18 (recording retention), R22 (prior-visit intimation), R24 (restoration
-  compensation) — each pair holds the underlying fact constant and varies only the event
-  date, so the verdict flip (`no_clause_found` → the rule's verdict) is attributable to
-  clause commencement alone, not a confound. Still short of the LLD's ≥30 minimum, and none
-  of the 2025 phased-date provisions (DL2025 8 May/1 Nov/15 Jun) are covered yet.
+- **Status** partial — 28 numeric cases (up from 15), covering boundary conditions for the
+  same 7 of the LLD §11's nine "pure date or money arithmetic" rules (R03 is decided by
+  `conflicts/detector.py` rather than a standalone rule evaluation and R16 is fully covered
+  in the `temporal` suite below, so neither gets a dedicated numeric case): R01 (30-day
+  release window: the pre-existing ±1-day boundary plus a same-day zero-delay compliant case
+  and a 60-day grossly-non-compliant violation), R02 (₹5,000/day compensation: the
+  pre-existing 45-day exact-payment/underpaid pair plus the tightest 31-day compliant
+  boundary and a 90-day underpaid case at a different multiplier), R12 (grievance mechanism
+  disclosed — compliant side only; a violation case still needs a fact recorded as explicitly
+  *absent*, which `eval/loader.py`'s case format does not yet express), R13 (24-hour offshore
+  deletion: the pre-existing ±1-hour boundary plus a 0-hour compliant extreme, a 48-hour
+  violation extreme, and a MissingFact violation with no deletion window disclosed at all),
+  R18 (180-day recording retention: the pre-existing boundary plus a 365-day compliant
+  extreme, a 90-day violation extreme, and a MissingFact violation), R22 (one-day
+  prior-intimation: the pre-existing boundary plus a 7-day compliant extreme and a MissingFact
+  violation with no intimation on record at all), R24 (restoration compensation: the
+  pre-existing zero/one-hour pair plus a 10-hour violation at a larger compensation
+  multiplier). All 28 verified at `verdict_accuracy == 1.0` against the real corpus
+  (`tests/integration/eval/test_harness.py::test_numeric_rules_suite_boundaries_are_exact`).
+  Still short of the LLD's ≥60 minimum — same honest-scope-reduction pattern as
+  ADR-034/ADR-035, not a fabricated count.
+  12 temporal cases (6 pairs, up from 4 pairs/8 cases): the PRD §11 pair (`EV-TEMPORAL-001`/
+  `-002`, R16 contact window), 3 pairs across the 2027-01-01 RBC-AMD2026 commencement date
+  (R18 recording retention, R22 prior-visit intimation, R24 restoration compensation), and 2
+  new pairs across **DL2025's own 2025-05-08 phased commencement date** (R13 offshore
+  deletion, R12 grievance escalation disclosure) — the first phased-2025-date coverage this
+  suite has had. Each pair holds the underlying fact constant and varies only the event date,
+  so the verdict flip (`no_clause_found` → the rule's verdict) is attributable to clause
+  commencement alone, not a confound. Still short of the LLD's ≥30 minimum, and the DL2025
+  1 Nov / 15 Jun phased dates (`DL2025/p6`, `DL2025/p17`) remain uncovered.
 - **Depends on** M5-T02, M5-T03
 - **Files** `eval/cases/numeric_rules/*.json`, `eval/cases/temporal/*.json`, `reports/`
 - **Acceptance**

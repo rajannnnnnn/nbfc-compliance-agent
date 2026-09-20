@@ -71,7 +71,10 @@ async def snapshot_id():
 async def test_numeric_rules_suite_boundaries_are_exact(snapshot_id):
     """Boundary cases for all of the LLD §11's nine "pure date or money arithmetic" rules
     that this pass covers (R01, R02, R12, R13, R18, R22, R24) — deterministic, no model
-    judgement involved, so this must be 100%."""
+    judgement involved, so this must be 100%. M5-T06 follow-up: extended beyond the tightest
+    off-by-one boundary per rule with far-exceeding values, extreme low ends (zero-day/hour
+    delays), and MissingFact code paths (a fact recorded as disclosed vs. never disclosed at
+    all), so the suite exercises more than one arithmetic edge per rule."""
     settings = get_settings()
     sm = get_sessionmaker(settings)
     registry = FieldRegistry("app/schema/fields.yaml")
@@ -87,7 +90,7 @@ async def test_numeric_rules_suite_boundaries_are_exact(snapshot_id):
             client=client,
         )
 
-    assert report["case_count"] == 15
+    assert report["case_count"] == 28
     assert report["metrics"]["verdict_accuracy"] == 1.0
     assert report["metrics"]["hallucinated_citation_rate"] == 0.0
     assert all(r["passed"] for r in report["results"])
@@ -114,12 +117,15 @@ async def test_abstention_suite_correctly_abstains(snapshot_id):
 
 
 async def test_temporal_suite_verdicts_correct_even_with_a_dumb_stub(snapshot_id):
-    """PRD §11 temporal pair as a first-class eval case, plus three more pairs added in
-    this pass across the same 2027-01-01 commencement date (R18 recording retention, R22
-    prior-visit intimation, R24 restoration compensation): the *verdict* on both sides of
-    the commencement date is correct regardless of model quality (one side is a rule-level
-    fact, the other a corpus-applicability fact) — only the citation on the abstention side
-    depends on model judgement, which this dumb stub doesn't attempt."""
+    """PRD §11 temporal pair as a first-class eval case, plus five more pairs added across
+    this pass: three across the 2027-01-01 RBC-AMD2026 commencement date (R18 recording
+    retention, R22 prior-visit intimation, R24 restoration compensation), and two across
+    DL2025's own 2025-05-08 phased commencement date (R13 offshore deletion, R12 grievance
+    escalation disclosure) — closing part of the "no 2025 phased-date coverage" gap noted in
+    TASKS.md M5-T06. The *verdict* on both sides of each commencement date is correct
+    regardless of model quality (one side is a rule-level fact or corpus-applicability fact,
+    never a model judgement call) — only the citation on the abstention side depends on model
+    judgement, which this dumb stub doesn't attempt."""
     settings = get_settings()
     sm = get_sessionmaker(settings)
     registry = FieldRegistry("app/schema/fields.yaml")
@@ -135,13 +141,15 @@ async def test_temporal_suite_verdicts_correct_even_with_a_dumb_stub(snapshot_id
             client=client,
         )
 
-    assert report["case_count"] == 8
+    assert report["case_count"] == 12
     by_ref = {r["case_ref"]: r for r in report["results"]}
     for before_ref, after_ref in [
         ("EV-TEMPORAL-001", "EV-TEMPORAL-002"),
         ("EV-TEMPORAL-003", "EV-TEMPORAL-004"),
         ("EV-TEMPORAL-005", "EV-TEMPORAL-006"),
         ("EV-TEMPORAL-007", "EV-TEMPORAL-008"),
+        ("EV-TEMPORAL-009", "EV-TEMPORAL-010"),
+        ("EV-TEMPORAL-011", "EV-TEMPORAL-012"),
     ]:
         assert "verdict" not in by_ref[before_ref]["diff"]  # no_clause_found, correct
         assert by_ref[after_ref]["passed"]  # violation, decisive citation from the rule

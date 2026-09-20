@@ -1,0 +1,30 @@
+{
+  "case_ref": "EV-TEMPORAL-009",
+  "suite": "temporal",
+  "stage": "verdict",
+  "doc_type": "loan_agreement",
+  "input_ref": null,
+  "event_date": "2025-04-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": true,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "data_stored_offshore_flag": "true",
+      "offshore_deletion_within_hours": "48"
+    },
+    "check_key": "F:offshore_deletion_within_hours",
+    "verdict": "no_clause_found",
+    "decisive_citations": [],
+    "context_citations": [],
+    "forbidden_citations": [
+      "DL2025/p13"
+    ]
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "First of the phased 2025 commencement pairs (see TASKS.md M5-T06): DL2025/p13 (the offshore-deletion clause) is effective_from 2025-05-08 (docs/DECISIONS.md ADR-001's placeholder corpus). Before that date the clause is not yet in force, so a 48-hour deletion window governs no clause \u2014 no_clause_found, not R13_offshore_deletion. Pairs with EV-TEMPORAL-010."
+}

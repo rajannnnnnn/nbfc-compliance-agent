@@ -1,0 +1,29 @@
+{
+  "case_ref": "EV-TEMPORAL-011",
+  "suite": "temporal",
+  "stage": "verdict",
+  "doc_type": "kfs",
+  "input_ref": null,
+  "event_date": "2025-04-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": true,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "grievance_mechanism_clause_ref": "Clause 9.2 of the Key Facts Statement"
+    },
+    "check_key": "F:grievance_mechanism_clause_ref",
+    "verdict": "no_clause_found",
+    "decisive_citations": [],
+    "context_citations": [],
+    "forbidden_citations": [
+      "DL2025/p11"
+    ]
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Second phased-2025-commencement pair: DL2025/p11 (grievance officer/escalation disclosure) is effective_from 2025-05-08. R12 itself has no as_of gate \u2014 the flip comes from retrieval/validator (LLD \u00a72's citation-window invariant), not the rule. Before commencement, a disclosed grievance mechanism governs no clause \u2014 no_clause_found. Pairs with EV-TEMPORAL-012."
+}

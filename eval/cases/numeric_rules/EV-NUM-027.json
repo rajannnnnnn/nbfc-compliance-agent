@@ -1,0 +1,29 @@
+{
+  "case_ref": "EV-NUM-027",
+  "suite": "numeric_rules",
+  "stage": "verdict",
+  "doc_type": "field_visit_report",
+  "input_ref": null,
+  "event_date": "2027-02-10",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "first_visit_date": "2027-02-10"
+    },
+    "check_key": "R22_visit_prior_intimation",
+    "verdict": "violation",
+    "decisive_citations": [
+      "RBC-AMD2026/p100I"
+    ],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Different code path from the lead-time cases above: a recovery visit occurred with no prior intimation on record at all (MissingFact branch), not merely a same-day one \u2014 violation."
+}
