@@ -327,3 +327,28 @@ citation guarantee and this fact-table invariant are the same kind of defect cla
 `None`/`False` combination that should be structurally impossible was reachable at runtime
 and only mypy's strict optional-type checking surfaced it, which is the case for running
 `mypy --strict` on every commit rather than treating it as a formality.
+
+---
+
+## ADR-024 — pinned clause lookups go through the applicability filter too
+
+Found by the integration test that exercises the PRD §11 temporal pair against the real
+ingested corpus, not by any unit test: LLD §8.5 step 2 reads "pinned = expand(pinning[field_key])"
+with no applicability predicate attached, and I implemented it exactly that way at first.
+The result: `contact_datetime`'s pin includes `RBC-AMD2026/p100W` (the amendment's own
+contact-hour clause), so that clause showed up in `candidates` on 2026-09-03 — five months
+before it commences — because nothing about being *pinned* checked whether the clause was
+actually in force. Retrieving through the pin table bypassed the exact temporal check the
+whole architecture exists to enforce, defeating the applicability filter for every pinned
+field simultaneously.
+
+Fixed by running `_PINNED_LOOKUP_SQL` through the same `APPLICABILITY_SQL` predicate as
+vector and lexical search, and returning the full (unfiltered) expanded pin-path list
+alongside the applicable subset so a pinned-but-excluded clause still seeds `context_only`
+with the correct reason rather than disappearing silently. This is the same defect class as
+SQ-13 (ADR-005): a mechanism that looks like a targeted shortcut (a hint table, a pin) quietly
+carries no temporal or scope check unless one is added explicitly, and the LLD's own prose
+never says to add it for the pinned path specifically. The integration test
+(`tests/integration/retrieve/test_service.py`) now asserts both halves of the PRD §11 pair
+and the microfinance borrower-scope case against the real placeholder corpus, which is what
+caught this — a unit test with a hand-built `ClauseCandidateSet` would not have.

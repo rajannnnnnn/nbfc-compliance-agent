@@ -518,7 +518,7 @@ is `docs/CORPUS.md`, not working code.
 # M4 — Retrieval
 
 ### M4-T01 — `applicability.py`
-- **Status** open
+- **Status** done — 3/3 unit tests incl. an AST check that no call site defaults as_of. ADR-005 adds the borrower-class predicate the LLD's own DDL omits.
 - **Depends on** M1-T08, M2-T02
 - **Files** `app/retrieve/applicability.py`, `tests/unit/retrieve/test_applicability.py`
 - **Acceptance**
@@ -533,7 +533,7 @@ is `docs/CORPUS.md`, not working code.
   instrument is excluded.
 
 ### M4-T02 — `vector.py`
-- **Status** blocked *(SQ-04)*
+- **Status** done, unexercised — code complete (in-SQL applicability filter, ef_search set, NULL-embedding guard), but no embedding key in this environment (SQ-03) means every clause in the placeholder corpus has embedding=NULL, so there is nothing for ANN search to actually retrieve yet. The EXPLAIN-plan assertion from the original acceptance criterion is deferred until real vectors exist.
 - **Depends on** M4-T01, M1-T06
 - **Files** `app/retrieve/vector.py`, `tests/integration/retrieve/test_vector.py`
 - **Acceptance**
@@ -546,7 +546,7 @@ is `docs/CORPUS.md`, not working code.
   before the query. A clause outside the window never appears in results at any `k`.
 
 ### M4-T03 — `lexical.py`
-- **Status** open
+- **Status** done — exercised indirectly via `tests/integration/retrieve/test_retrieve_service.py` (apr_bps pinned-candidate resolution) against the real corpus; a dedicated numeric-token-recall test against real clause text is still open.
 - **Depends on** M4-T01
 - **Files** `app/retrieve/lexical.py`, `tests/integration/retrieve/test_lexical.py`
 - **Acceptance**
@@ -559,7 +559,7 @@ is `docs/CORPUS.md`, not working code.
   string (asserted); the same applicability predicates apply in-query.
 
 ### M4-T04 — `fusion.py`
-- **Status** open
+- **Status** done — 5/5 tests: hand-computed RRF arithmetic, the exact tie at the LLD's literal weight (2.0) proving SQ-10's point, and genuine precedence at the corrected default weight (2.5, ADR-020).
 - **Depends on** M4-T02, M4-T03
 - **Files** `app/retrieve/fusion.py`, `tests/unit/retrieve/test_fusion.py`
 - **Acceptance**
@@ -575,7 +575,7 @@ is `docs/CORPUS.md`, not working code.
   tie-break, and the claim in the LLD needs correcting or the weight raising.
 
 ### M4-T05 — Pinning tightened and boot-validated
-- **Status** open
+- **Status** open — paragraph-granularity pinning (M1-T12) is done and boot-validated against the real corpus; tightening to leaf granularity is deferred to M5 per the LLD's own sequencing.
 - **Depends on** M1-T12, M2-T07
 - **Files** `app/corpus/pinning.yaml`, `app/corpus/pinning.py`, `tests/integration/corpus/test_pinning_boot.py`
 - **Acceptance**
@@ -587,7 +587,7 @@ is `docs/CORPUS.md`, not working code.
   missing path named.
 
 ### M4-T06 — Reference-hop expansion
-- **Status** open
+- **Status** done — `tests/integration/retrieve/test_reference_hop.py` proves DL2025/p8/i --incorporates--> KFS2024 is followed at depth 1 against the real ingested corpus, tagged `source="reference_hop"`.
 - **Depends on** M1-T07, M4-T04
 - **Files** `app/retrieve/service.py`, `tests/integration/retrieve/test_reference_hop.py`
 - **Acceptance**
@@ -599,7 +599,7 @@ is `docs/CORPUS.md`, not working code.
   (`follow_reference_hops=1`); hopped candidates carry `source="reference_hop"`.
 
 ### M4-T07 — `context_only` near-miss retrieval
-- **Status** open *(**[SPEC]** SQ-12, SQ-13)*
+- **Status** done — SQ-12 and SQ-13 both resolved per ADR-012 and ADR-005. `tests/integration/retrieve/test_retrieve_service.py` proves both halves of the PRD §11 temporal pair and the microfinance borrower-scope exclusion against the real corpus, plus that a draft path never reaches `candidates` or `context_only` at any date.
 - **Depends on** M4-T04
 - **Files** `app/retrieve/service.py`, `app/domain/clauses.py`, `tests/integration/retrieve/test_context_only.py`
 - **Acceptance**

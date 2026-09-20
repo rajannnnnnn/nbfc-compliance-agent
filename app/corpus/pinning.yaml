@@ -7,6 +7,7 @@ pins:
   apr_bps:
     - KFS2024/annexA/part1/9
     - RBC2025/p29
+    - DL2025/p8/i
     - DL2025/p8/ii
   cooling_off_period_days:
     - DL2025/p10
