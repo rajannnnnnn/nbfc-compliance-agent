@@ -1,0 +1,9 @@
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+
+SANCTION LETTER
+Reference: SL-SYN-2026-19120
+Date: 28-03-2026
+We are pleased to sanction a personal loan of Rs. 250,000 at 21.00% p.a.
+Processing fee: ₹5,000/-
+Loan term: 180 days.
+Annual Percentage Rate: 22.46% p.a.

@@ -1,0 +1,13 @@
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+
+-- KFS (Key Facts Statement) --
+Ref no.: LN-SYN-2026-74799
+Product: gold loan
+Amount sanctioned: Rs. 750,000
+Tenure: 180 days
+Rate of interest: 21.00% per annum, fixed basis
+Fees payable: INR 2,500.00
+APR (all-inclusive): 22.06%
+Look-up / cooling-off period: 1 days; no prepayment charge within this window.
+Grievance officer: Vikram Chauhan | Tel: 1800-630-8611 | Email: grievance@northbridge.example
+Validity of this statement: 7 working days from 15-02-2026.

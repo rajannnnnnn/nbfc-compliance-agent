@@ -1,0 +1,13 @@
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+
+-- KFS (Key Facts Statement) --
+Ref no.: LN-SYN-2025-93136
+Product: vehicle loan
+Amount sanctioned: Rs. 750,000
+Tenure: 180 days
+Rate of interest: 16.50% per annum, floating basis
+Fees payable: Rs. 1,000
+APR (all-inclusive): 18.63%
+Look-up / cooling-off period: 3 days; no prepayment charge within this window.
+Grievance officer: Deepak Rao | Tel: 1800-859-8239 | Email: grievance@meridian.example
+Validity of this statement: 7 working days from 2026-05-17.

@@ -1,0 +1,9 @@
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+
+SANCTION LETTER
+Reference: SL-SYN-2026-57749
+Date: 24-03-2026
+We are pleased to sanction a consumer_durable loan of ₹750,000/- at 12.00% p.a.
+Processing fee: ₹2,500/-
+Loan term: 365 days.
+Annual Percentage Rate: 13.09% p.a.

@@ -1,0 +1,13 @@
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+
+-- KFS (Key Facts Statement) --
+Ref no.: LN-SYN-2026-20735
+Product: personal loan
+Amount sanctioned: ₹750,000/-
+Tenure: 180 days
+Rate of interest: 16.50% per annum, floating basis
+Fees payable: Rs. 7,500
+APR (all-inclusive): 18.66%
+Look-up / cooling-off period: 1 days; no prepayment charge within this window.
+Grievance officer: Vikram Chauhan | Tel: 1800-141-1508 | Email: grievance@northbridge.example
+Validity of this statement: 3 working days from 11/06/2026.

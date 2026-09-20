@@ -1,0 +1,13 @@
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+
+-- KFS (Key Facts Statement) --
+Ref no.: LN-SYN-2025-88193
+Product: vehicle loan
+Amount sanctioned: ₹1,200,000/-
+Tenure: 730 days
+Rate of interest: 16.50% per annum, floating basis
+Fees payable: ₹1,000/-
+APR (all-inc1usive): 18.30%
+Look-up / cooling-off period: 1 days; no prepayment charge within this window.
+Grievance officer: Farha Sheikh | Tel: 1800-690-4114 | Email: grievance@sunrise.example
+Validity of this statement: 3 working days from 2026-05-06.

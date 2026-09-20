@@ -1,0 +1,13 @@
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+
+KEY FACTS STATEMENT
+Loan proposal number: LN-SYN-2025-54313
+Type of loan: business
+Sanctioned loan amount: ₹100,000/-
+Loan term: 365 days
+Interest rate: 14.50% p.a. (fixed)
+Total fees and charges: Rs. 2,500
+Annual Percentage Rate (APR): 15.18% p.a.
+Cooling-off / look-up period: 7 days. No prepayment penalty applies if the borrower exits within this period.
+Grievance redressal officer: Vikram Chauhan, phone 1800-160-4750, email grievance@northbridge.example
+This Key Facts Statement is valid for 3 working days from the date of issue, 15 September 2026.

@@ -1,0 +1,15 @@
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+
+LOAN AGREEMENT
+This agreement is made between Sunrise Capital NBFC Ltd. ("the Lender") and Sunita Yadav ("the Borrower").
+Agreement reference: LA-SYN-2025-35443
+Type of loan: vehicle
+Sanctioned amount: Rs. 1,200,000
+Rate of interest: 21.00% p.a.
+Disbursal shall be credited to the Borrower's own bank account.
+Repayment shall be debited directly from the Borrower's own bank account; no pass-through or pooling account is used.
+Cooling-off period: 3 days; no prepayment penalty within this period.
+The particulars of the Key Facts Statement are reproduced as a summary box forming part of this Agreement.
+Grievance escalation mechanism is described in clause 3.5 of this Agreement.
+This loan is not transferable without the Lender's prior written consent.
+A lending service provider, Apex Recovery Services, is engaged for sourcing and recovery under this Agreement; its fee is borne by the Lender, not the Borrower.

@@ -1,0 +1,9 @@
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+
+SANCTION LETTER
+Reference: 5L-SYN-2026-39430
+Date: 08/06/2026
+We are pleased to sanction a vehicle loan of Rs. 750,000 at 12.00% p.a.
+Processing fee: ₹5,000/-
+Loan term: 365 days.
+Annual Pcrcentage Rate: 12.87% p.a.

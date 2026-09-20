@@ -500,7 +500,14 @@ is `docs/CORPUS.md`, not working code.
   extracts from. Must be settled before this task can be written.
 
 ### M3-T07 — Synthetic document generator
-- **Status** open
+- **Status** done — 150 fixtures generated (25 each across the six deep types: `kfs`,
+  `loan_agreement`, `sanction_letter`, `mitc`, `call_transcript`, `closure_statement`), 2-3
+  layout templates per type, 3 currency formats, 4 date formats, ~15% of documents given
+  light OCR-style character noise (confined to the body, never the banner). 5/5 unit tests
+  (`tests/unit/test_synthetic_docs.py`), including a direct re-use of `app/extract/redact.py`'s
+  own AADHAAR/PAN/ACCOUNT patterns to prove no generated value matches them (proposal/
+  reference numbers are letter-prefixed and dash-broken, e.g. `LN-SYN-2026-00042`, so no
+  9-18-digit run ever occurs).
 - **Depends on** M2-T01
 - **Files** `scripts/gen_synthetic_docs.py`, `eval/fixtures/**`, `tests/unit/test_synthetic_docs.py`
 - **Acceptance**

@@ -1,0 +1,13 @@
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+
+KEY FACTS STATEMENT
+Loan proposal number: LN-SYN-2026-25713
+Type of loan: business
+Sanctioned loan amount: ₹1,200,000/-
+Loan term: 180 days
+Interest rate: 12.00% p.a. (fixed)
+Total fees and charges: INR 2,500.00
+Annual Percentage Rate (APR): 14.18% p.a.
+Cooling-off / look-up period: 7 days. No prepayment penalty applies if the borrower exits within this period.
+Grievance redressal officer: Vikram Chauhan, phone 1800-635-6183, email grievance@sunrise.example
+This Key Facts Statement is valid for 3 working days from the date of issue, 03 March 2026.

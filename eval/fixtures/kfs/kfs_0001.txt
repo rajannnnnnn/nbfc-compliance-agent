@@ -1,0 +1,13 @@
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+
+KEY FACTS STATEMENT
+Loan proposal number: LN-SYN-2026-46421
+Type of loan: gold
+Sanctioned loan amount: INR 100,000.00
+Loan term: 180 days
+Interest rate: 14.50% p.a. (fixed)
+Total fees and charges: INR 7,500.00
+Annual Percentage Rate (APR): 15.24% p.a.
+Cooling-off / look-up period: 3 days. No prepayment penalty applies if the borrower exits within this period.
+Grievance redressal officer: Farha Sheikh, phone 1800-718-5333, email grievance@northbridge.example
+This Key Facts Statement is valid for 7 working days from the date of issue, 2026-05-26.

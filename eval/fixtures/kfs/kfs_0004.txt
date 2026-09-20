@@ -1,0 +1,13 @@
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+
+-- KFS (Key Facts Statement) --
+Ref no.: LN-SYN-2025-42325
+Product: business loan
+Amount sanctioned: INR 750,000.00
+Tenure: 1095 days
+Rate of interest: 14.50% per annum, floating basis
+Fees payable: Rs. 5,000
+APR (all-inclusive): 15.35%
+Look-up / cooling-off period: 7 days; no prepayment charge within this window.
+Grievance officer: Farha Sheikh | Tel: 1800-193-1771 | Email: grievance@northbridge.example
+Validity of this statement: 3 working days from 13-08-2026.
