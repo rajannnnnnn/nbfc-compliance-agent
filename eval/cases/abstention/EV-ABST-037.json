@@ -1,0 +1,27 @@
+{
+  "case_ref": "EV-ABST-037",
+  "suite": "abstention",
+  "stage": "verdict",
+  "doc_type": "docs_release_ack",
+  "input_ref": null,
+  "event_date": "2026-05-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "release_delay_days": "5"
+    },
+    "check_key": "F:release_delay_days",
+    "verdict": "no_clause_found",
+    "decisive_citations": [],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "No rule in this build consumes release_delay_days and no ingested clause governs it directly \u2014 a correct abstention, not a stretch to fit an unrelated provision."
+}

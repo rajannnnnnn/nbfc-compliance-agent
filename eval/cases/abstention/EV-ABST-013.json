@@ -1,0 +1,27 @@
+{
+  "case_ref": "EV-ABST-013",
+  "suite": "abstention",
+  "stage": "verdict",
+  "doc_type": "kfs",
+  "input_ref": null,
+  "event_date": "2026-05-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "contingent_charges_text": "Cheque bounce charge Rs 500 per instance."
+    },
+    "check_key": "F:contingent_charges_text",
+    "verdict": "no_clause_found",
+    "decisive_citations": [],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "No rule in this build consumes contingent_charges_text and no ingested clause governs it directly \u2014 a correct abstention, not a stretch to fit an unrelated provision."
+}

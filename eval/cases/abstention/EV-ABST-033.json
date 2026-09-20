@@ -1,0 +1,27 @@
+{
+  "case_ref": "EV-ABST-033",
+  "suite": "abstention",
+  "stage": "verdict",
+  "doc_type": "call_transcript",
+  "input_ref": null,
+  "event_date": "2026-05-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "abusive_language_flag": "false"
+    },
+    "check_key": "F:abusive_language_flag",
+    "verdict": "no_clause_found",
+    "decisive_citations": [],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "No rule in this build consumes abusive_language_flag and no ingested clause governs it directly \u2014 a correct abstention, not a stretch to fit an unrelated provision."
+}
