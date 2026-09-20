@@ -84,9 +84,13 @@ async def test_numeric_rules_suite_boundaries_are_exact(snapshot_id):
     the 60-day past-due boundary, a below-minimum violation, a reversed-cure-notice-sequence
     violation, and an unfinanced-device violation — four independent precondition-failure
     paths) and R26 (KFS validity: the 3-working-day boundary, a below-minimum violation, a
-    missing-proposal-number violation, and a missing-validity-period violation). None of
-    R02b/R16/R17/R23/R26 is in the LLD's named list of nine, but all are the same kind of
-    pure date/time/sequencing arithmetic."""
+    missing-proposal-number violation, and a missing-validity-period violation). Also covers
+    R04 (APR-vs-rate-plus-fees computation, KFS2024/annexA/part1/9): the 200 bps tolerance
+    boundary (200 compliant / 201 ambiguous — this check's own verdict for a diff beyond
+    tolerance, not violation) plus a nonzero-fee case that exercises the fee-load
+    annualisation arithmetic itself, not just the zero-fee shortcut. None of
+    R02b/R04/R16/R17/R23/R26 is in the LLD's named list of nine, but all are the same kind of
+    pure date/time/money/sequencing arithmetic."""
     settings = get_settings()
     sm = get_sessionmaker(settings)
     registry = FieldRegistry("app/schema/fields.yaml")
@@ -102,7 +106,7 @@ async def test_numeric_rules_suite_boundaries_are_exact(snapshot_id):
             client=client,
         )
 
-    assert report["case_count"] == 46
+    assert report["case_count"] == 49
     assert report["metrics"]["verdict_accuracy"] == 1.0
     assert report["metrics"]["hallucinated_citation_rate"] == 0.0
     assert all(r["passed"] for r in report["results"])

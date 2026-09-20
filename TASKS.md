@@ -787,11 +787,11 @@ is `docs/CORPUS.md`, not working code.
   (PRD §14 Q3) wherever the corpus actually has one.
 
 ### M5-T06 — `numeric_rules` and `temporal` suites
-- **Status** partial — 46 numeric cases (up from 15), covering boundary conditions for 8 of
+- **Status** partial — 49 numeric cases (up from 15), covering boundary conditions for 8 of
   the LLD §11's nine "pure date or money arithmetic" rules (R03 is decided by
   `conflicts/detector.py` rather than a standalone rule evaluation, so it alone gets no
-  dedicated numeric case), plus five rules of the same arithmetic character outside that
-  named list (R02b, R16, R17, R23, R26): R01 (30-day
+  dedicated numeric case), plus six rules of the same arithmetic character outside that
+  named list (R02b, R04, R16, R17, R23, R26): R01 (30-day
   release window: the pre-existing ±1-day boundary plus a same-day zero-delay compliant case
   and a 60-day grossly-non-compliant violation), R02 (₹5,000/day compensation: the
   pre-existing 45-day exact-payment/underpaid pair plus the tightest 31-day compliant
@@ -814,10 +814,13 @@ is `docs/CORPUS.md`, not working code.
   R02's 30, plus its own not-assisted violation path), R23 (device-restriction
   preconditions: the 60-day past-due boundary, a below-minimum violation, a
   reversed-cure-notice-sequence violation, and an unfinanced-device violation — four
-  independent precondition-failure paths), and R26 (KFS validity: the 3-working-day
+  independent precondition-failure paths), R26 (KFS validity: the 3-working-day
   boundary, a below-minimum violation, a missing-proposal-number violation, and a
-  missing-validity-period violation). All 46 verified at `verdict_accuracy == 1.0` against
-  the real corpus (`tests/integration/eval/
+  missing-validity-period violation), and R04 (APR-vs-rate-plus-fees computation,
+  KFS2024/annexA/part1/9: the 200 bps tolerance boundary — 200 compliant / 201 ambiguous,
+  this check's own verdict for a diff beyond tolerance rather than violation — plus a
+  nonzero-fee case exercising the fee-load annualisation arithmetic itself). All 49 verified
+  at `verdict_accuracy == 1.0` against the real corpus (`tests/integration/eval/
   test_harness.py::test_numeric_rules_suite_boundaries_are_exact`). Still short of the LLD's
   ≥60 minimum — same honest-scope-reduction pattern as ADR-034/ADR-035, not a fabricated
   count.

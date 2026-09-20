@@ -1,0 +1,33 @@
+{
+  "case_ref": "EV-NUM-049",
+  "suite": "numeric_rules",
+  "stage": "verdict",
+  "doc_type": "kfs",
+  "input_ref": null,
+  "event_date": "2026-05-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "apr_bps": "2000",
+      "interest_rate_bps": "1000",
+      "fees_total": "100000",
+      "sanctioned_amount": "1000000",
+      "loan_term_days": "365"
+    },
+    "check_key": "R04_apr_computation",
+    "verdict": "compliant",
+    "decisive_citations": [
+      "KFS2024/annexA/part1/9"
+    ],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Exercises the fee-load annualisation itself, not just the zero-fee case: Rs 1,000 in fees on a Rs 10,000 principal over exactly one year annualises to 1,000 bps, so the implied APR (1,000 rate + 1,000 fee load = 2,000 bps) exactly matches the disclosed 2,000 bps APR \u2014 compliant with zero diff."
+}
