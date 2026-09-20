@@ -967,3 +967,40 @@ it stands, not as a target met.
 correctly. Full regression (306 tests) passes. The fix was not re-run against the live suite
 in this pass (each re-run costs real, budget-owner money) — `contact_datetime`'s specific
 0.0 is expected to improve on the next live run, not yet re-verified against the API.
+
+## ADR-043 — Real fix for ADR-041: splitting `loan_agreement`'s extraction into field groups
+
+**Context.** ADR-041 recorded the workaround (isolate the failing case, don't lose the rest
+of the suite) but explicitly deferred the real fix — splitting a large doc_type's extraction
+into multiple smaller calls — as "a genuine design change ... not one to make silently while
+iterating on a live key," pending the budget owner's decision. Asked directly to implement
+it, with explicit instruction to keep overall spend tight without sacrificing accuracy.
+
+**Decision.** `app/schema/generated.py` gains `build_model_for_field_group(doc_type,
+group_index, specs)`, sharing its field-building logic with `build_model_for_doc_type` via a
+new private `_build_model` helper — no behavioural change to the existing single-call path.
+`app/extract/extractor.py`'s `extract_raw_fields()` now checks
+`len(registry.for_doc_type(doc_type))` against `_MAX_FIELDS_PER_CALL = 25` — set to exactly
+`kfs`'s live-proven-working field count, not a guessed margin, so no currently-working
+doc_type is pushed into the split path and pays its extra-calls cost. Only `loan_agreement`
+(34 fields) exceeds it today. Fields are chunked into groups of ≤25, each sent as its own
+schema-constrained call carrying the *full* document text (necessary — a field group can't
+know in advance which fields the model will find, so each group's prompt must see the whole
+document), and the per-group results are merged by field key into the full per-doc-type
+model via `model_validate` before returning — the rest of the pipeline
+(`app/extract/service.py::extract_document`) is unchanged, since it only sees the final
+merged model.
+
+**Cost tradeoff, stated plainly.** This doubles token cost specifically for `loan_agreement`
+documents (2 calls instead of 1, each carrying the full document text) — live-verified at
+$0.0126 for one `loan_agreement` fixture (2 calls) vs ~$0.005 for a single-call doc_type. No
+other doc_type's cost changes. This is the tradeoff the user explicitly asked for: real
+field-level output for `loan_agreement` instead of zero data, in exchange for a bounded,
+scoped cost increase on the one doc_type that needs it.
+
+**Verification.** New unit tests in `tests/unit/extract/test_extractor.py`
+(`test_small_doc_type_makes_a_single_call`, `test_large_doc_type_splits_into_multiple_calls_and_merges_results`)
+use a stub client to prove the chunking/merging mechanics without spending real money. Full
+regression (308 tests) passes. Live-verified against the real API: `loan_agreement_0000.txt`
+extracted successfully in 2 calls with 15 real, correctly-shaped fields returned (no schema
+rejection) — the specific failure ADR-041 recorded no longer occurs.

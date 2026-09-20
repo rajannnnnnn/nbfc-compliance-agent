@@ -7,11 +7,14 @@ requires `quoted_span` and `is_absent` per field, not just a value, so the model
 in has to carry that shape.
 """
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field, create_model
 
 from app.schema.registry import FieldRegistry
+
+if TYPE_CHECKING:
+    from app.schema.registry import FieldSpec
 
 
 class FieldExtraction(BaseModel):
@@ -21,10 +24,9 @@ class FieldExtraction(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0, default=0.5)
 
 
-def build_model_for_doc_type(registry: FieldRegistry, doc_type: str) -> type[BaseModel]:
-    fields = registry.for_doc_type(doc_type)
+def _build_model(model_name: str, specs: list["FieldSpec"]) -> type[BaseModel]:
     field_defs: dict[str, Any] = {}
-    for spec in fields:
+    for spec in specs:
         field_defs[spec.key] = (
             FieldExtraction,
             Field(
@@ -32,9 +34,24 @@ def build_model_for_doc_type(registry: FieldRegistry, doc_type: str) -> type[Bas
                 description=spec.description,
             ),
         )
-    model_name = f"{doc_type.title().replace('_', '')}Fields"
     model: type[BaseModel] = create_model(model_name, **field_defs)
     return model
+
+
+def build_model_for_doc_type(registry: FieldRegistry, doc_type: str) -> type[BaseModel]:
+    fields = registry.for_doc_type(doc_type)
+    model_name = f"{doc_type.title().replace('_', '')}Fields"
+    return _build_model(model_name, fields)
+
+
+def build_model_for_field_group(
+    doc_type: str, group_index: int, specs: list["FieldSpec"]
+) -> type[BaseModel]:
+    """A model over one slice of a doc_type's fields — ADR-041: some providers' structured-
+    output mode rejects a schema with too many fields in one call, so a large doc_type is
+    split into several of these rather than one `build_model_for_doc_type` call."""
+    model_name = f"{doc_type.title().replace('_', '')}FieldsGroup{group_index}"
+    return _build_model(model_name, specs)
 
 
 def build_all_models(registry: FieldRegistry, doc_types: list[str]) -> dict[str, type[BaseModel]]:
