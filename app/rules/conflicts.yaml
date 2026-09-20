@@ -1,19 +1,42 @@
 # Cross-document conflict groups. LLD §12.
 #
-# Per ADR-029: the LLD names twelve groups (§12: apr, sanctioned_amount, interest_rate,
-# tenor, instalment, fees, closure_release_window, closure_charge_satisfaction,
-# closure_noc_order, cure_notice_sequence, grievance_officer_contact, cooling_off) but gives
-# full YAML for only three of them (apr, closure_release_window, cure_notice_sequence) — and
-# every group's `raises_check` must resolve to a rule actually registered in
-# app/rules/registry.py (M7-T01's own acceptance criterion). Inventing a `raises_check` that
-# doesn't correspond to a real, clause-grounded rule would be exactly the "invent a citation
-# basis" defect CLAUDE.md §2.6 forbids, just one level removed — a conflict that raises a
-# non-existent check is a dead end that never re-assesses anything. Shipping only the three
-# groups the LLD fully specifies, all pointing at real registered rules, keeps this file
-# honest; the remaining nine need either a new clause-grounded rule (most of them currently
-# have no corresponding rule at all — R03/R04 exist as intentional stubs precisely for this
-# gap) or a clause lookup that does not yet exist in the ingested corpus. Extending this file
-# is tracked as M7-T01b in TASKS.md rather than guessed at here.
+# Per ADR-029/M7-T01b: the LLD names twelve groups (§12: apr, sanctioned_amount,
+# interest_rate, tenor, instalment, fees, closure_release_window,
+# closure_charge_satisfaction, closure_noc_order, cure_notice_sequence,
+# grievance_officer_contact, cooling_off) but gives full YAML for only three of them (apr,
+# closure_release_window, cure_notice_sequence) — and every group's `raises_check` must
+# resolve to a rule actually registered in app/rules/registry.py, whose subject matter
+# matches the group's own fact pattern (M7-T01/M7-T01b's acceptance criterion). Inventing a
+# `raises_check` that doesn't correspond to a real, clause-grounded rule on that exact
+# subject would be the "invent a citation basis" defect CLAUDE.md §2.6 forbids, one level
+# removed.
+#
+# `cooling_off` (4th group, added in M7-T01b) is safe to add: `cooling_off_period_days`
+# is a real field on two doc_types (kfs, loan_agreement — app/schema/fields.yaml), and
+# R07_cooling_off_disclosed already exists, clause-grounded on DL2025/p10, checking exactly
+# this fact pattern (period disclosed, minimum length, no prepayment penalty within it).
+#
+# The other eight (`sanctioned_amount`, `interest_rate`, `tenor`, `instalment`, `fees`,
+# `closure_charge_satisfaction`, `closure_noc_order`, `grievance_officer_contact`) were
+# checked directly against the ingested corpus for M7-T01b and remain blocked:
+# - `sanctioned_amount`/`interest_rate`/`tenor`/`instalment`/`fees`: each field does span
+#   multiple doc_types, but the corpus has no clause grounding a *consistency* check on any
+#   one of them individually (R04_apr_computation consumes several of them together for an
+#   APR-computation check, a different subject matter — reusing it as `raises_check` for,
+#   say, a `sanctioned_amount` conflict would violate "no group may point at a rule whose
+#   subject matter doesn't match the group's own fact pattern").
+# - `closure_charge_satisfaction`/`closure_noc_order`: no clause beyond RBC2025/p35/p39
+#   (already used by R01/R02, about document *release* timing, not charge satisfaction or
+#   NOC issuance order) was found searching the corpus for "no objection", "foreclosure",
+#   or "closure charge".
+# - `grievance_officer_contact`: `grievance_officer_phone`/`grievance_officer_email` are
+#   defined only on `kfs` — a single doc_type, so there is no second document to compare
+#   against; `grievance_officer_details_disclosed_flag` (reminder_notice/demand_notice) is a
+#   boolean presence flag, not the same value type, so it cannot form an `equal`/
+#   `equal_within` pair with the KFS fields either.
+# Each of these needs either a new clause-grounded rule (once the corpus actually carries
+# the relevant clause) or the group formally dropped from the LLD's list — not guessed at
+# here.
 version: 1
 groups:
   - key: apr
@@ -41,3 +64,10 @@ groups:
     operator: date_order
     params: { direction: strictly_increasing }
     raises_check: R23_device_restriction_preconditions
+
+  - key: cooling_off
+    members:
+      - { doc_type: kfs, field: cooling_off_period_days }
+      - { doc_type: loan_agreement, field: cooling_off_period_days }
+    operator: equal
+    raises_check: R07_cooling_off_disclosed

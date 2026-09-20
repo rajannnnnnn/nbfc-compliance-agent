@@ -5,9 +5,9 @@ from app.conflicts.loader import ConflictValidationError, load
 
 def test_loads_real_conflicts_yaml():
     registry = load()
-    assert len(registry.groups) == 3
+    assert len(registry.groups) == 4
     keys = {g.key for g in registry.groups}
-    assert keys == {"apr", "closure_release_window", "cure_notice_sequence"}
+    assert keys == {"apr", "closure_release_window", "cure_notice_sequence", "cooling_off"}
 
 
 def test_every_raises_check_is_a_registered_rule_id():

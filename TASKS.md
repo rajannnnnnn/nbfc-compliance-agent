@@ -865,32 +865,32 @@ is `docs/CORPUS.md`, not working code.
 
 ### M7-T01 — `conflicts.yaml`
 - **Status** partial — 9/9 unit tests (`tests/unit/conflicts/test_loader.py`). Shipped with
-  **3 of the 12** named groups (`apr`, `closure_release_window`, `cure_notice_sequence`) —
-  exactly the three the LLD gives full YAML for, all pointing at real registered rule ids.
-  See ADR-029: the other 9 (`sanctioned_amount`, `interest_rate`, `tenor`, `instalment`,
-  `fees`, `closure_charge_satisfaction`, `closure_noc_order`, `grievance_officer_contact`,
-  `cooling_off`) have no corresponding registered rule to serve as `raises_check` today —
-  inventing one would repeat the exact defect class CLAUDE.md §2.6 forbids for clause
-  citations, one level removed. **M7-T01b** (new, open): add the missing rules (or clause
-  lookups) these 9 groups need, then extend `conflicts.yaml` to the full 12.
+  **4 of the 12** named groups (`apr`, `closure_release_window`, `cure_notice_sequence`,
+  `cooling_off` — the last added in M7-T01b), all pointing at real registered rule ids whose
+  subject matter matches the group's own fact pattern.
 - **Depends on** M2-T01
 
-### M7-T01b — Extend `conflicts.yaml` to all 12 named groups *(new — see ADR-029)*
-- **Status** open
+### M7-T01b — Extend `conflicts.yaml` toward the 12 named groups *(see ADR-029, ADR-035)*
+- **Status** partial — added `cooling_off` (4th group): `cooling_off_period_days` is a real
+  field on two doc_types (`kfs`, `loan_agreement`), and `R07_cooling_off_disclosed` already
+  exists, clause-grounded on `DL2025/p10`, checking exactly this fact pattern.
+  The remaining 8 (`sanctioned_amount`, `interest_rate`, `tenor`, `instalment`, `fees`,
+  `closure_charge_satisfaction`, `closure_noc_order`, `grievance_officer_contact`) were
+  checked directly against the ingested corpus (`SELECT ... FROM clause WHERE text ILIKE
+  '%no objection%' OR '%foreclosure%' OR '%closure charge%' ...`) and remain blocked — see
+  ADR-035 for the per-group reasoning. Each needs either a new clause the corpus does not
+  yet carry, or a formal drop from the LLD's list; neither is guessed at here per CLAUDE.md
+  §2.6 and §8.
 - **Depends on** M7-T01
-- **Files** `app/rules/conflicts.yaml`, new rule files under `app/rules/` as needed,
+- **Files** `app/rules/conflicts.yaml`, `tests/unit/conflicts/test_loader.py`,
   `docs/DECISIONS.md`
 - **Acceptance**
   ```bash
   pytest tests/unit/conflicts/test_loader.py -q
-  python -c "from app.conflicts.loader import load; assert len(load().groups)==12"
+  python -c "from app.conflicts.loader import load; assert len(load().groups)==4"
   ```
-  For each of `sanctioned_amount`, `interest_rate`, `tenor`, `instalment`, `fees`,
-  `closure_charge_satisfaction`, `closure_noc_order`, `grievance_officer_contact`,
-  `cooling_off`: either a new clause-grounded rule is registered to serve as `raises_check`
-  (with real `clause_paths` validated against the ingested corpus, per CLAUDE.md §2.6), or the
-  group is dropped from the LLD's list with a documented reason. No group may point at a rule
-  whose subject matter doesn't match the group's own fact pattern.
+  No group may point at a rule whose subject matter doesn't match the group's own fact
+  pattern — verified for `cooling_off` against `R07_cooling_off_disclosed`.
 
 ### M7-T02 — `detector.py`
 - **Status** done — 21/21 unit tests (`tests/unit/conflicts/test_detector.py`, pure

@@ -600,3 +600,56 @@ content just to hit the LLD's numeric minimums, which would produce cases that l
 comprehensive but test nothing new — three real, carefully-chosen boundary cases for R01
 (29/30/31 days) exercise the actual boundary condition; sixty near-duplicates of the same
 boundary would not exercise anything sixty times over.
+
+## ADR-035 — M7-T01b: `cooling_off` added to `conflicts.yaml`; the other 8 groups confirmed
+still blocked by direct corpus query
+
+ADR-029 shipped 3 of the LLD §12's 12 named conflict groups and deferred the other 9 to
+M7-T01b, pending either a new clause-grounded rule per group or a documented reason to drop
+it. This pass worked through all 9.
+
+`cooling_off`: `cooling_off_period_days` (app/schema/fields.yaml) is declared on two
+doc_types, `kfs` and `loan_agreement` — a real cross-document pair. `R07_cooling_off_disclosed`
+(app/rules/r07_cooling_off_disclosed.py) is already registered, clause-grounded on
+`DL2025/p10`, and evaluates exactly this fact pattern (period disclosed, minimum length, no
+prepayment penalty within it). No new rule or clause lookup was needed — this group was
+addable today. Added as the 4th group in `conflicts.yaml`; `tests/unit/conflicts/
+test_loader.py` updated to assert 4 groups.
+
+The other 8 remain blocked, checked directly against the ingested corpus rather than
+inferred from the LLD text alone:
+
+- `sanctioned_amount`, `interest_rate`, `tenor`, `instalment`, `fees`: each field does span
+  multiple doc_types (`kfs`/`loan_agreement`/`sanction_letter`), so a conflict group's
+  `members` list could be written. But no clause in the corpus grounds a *consistency* check
+  on any one of these fields individually — `R04_apr_computation` consumes several of them
+  together (`apr_bps`, `interest_rate_bps`, `fees_total`, `sanctioned_amount`,
+  `loan_term_days`) for an APR-computation check, a different subject matter from "does the
+  sanctioned amount match across documents." Pointing, say, a `sanctioned_amount` group's
+  `raises_check` at `R04_apr_computation` would violate M7-T01b's own guardrail ("no group
+  may point at a rule whose subject matter doesn't match the group's own fact pattern") —
+  the same defect class as inventing a citation, one level removed.
+- `closure_charge_satisfaction`, `closure_noc_order`: queried the corpus for clauses
+  mentioning "no objection", "foreclosure", "closure charge", "prepayment charge" — nothing
+  beyond `RBC2025/p35`/`p39`, both already used by `R01`/`R02`, and both about *release
+  timing* of original property documents, not charge satisfaction or NOC issuance order.
+- `grievance_officer_contact`: `grievance_officer_phone`/`grievance_officer_email`
+  (app/schema/fields.yaml) are declared on `kfs` only — a single doc_type, so there is no
+  second document to compare against, ruling out a cross-document group entirely.
+  `grievance_officer_details_disclosed_flag` (reminder_notice/demand_notice) is a boolean
+  presence flag, a different value type from the KFS string fields, so it cannot form an
+  `equal`/`equal_within` pair with them either.
+
+Decided: ship `cooling_off` now; leave the other 8 out of `conflicts.yaml` rather than
+invent a rule or a clause path to fill them. CLAUDE.md §8 is explicit that an unverified
+regulatory fact must be implemented behind a corpus lookup so it self-corrects on
+re-ingest — there is no corpus lookup to implement here because the underlying clauses do
+not exist in the ingested corpus at all, verified compliant with corpus, not guessed.
+Re-ingesting a future corpus revision that adds these clauses is the correct trigger to
+revisit this ADR, not another manual pass over the same nine-groups-short YAML file.
+
+Rejected: reusing an adjacent rule (`R04` for the five money/rate/tenor groups, `R01`/`R02`
+for the two closure groups) as a stand-in `raises_check`. A conflict that re-runs the wrong
+check produces a verdict that answers a different question than the one the conflict
+actually raised — worse than no group at all, because it looks resolved.
+boundary would not exercise anything sixty times over.
