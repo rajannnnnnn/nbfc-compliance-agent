@@ -1004,3 +1004,12 @@ use a stub client to prove the chunking/merging mechanics without spending real 
 regression (308 tests) passes. Live-verified against the real API: `loan_agreement_0000.txt`
 extracted successfully in 2 calls with 15 real, correctly-shaped fields returned (no schema
 rejection) — the specific failure ADR-041 recorded no longer occurs.
+
+**All 25 `loan_agreement` cases re-run live** (targeted re-run, not the full 125-case suite,
+to keep spend proportional to what actually changed): `field_accuracy=0.770`,
+`absence_accuracy=0.932`, `span_grounding=0.455` — 50 calls, $0.289 total. In line with the
+rest of the suite's ADR-042 numbers (`field_accuracy=0.825` on the other 100 cases), not an
+outlier once the schema-size failure itself is fixed. `extraction_core`'s full-suite
+aggregate across all 125 cases (combining these `loan_agreement` numbers with ADR-042's 100)
+is now real for every doc_type with registered fields — no case in the suite produces zero
+data anymore.

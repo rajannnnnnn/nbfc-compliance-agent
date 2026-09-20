@@ -542,15 +542,20 @@ is `docs/CORPUS.md`, not working code.
   currency suffix rejected by `normalise_money_to_paise` (ADR-040), and an `IST` timezone
   suffix rejected by `normalise_time`, which had been zeroing out `contact_datetime` on
   every `call_transcript` case (ADR-042) — fixed after this run, not yet re-verified live.
-  **Known open gaps, stated honestly, not closed by this task:** `loan_agreement`'s 25 cases
-  (34 registered fields) still produce zero data — Gemini's structured-output mode rejects
-  that large a schema outright (ADR-041); several per-field scores are still low and
-  untriaged beyond the one fix above (`sanctioned_amount` 0.62, `fees_total` 0.66,
-  `kfs_validity_days` 0.6, several boolean flags at 0.32); `span_grounding` at 0.486 means
-  roughly half of correctly-valued fields have no verifiable quoted span, a real defect
-  category of its own. A real fix for `loan_agreement` (splitting a large doc_type's
-  extraction into multiple smaller model calls) is a genuine design change to
-  `app/extract/extractor.py`, out of scope for this task.
+  **`loan_agreement`'s schema-size gap is now closed (ADR-043):** `extract_raw_fields()`
+  splits any doc_type above 25 registered fields (currently only `loan_agreement`, 34
+  fields) into multiple schema-constrained calls over field groups, merging results by key —
+  every other doc_type's call count and cost is unchanged. A targeted re-run of all 25
+  `loan_agreement` cases (not the full 125, to keep spend proportional to what changed):
+  `field_accuracy=0.770`, `absence_accuracy=0.932`, `span_grounding=0.455` — in line with the
+  rest of the suite, not an outlier. Every case in `extraction_core` now produces real
+  field-level data; none returns zero.
+  **Known open gaps, stated honestly, not closed by this task:** several per-field scores
+  are still low and untriaged beyond the two normalisation fixes above (`sanctioned_amount`
+  0.62, `fees_total` 0.66, `kfs_validity_days` 0.6, several boolean flags at 0.32);
+  `span_grounding` around 0.45-0.49 means roughly half of correctly-valued fields across the
+  suite have no verifiable quoted span, a real defect category of its own, not yet
+  root-caused per field.
 - **Depends on** M3-T05, M3-T06, M3-T07
 - **Files** `eval/harness.py`, `eval/cases/extraction_core/*.json`, `Makefile` (`make eval`, `make eval-report`), `reports/`
 - **Acceptance**
