@@ -1,13 +1,13 @@
 *** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
 
 -- KFS (Key Facts Statement) --
-Ref no.: LN-SYN-2026-43586
-Product: gold loan
-Amount sanctioned: ₹750,000/-
-Tenure: 180 days
-Rate of interest: 12.00% per annum, fixed basis
-Fees payable: INR 2,500.00
-APR (all-inclusive): 12.77%
+Ref no.: LN-SYN-2026-24953
+Product: personal loan
+Amount sanctioned: Rs. 250,000
+Tenure: 1095 days
+Rate of interest: 12.00% per annum, floating basis
+Fees payable: Rs. 5,000
+APR (all-inclusive): 12.68%
 Look-up / cooling-off period: 7 days; no prepayment charge within this window.
-Grievance officer: Deepak Rao | Tel: 1800-419-7149 | Email: grievance@sunrise.example
-Validity of this statement: 7 working days from 05-04-2026.
+Grievance officer: Vikram Chauhan | Tel: 1800-802-1878 | Email: grievance@northbridge.example
+Validity of this statement: 3 working days from 11/08/2026.

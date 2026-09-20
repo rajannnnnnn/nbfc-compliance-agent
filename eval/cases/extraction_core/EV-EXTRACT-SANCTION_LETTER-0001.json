@@ -1,0 +1,33 @@
+{
+  "case_ref": "EV-EXTRACT-SANCTION_LETTER-0001",
+  "suite": "extraction_core",
+  "stage": "extraction",
+  "doc_type": "sanction_letter",
+  "input_ref": "sanction_letter/sanction_letter_0001.txt",
+  "event_date": "2026-06-01",
+  "account_profile": {
+    "product_type": "vehicle",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "loan_type": "vehicle",
+      "sanctioned_amount": "25000000",
+      "interest_rate_bps": "1450",
+      "processing_fee": "500000",
+      "fees_total": "500000",
+      "loan_term_days": "730",
+      "apr_bps": "1594"
+    },
+    "check_key": "extraction",
+    "verdict": "n/a",
+    "decisive_citations": [],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Ground truth is the exact value scripts/gen_synthetic_docs.py used to render sanction_letter_0001.txt, not a separately authored expectation."
+}

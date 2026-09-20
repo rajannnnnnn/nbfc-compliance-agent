@@ -1,0 +1,41 @@
+{
+  "case_ref": "EV-EXTRACT-KFS-0019",
+  "suite": "extraction_core",
+  "stage": "extraction",
+  "doc_type": "kfs",
+  "input_ref": "kfs/kfs_0019.txt",
+  "event_date": "2026-07-09",
+  "account_profile": {
+    "product_type": "gold",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "loan_proposal_number": "LN-SYN-2025-55870",
+      "loan_type": "gold",
+      "sanctioned_amount": "10000000",
+      "loan_term_days": "180",
+      "interest_rate_bps": "1850",
+      "interest_rate_type": "fixed",
+      "fees_total": "100000",
+      "apr_bps": "2093",
+      "grievance_officer_name": "Deepak Rao",
+      "grievance_officer_phone": "1800-304-1333",
+      "grievance_officer_email": "grievance@meridian.example",
+      "cooling_off_period_days": "1",
+      "cooling_off_prepayment_penalty_flag": "false",
+      "kfs_validity_days": "3",
+      "kfs_issued_date": "2026-07-09"
+    },
+    "check_key": "extraction",
+    "verdict": "n/a",
+    "decisive_citations": [],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Ground truth is the exact value scripts/gen_synthetic_docs.py used to render kfs_0019.txt, not a separately authored expectation."
+}

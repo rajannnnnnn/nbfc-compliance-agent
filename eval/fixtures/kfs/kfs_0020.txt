@@ -1,13 +1,13 @@
 *** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
 
 KEY FACTS STATEMENT
-Loan proposal number: LN-SYN-2026-72518
+Loan proposal number: LN-SYN-2025-31465
 Type of loan: vehicle
-Sanctioned loan amount: INR 750,000.00
-Loan term: 1095 days
-Interest rate: 18.50% p.a. (floating)
-Total fees and charges: ₹1,000/-
-Annual Percentage Rate (APR): 20.91% p.a.
+Sanctioned loan amount: ₹500,000/-
+Loan term: 180 days
+Interest rate: 16.50% p.a. (fixed)
+Total fees and charges: ₹2,500/-
+Annual Percentage Rate (APR): 17.79% p.a.
 Cooling-off / look-up period: 7 days. No prepayment penalty applies if the borrower exits within this period.
-Grievance redressal officer: Vikram Chauhan, phone 1800-919-4613, email grievance@sunrise.example
-This Key Facts Statement is valid for 3 working days from the date of issue, 27 April 2026.
+Grievance redressal officcr: Vikram Chauhan, phone 1800-484-7498, email grievance@meridian.example
+This Key Facts Statement is valid for 3 working days from the date of issue, 15-04-2026.

@@ -13,6 +13,7 @@ tenant data.
 import json
 from dataclasses import dataclass, field
 from datetime import date, datetime
+from pathlib import Path
 from typing import Any
 from uuid import UUID
 
@@ -36,6 +37,7 @@ from app.domain.facts import (
     StringValue,
     value_to_jsonable,
 )
+from app.extract.service import extract_document
 from app.llm.client import LLMClient
 from app.schema.registry import FieldRegistry
 from app.verdict.assess import assess_fact
@@ -71,6 +73,23 @@ class PersistedCitationCheck:
     role: str
     resolves_to_live_in_window_clause: bool
     is_hallucinated: bool
+
+
+@dataclass
+class FieldOutcome:
+    field_key: str
+    expected_present: bool
+    actual_present: bool
+    value_match: bool  # only meaningful when both expected_present and actual_present
+    span_verified: bool
+
+
+@dataclass
+class ExtractionOutcome:
+    case_ref: str
+    fields: list[FieldOutcome] = field(default_factory=list)
+    passed: bool = False
+    diff: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -322,6 +341,147 @@ async def run_case(
         await session.execute(
             text("DELETE FROM extracted_fact WHERE loan_account_id = :lid"),
             {"lid": str(loan_id)},
+        )
+        await session.execute(text("DELETE FROM document WHERE id = :id"), {"id": str(doc_id)})
+        await session.execute(text("DELETE FROM loan_account WHERE id = :id"), {"id": str(loan_id)})
+        await session.execute(text("DELETE FROM tenant WHERE id = :id"), {"id": str(tenant_id)})
+        await session.commit()
+
+
+async def run_extraction_case(
+    session: AsyncSession,
+    case: EvalCase,
+    *,
+    settings: Settings,
+    registry: FieldRegistry,
+    client: LLMClient,
+    fixtures_dir: str = "eval/fixtures",
+) -> ExtractionOutcome:
+    """Runs Stage A extraction (LLD §9) for real against a fixture's document text — no
+    ground truth is injected pre-extraction, unlike `run_case`'s verdict-stage shortcut.
+    `case.input_ref` names the fixture file (relative to `fixtures_dir`); `case.expected.facts`
+    is the ground truth the generator itself used to render that fixture (see
+    scripts/gen_synthetic_docs.py). A field registered for `case.doc_type` but absent from
+    `expected.facts` is expected absent."""
+    if not case.input_ref:
+        raise ValueError(f"{case.case_ref}: extraction-stage case requires input_ref")
+    document_text = (Path(fixtures_dir) / case.input_ref).read_text()
+
+    tenant_id, loan_id, doc_id = uuid7(), uuid7(), uuid7()
+    event_date = date.fromisoformat(case.event_date)
+
+    try:
+        await session.execute(
+            text("INSERT INTO tenant (id, name) VALUES (:id, :name)"),
+            {"id": str(tenant_id), "name": f"eval-{case.case_ref}"},
+        )
+        await session.execute(
+            text(
+                "INSERT INTO loan_account (id, tenant_id, external_ref, product_type, "
+                "is_microfinance, is_digital_lending, device_financed) VALUES "
+                "(:id, :tid, :ref, :pt, :mfi, :dl, :dev)"
+            ),
+            {
+                "id": str(loan_id),
+                "tid": str(tenant_id),
+                "ref": case.case_ref,
+                "pt": case.account_profile.product_type,
+                "mfi": case.account_profile.is_microfinance,
+                "dl": case.account_profile.is_digital_lending,
+                "dev": case.account_profile.device_financed,
+            },
+        )
+        await session.execute(
+            text(
+                "INSERT INTO document (id, tenant_id, loan_account_id, doc_type, "
+                "lifecycle_stage, event_date, content_sha256, source_uri, char_count, "
+                "span_budget_chars) VALUES (:id, :tid, :lid, :dt, :stage, :ed, :sha, "
+                "'eval://synthetic', :cc, :budget)"
+            ),
+            {
+                "id": str(doc_id),
+                "tid": str(tenant_id),
+                "lid": str(loan_id),
+                "dt": case.doc_type,
+                "stage": _DOC_TYPE_LIFECYCLE_STAGE_FALLBACK,
+                "ed": event_date,
+                "sha": uuid7().hex + uuid7().hex,
+                "cc": len(document_text),
+                "budget": max(1, int(len(document_text) * settings.span_budget_ratio)),
+            },
+        )
+
+        await extract_document(
+            session=session,
+            document_id=doc_id,
+            tenant_id=tenant_id,
+            loan_account_id=loan_id,
+            doc_type=case.doc_type,
+            document_text=document_text,
+            client=client,
+            registry=registry,
+            settings=settings,
+        )
+        await session.commit()
+
+        rows = await session.execute(
+            text(
+                "SELECT field_key, is_absent, value_normalized, span_verified "
+                "FROM extracted_fact WHERE document_id = :did"
+            ),
+            {"did": str(doc_id)},
+        )
+        by_field = {r.field_key: r for r in rows}
+
+        field_outcomes: list[FieldOutcome] = []
+        mismatches: dict[str, Any] = {}
+        for spec in registry.for_doc_type(case.doc_type):
+            expected_present = spec.key in case.expected.facts
+            row = by_field.get(spec.key)
+            actual_present = row is not None and not row.is_absent
+            value_match = False
+            span_verified = bool(row.span_verified) if row is not None else False
+
+            if expected_present and actual_present:
+                expected_typed = _parse_expected_value(spec.type, case.expected.facts[spec.key])
+                expected_jsonable = value_to_jsonable(expected_typed)
+                actual_jsonable = (
+                    json.loads(row.value_normalized)
+                    if isinstance(row.value_normalized, str)
+                    else row.value_normalized
+                )
+                value_match = actual_jsonable == expected_jsonable
+                if not value_match:
+                    mismatches[spec.key] = {
+                        "expected": expected_jsonable,
+                        "actual": actual_jsonable,
+                    }
+            elif expected_present != actual_present:
+                mismatches[spec.key] = {
+                    "expected_present": expected_present,
+                    "actual_present": actual_present,
+                }
+
+            field_outcomes.append(
+                FieldOutcome(
+                    field_key=spec.key,
+                    expected_present=expected_present,
+                    actual_present=actual_present,
+                    value_match=value_match,
+                    span_verified=span_verified,
+                )
+            )
+
+        outcome = ExtractionOutcome(
+            case_ref=case.case_ref,
+            fields=field_outcomes,
+            passed=not mismatches,
+            diff=mismatches,
+        )
+        return outcome
+    finally:
+        await session.execute(
+            text("DELETE FROM extracted_fact WHERE document_id = :did"), {"did": str(doc_id)}
         )
         await session.execute(text("DELETE FROM document WHERE id = :id"), {"id": str(doc_id)})
         await session.execute(text("DELETE FROM loan_account WHERE id = :id"), {"id": str(loan_id)})

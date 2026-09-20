@@ -1,0 +1,12 @@
+{
+  "doc_type": "sanction_letter",
+  "facts": {
+    "loan_type": "personal",
+    "sanctioned_amount": "75000000",
+    "interest_rate_bps": "1650",
+    "processing_fee": "500000",
+    "fees_total": "500000",
+    "loan_term_days": "730",
+    "apr_bps": "1839"
+  }
+}

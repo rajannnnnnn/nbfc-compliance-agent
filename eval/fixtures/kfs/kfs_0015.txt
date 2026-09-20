@@ -1,13 +1,13 @@
 *** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
 
 KEY FACTS STATEMENT
-Loan proposal number: LN-SYN-2025-96511
+Loan proposal number: LN-SYN-2026-37549
 Type of loan: consumer_durable
-Sanctioned loan amount: INR 500,000.00
+Sanctioned loan amount: ₹1,200,000/-
 Loan term: 730 days
-Interest rate: 14.50% p.a. (fixed)
-Total fees and charges: INR 2,500.00
-Annual Percentage Rate (APR): 15.89% p.a.
-Cooling-off / look-up period: 7 days. No prepayment penalty applies if the borrower exits within this period.
-Grievance redressal officer: Vikram Chauhan, phone 1800-509-9785, email grievance@sunrise.example
-This Key Facts Statement is valid for 3 working days from the date of issue, 12/08/2026.
+Interest rate: 12.00% p.a. (floating)
+Total fees and charges: Rs. 5,000
+Annual Percentage Rate (APR): 13.63% p.a.
+Cooling-off / look-up period: 3 days. No prepayment penalty applies if the borrower exits within this period.
+Grievance redressal officer: Vikram Chauhan, phone 1800-318-9375, email grievance@sunrise.example
+This Key Facts Statement is valid for 7 working days from the date of issue, 13 May 2026.

@@ -1,14 +1,15 @@
 *** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
 
 LOAN AGREEMENT
-This agreement is made between Northbridge Finance Ltd. ("the Lender") and Priya Nair ("the Borrower").
-Agreement reference: LA-SYN-2025-91381
-Type of loan: vehicle
+This agreement is made between Northbridge Finance Ltd. ("the Lender") and Ravi Kumar Singh ("the Borrower").
+Agreement reference: LA-SYN-2026-23256
+Type of loan: business
 Sanctioned amount: ₹250,000/-
-Rate of interest: 21.00% p.a.
+Rate of interest: 14.50% p.a.
 Disbursal shall be credited to the Borrower's own bank account.
 Repayment shall be debited directly from the Borrower's own bank account; no pass-through or pooling account is used.
 Cooling-off period: 7 days; no prepayment penalty within this period.
 The particulars of the Key Facts Statement are reproduced as a summary box forming part of this Agreement.
-Grievance escalation mechanism is described in clause 3.2 of this Agreement.
+Grievance escalation mechanism is described in clause 9.1 of this Agreement.
 This loan is not transferable without the Lender's prior written consent.
+A lending service provider, Apex Recovery Services, is engaged for sourcing and recovery under this Agreement; its fee is borne by the Lender, not the Borrower.

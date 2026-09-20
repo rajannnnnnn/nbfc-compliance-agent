@@ -1,0 +1,37 @@
+{
+  "case_ref": "EV-EXTRACT-LOAN_AGREEMENT-0013",
+  "suite": "extraction_core",
+  "stage": "extraction",
+  "doc_type": "loan_agreement",
+  "input_ref": "loan_agreement/loan_agreement_0013.txt",
+  "event_date": "2026-06-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "loan_type": "personal",
+      "sanctioned_amount": "120000000",
+      "interest_rate_bps": "1650",
+      "disbursal_credited_account_type": "borrower_own",
+      "repayment_debited_account_type": "lender_own",
+      "pass_through_account_used_flag": "false",
+      "cooling_off_period_days": "1",
+      "cooling_off_prepayment_penalty_flag": "false",
+      "kfs_summary_in_agreement_flag": "true",
+      "grievance_mechanism_clause_ref": "4.5",
+      "loan_transferable_flag": "false"
+    },
+    "check_key": "extraction",
+    "verdict": "n/a",
+    "decisive_citations": [],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Ground truth is the exact value scripts/gen_synthetic_docs.py used to render loan_agreement_0013.txt, not a separately authored expectation."
+}

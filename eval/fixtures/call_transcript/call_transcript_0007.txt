@@ -1,8 +1,8 @@
 *** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
 
 COLLECTIONS CALL TRANSCRIPT
-Date/time of call: 02 May 2026 09:00 IST
-Agent: Farha Sheikh (Apex Recovery Services)
+Date/time of call: 10 June 2026 19:00 IST
+Agent: Vikram Chauhan (Apex Recovery Services)
 Agent identified themself and the agency before proceeding with the call.
 Days past due at time of contact: 65
 Call was recorded; recording will be retained for 180 days.

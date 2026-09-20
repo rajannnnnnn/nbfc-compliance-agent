@@ -1,0 +1,20 @@
+{
+  "doc_type": "kfs",
+  "facts": {
+    "loan_proposal_number": "LN-SYN-2025-80678",
+    "loan_type": "gold",
+    "sanctioned_amount": "25000000",
+    "loan_term_days": "1095",
+    "interest_rate_bps": "1650",
+    "interest_rate_type": "fixed",
+    "fees_total": "750000",
+    "apr_bps": "1900",
+    "grievance_officer_name": "Farha Sheikh",
+    "grievance_officer_phone": "1800-294-2545",
+    "grievance_officer_email": "grievance@northbridge.example",
+    "cooling_off_period_days": "3",
+    "cooling_off_prepayment_penalty_flag": "false",
+    "kfs_validity_days": "7",
+    "kfs_issued_date": "2026-02-17"
+  }
+}

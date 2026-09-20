@@ -1,0 +1,33 @@
+{
+  "case_ref": "EV-EXTRACT-SANCTION_LETTER-0022",
+  "suite": "extraction_core",
+  "stage": "extraction",
+  "doc_type": "sanction_letter",
+  "input_ref": "sanction_letter/sanction_letter_0022.txt",
+  "event_date": "2026-06-01",
+  "account_profile": {
+    "product_type": "gold",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "loan_type": "gold",
+      "sanctioned_amount": "10000000",
+      "interest_rate_bps": "1650",
+      "processing_fee": "100000",
+      "fees_total": "100000",
+      "loan_term_days": "180",
+      "apr_bps": "1822"
+    },
+    "check_key": "extraction",
+    "verdict": "n/a",
+    "decisive_citations": [],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Ground truth is the exact value scripts/gen_synthetic_docs.py used to render sanction_letter_0022.txt, not a separately authored expectation."
+}

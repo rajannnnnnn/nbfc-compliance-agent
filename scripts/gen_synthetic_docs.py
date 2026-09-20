@@ -17,8 +17,10 @@ produces a bare 9-18 digit run or a 5-letter/4-digit/1-letter PAN shape.
 """
 
 import argparse
+import json
 import random
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from datetime import time as dtime
 from pathlib import Path
 
 SYNTHETIC_BANNER = "*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***"
@@ -68,12 +70,21 @@ def _apply_ocr_noise(text: str, rng: random.Random) -> str:
     return "".join(chars)
 
 
-def _gen_kfs(rng: random.Random) -> str:
+def _gen_kfs(rng: random.Random) -> tuple[str, dict[str, str]]:
     base = date(2026, rng.randint(1, 9), rng.randint(1, 28))
     principal = rng.choice([100000, 250000, 500000, 750000, 1200000])
     rate_bps = rng.choice([1200, 1450, 1650, 1850, 2100])
     fees = rng.choice([1000, 2500, 5000, 7500])
     ref = _proposal_ref(rng, "LN")
+    loan_type = rng.choice(_LOAN_TYPES)
+    term = rng.choice([180, 365, 730, 1095])
+    rate_type = rng.choice(["fixed", "floating"])
+    apr_bps = rate_bps + rng.randint(50, 250)
+    cooloff = rng.choice([1, 3, 7])
+    gname = rng.choice(_AGENT_NAMES)
+    gphone = f"1800-{rng.randint(100,999)}-{rng.randint(1000,9999)}"
+    gemail = "grievance@" + rng.choice(_LENDER_NAMES).split()[0].lower() + ".example"
+    validity = rng.choice([3, 5, 7])
     templates = [
         (
             "KEY FACTS STATEMENT\n"
@@ -107,78 +118,132 @@ def _gen_kfs(rng: random.Random) -> str:
     ]
     body = rng.choice(templates).format(
         ref=ref,
-        loan_type=rng.choice(_LOAN_TYPES),
+        loan_type=loan_type,
         amount=_fmt_money(principal, rng),
-        term=rng.choice([180, 365, 730, 1095]),
+        term=term,
         rate=rate_bps / 100,
-        rate_type=rng.choice(["fixed", "floating"]),
+        rate_type=rate_type,
         fees=_fmt_money(fees, rng),
-        apr=(rate_bps + rng.randint(50, 250)) / 100,
-        cooloff=rng.choice([1, 3, 7]),
-        gname=rng.choice(_AGENT_NAMES),
-        gphone=f"1800-{rng.randint(100,999)}-{rng.randint(1000,9999)}",
-        gemail="grievance@" + rng.choice(_LENDER_NAMES).split()[0].lower() + ".example",
-        validity=rng.choice([3, 5, 7]),
+        apr=apr_bps / 100,
+        cooloff=cooloff,
+        gname=gname,
+        gphone=gphone,
+        gemail=gemail,
+        validity=validity,
         issued=_fmt_date(base, rng),
     )
-    return body
+    facts = {
+        "loan_proposal_number": ref,
+        "loan_type": loan_type,
+        "sanctioned_amount": str(principal * 100),
+        "loan_term_days": str(term),
+        "interest_rate_bps": str(rate_bps),
+        "interest_rate_type": rate_type,
+        "fees_total": str(fees * 100),
+        "apr_bps": str(apr_bps),
+        "grievance_officer_name": gname,
+        "grievance_officer_phone": gphone,
+        "grievance_officer_email": gemail,
+        "cooling_off_period_days": str(cooloff),
+        "cooling_off_prepayment_penalty_flag": "false",
+        "kfs_validity_days": str(validity),
+        "kfs_issued_date": base.isoformat(),
+    }
+    return body, facts
 
 
-def _gen_loan_agreement(rng: random.Random) -> str:
+def _gen_loan_agreement(rng: random.Random) -> tuple[str, dict[str, str]]:
     principal = rng.choice([100000, 250000, 500000, 750000, 1200000])
     rate_bps = rng.choice([1200, 1450, 1650, 1850, 2100])
     borrower = rng.choice(_BORROWER_NAMES)
     lender = rng.choice(_LENDER_NAMES)
     ref = _proposal_ref(rng, "LA")
+    loan_type = rng.choice(_LOAN_TYPES)
+    cooloff = rng.choice([1, 3, 7])
+    grievance_clause_ref = f"{rng.randint(1, 9)}.{rng.randint(1,9)}"
     body = (
         "LOAN AGREEMENT\n"
         f'This agreement is made between {lender} ("the Lender") and {borrower} '
         '("the Borrower").\n'
         f"Agreement reference: {ref}\n"
-        f"Type of loan: {rng.choice(_LOAN_TYPES)}\n"
+        f"Type of loan: {loan_type}\n"
         f"Sanctioned amount: {_fmt_money(principal, rng)}\n"
         f"Rate of interest: {rate_bps/100:.2f}% p.a.\n"
         f"Disbursal shall be credited to the Borrower's own bank account.\n"
         f"Repayment shall be debited directly from the Borrower's own bank account; no "
         f"pass-through or pooling account is used.\n"
-        f"Cooling-off period: {rng.choice([1, 3, 7])} days; no prepayment penalty within "
+        f"Cooling-off period: {cooloff} days; no prepayment penalty within "
         "this period.\n"
         f"The particulars of the Key Facts Statement are reproduced as a summary box "
         "forming part of this Agreement.\n"
-        f"Grievance escalation mechanism is described in clause {rng.randint(1, 9)}.{rng.randint(1,9)} "
+        f"Grievance escalation mechanism is described in clause {grievance_clause_ref} "
         "of this Agreement.\n"
         f"This loan is not transferable without the Lender's prior written consent.\n"
     )
+    facts = {
+        "loan_type": loan_type,
+        "sanctioned_amount": str(principal * 100),
+        "interest_rate_bps": str(rate_bps),
+        "disbursal_credited_account_type": "borrower_own",
+        "repayment_debited_account_type": "lender_own",
+        "pass_through_account_used_flag": "false",
+        "cooling_off_period_days": str(cooloff),
+        "cooling_off_prepayment_penalty_flag": "false",
+        "kfs_summary_in_agreement_flag": "true",
+        "grievance_mechanism_clause_ref": grievance_clause_ref,
+        "loan_transferable_flag": "false",
+    }
     if rng.random() < 0.4:
+        lsp_name = rng.choice(_AGENCIES)
         body += (
-            f"A lending service provider, {rng.choice(_AGENCIES)}, is engaged for sourcing "
+            f"A lending service provider, {lsp_name}, is engaged for sourcing "
             "and recovery under this Agreement; its fee is borne by the Lender, not the "
             "Borrower.\n"
         )
-    return body
+        facts["lsp_name"] = lsp_name
+        facts["lsp_recovery_agent_named"] = "true"
+        facts["lsp_fee_borne_by"] = "lender"
+    return body, facts
 
 
-def _gen_sanction_letter(rng: random.Random) -> str:
+def _gen_sanction_letter(rng: random.Random) -> tuple[str, dict[str, str]]:
     base = date(2026, rng.randint(1, 9), rng.randint(1, 28))
     principal = rng.choice([100000, 250000, 500000, 750000, 1200000])
     rate_bps = rng.choice([1200, 1450, 1650, 1850, 2100])
     ref = _proposal_ref(rng, "SL")
-    return (
+    loan_type = rng.choice(_LOAN_TYPES)
+    processing_fee = rng.choice([1000, 2500, 5000])
+    term = rng.choice([180, 365, 730])
+    apr_bps = rate_bps + rng.randint(50, 250)
+    body = (
         "SANCTION LETTER\n"
         f"Reference: {ref}\n"
         f"Date: {_fmt_date(base, rng)}\n"
-        f"We are pleased to sanction a {rng.choice(_LOAN_TYPES)} loan of "
+        f"We are pleased to sanction a {loan_type} loan of "
         f"{_fmt_money(principal, rng)} at {rate_bps/100:.2f}% p.a.\n"
-        f"Processing fee: {_fmt_money(rng.choice([1000, 2500, 5000]), rng)}\n"
-        f"Loan term: {rng.choice([180, 365, 730])} days.\n"
-        f"Annual Percentage Rate: {(rate_bps + rng.randint(50,250))/100:.2f}% p.a.\n"
+        f"Processing fee: {_fmt_money(processing_fee, rng)}\n"
+        f"Loan term: {term} days.\n"
+        f"Annual Percentage Rate: {apr_bps/100:.2f}% p.a.\n"
     )
+    facts = {
+        "loan_type": loan_type,
+        "sanctioned_amount": str(principal * 100),
+        "interest_rate_bps": str(rate_bps),
+        "processing_fee": str(processing_fee * 100),
+        "fees_total": str(processing_fee * 100),
+        "loan_term_days": str(term),
+        "apr_bps": str(apr_bps),
+    }
+    return body, facts
 
 
-def _gen_mitc(rng: random.Random) -> str:
+def _gen_mitc(rng: random.Random) -> tuple[str, dict[str, str]]:
+    """MITC has no fields registered in app/schema/fields.yaml — nothing this generator
+    embeds is compared by the extraction_core suite; the fixture text still exists for
+    document-classification and future field-registration coverage."""
     base = date(2026, rng.randint(1, 9), rng.randint(1, 28))
     rate_bps = rng.choice([1200, 1450, 1650, 1850, 2100])
-    return (
+    body = (
         "MOST IMPORTANT TERMS AND CONDITIONS (MITC)\n"
         f"Date: {_fmt_date(base, rng)}\n"
         f"Applicable interest rate: {rate_bps/100:.2f}% p.a.\n"
@@ -187,36 +252,61 @@ def _gen_mitc(rng: random.Random) -> str:
         "The borrower may access the full agreement and KFS on request at no charge.\n"
         f"Grievance officer contact is set out in the accompanying Key Facts Statement.\n"
     )
+    return body, {}
 
 
-def _gen_call_transcript(rng: random.Random) -> str:
+def _gen_call_transcript(rng: random.Random) -> tuple[str, dict[str, str]]:
     base = date(2026, rng.randint(1, 9), rng.randint(1, 28))
     contact_hour = rng.choice([9, 11, 14, 19, 21])
     agent = rng.choice(_AGENT_NAMES)
     agency = rng.choice(_AGENCIES)
     dpd = rng.choice([15, 35, 65, 95])
-    return (
+    retention = rng.choice([90, 180, 365])
+    body = (
         "COLLECTIONS CALL TRANSCRIPT\n"
         f"Date/time of call: {_fmt_date(base, rng)} {contact_hour:02d}:00 IST\n"
         f"Agent: {agent} ({agency})\n"
         f"Agent identified themself and the agency before proceeding with the call.\n"
         f"Days past due at time of contact: {dpd}\n"
-        "Call was recorded; recording will be retained for {ret} days.\n"
+        f"Call was recorded; recording will be retained for {retention} days.\n"
         "No third party was contacted regarding this account.\n"
         "No abusive language or threats were used during this call.\n"
-    ).format(ret=rng.choice([90, 180, 365]))
+    )
+    facts = {
+        "contact_datetime": datetime.combine(base, dtime(contact_hour, 0)).isoformat(),
+        "contact_channel": "call",
+        "agent_name": agent,
+        "agency_name": agency,
+        "agent_id_disclosed_flag": "true",
+        "recovery_agent_identity_notified_before_contact_flag": "true",
+        "days_past_due_at_contact": str(dpd),
+        "call_recorded_flag": "true",
+        "recording_retention_days": str(retention),
+        "third_party_contacted_flag": "false",
+        "third_party_relationship": "none",
+        "abusive_language_flag": "false",
+        "threat_made_flag": "false",
+    }
+    return body, facts
 
 
-def _gen_closure_statement(rng: random.Random) -> str:
+def _gen_closure_statement(rng: random.Random) -> tuple[str, dict[str, str]]:
     base = date(2026, rng.randint(1, 9), rng.randint(1, 20))
     release_days = rng.choice([5, 15, 29, 30, 31, 45])
-    return (
+    issued = base + timedelta(days=1)
+    released = base + timedelta(days=release_days)
+    body = (
         "CLOSURE STATEMENT\n"
         f"Full repayment received on: {_fmt_date(base, rng)}\n"
-        f"Closure statement issued on: {_fmt_date(base + timedelta(days=1), rng)}\n"
-        f"Original title documents released on: "
-        f"{_fmt_date(base + timedelta(days=release_days), rng)}\n"
+        f"Closure statement issued on: {_fmt_date(issued, rng)}\n"
+        f"Original title documents released on: {_fmt_date(released, rng)}\n"
     )
+    facts = {
+        "full_repayment_date": base.isoformat(),
+        "closure_statement_date": issued.isoformat(),
+        "original_docs_released_date": released.isoformat(),
+    }
+    return body, facts
 
 
 _GENERATORS = {
@@ -229,14 +319,21 @@ _GENERATORS = {
 }
 
 
-def generate_document(doc_type: str, rng: random.Random) -> str:
-    body = _GENERATORS[doc_type](rng)
-    if rng.random() < _OCR_NOISE_RATE:
+def generate_document(doc_type: str, rng: random.Random) -> tuple[str, dict[str, str]]:
+    body, facts = _GENERATORS[doc_type](rng)
+    noisy = rng.random() < _OCR_NOISE_RATE
+    if noisy:
         body = _apply_ocr_noise(body, rng)
-    return f"{SYNTHETIC_BANNER}\n\n{body}"
+    return f"{SYNTHETIC_BANNER}\n\n{body}", facts
 
 
 def generate_all(out_dir: Path, count: int, *, seed: int = 42) -> list[Path]:
+    """Writes `<doc_type>_<i>.txt` plus a companion `<doc_type>_<i>.facts.json` recording the
+    exact normalised ground-truth value (per `eval.runner._parse_expected_value`'s
+    conventions) for every field this generator actually embedded in the text. A field
+    registered for the doc_type but absent from the JSON is, by construction, genuinely
+    absent from the text — never fabricated ground truth, since these are the same Python
+    values used to render the document itself."""
     rng = random.Random(seed)
     doc_types = list(_GENERATORS)
     per_type = max(1, count // len(doc_types))
@@ -245,10 +342,15 @@ def generate_all(out_dir: Path, count: int, *, seed: int = 42) -> list[Path]:
         type_dir = out_dir / doc_type
         type_dir.mkdir(parents=True, exist_ok=True)
         for i in range(per_type):
-            text = generate_document(doc_type, rng)
+            text, facts = generate_document(doc_type, rng)
             path = type_dir / f"{doc_type}_{i:04d}.txt"
             path.write_text(text)
             written.append(path)
+            facts_path = type_dir / f"{doc_type}_{i:04d}.facts.json"
+            facts_path.write_text(json.dumps({"doc_type": doc_type, "facts": facts}, indent=2))
+            # `written` intentionally lists only the .txt fixtures — callers (and existing
+            # tests) treat it as "the generated documents"; the facts.json ground-truth
+            # companion is a side effect recorded on disk, not a fixture itself.
     return written
 
 

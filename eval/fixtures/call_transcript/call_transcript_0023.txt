@@ -1,10 +1,10 @@
 *** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
 
 COLLECTIONS CALL TRANSCRIPT
-Date/time of call: 2026-09-16 09:00 IST
-Agent: Farha Sheikh (Clearline Collections Pvt. Ltd.)
-Agent identified themself and the agency before proceeding with the ca1l.
-Days past due at time of contact: 65
-Call was recorded; recording will be retained for 180 days.
+Date/time of call: 25/03/2026 19:00 IST
+Agent: Vikram Chauhan (Clearline Collections Pvt. Ltd.)
+Agent identified themself and the agency before proceeding with the call.
+Days past due at time of contact: 15
+Call was recorded; recording will be retained for 365 days.
 No third party was contacted regarding this account.
 No abusive language or threats were used during this call.

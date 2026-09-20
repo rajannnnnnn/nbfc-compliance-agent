@@ -1,15 +1,14 @@
 *** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
 
 LOAN AGREEMENT
-This agreement is made between Meridian Credit Ltd. ("the Lender") and Asha Devi ("the Borrower").
-Agreement reference: LA-SYN-2026-27224
+This agreement is made between Meridian Credit Ltd. ("the Lender") and Ravi Kumar Singh ("the Borrower").
+Agreement reference: LA-SYN-2025-67366
 Type of loan: personal
-Sanctioned amount: INR 500,000.00
-Rate of interest: 18.50% p.a.
+Sanctioned amount: INR 250,000.00
+Rate of interest: 14.50% p.a.
 Disbursal shall be credited to the Borrower's own bank account.
 Repayment shall be debited directly from the Borrower's own bank account; no pass-through or pooling account is used.
 Cooling-off period: 3 days; no prepayment penalty within this period.
 The particulars of the Key Facts Statement are reproduced as a summary box forming part of this Agreement.
-Grievance escalation mechanism is described in clause 7.3 of this Agreement.
+Grievance escalation mechanism is described in clause 6.4 of this Agreement.
 This loan is not transferable without the Lender's prior written consent.
-A lending service provider, Clearline Collections Pvt. Ltd., is engaged for sourcing and recovery under this Agreement; its fee is borne by the Lender, not the Borrower.

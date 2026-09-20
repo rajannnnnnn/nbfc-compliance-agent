@@ -1,10 +1,10 @@
 *** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
 
 COLLECTIONS CALL TRANSCRIPT
-Date/time of call: 2026-05-23 09:00 IST
-Agent: Farha Sheikh (Clearline Collections Pvt. Ltd.)
+Date/time of call: 22/08/2026 19:00 IST
+Agent: Deepak Rao (Apex Recovery Services)
 Agent identified themself and the agency before proceeding with the call.
-Days past due at time of contact: 65
+Days past due at time of contact: 95
 Call was recorded; recording will be retained for 90 days.
 No third party was contacted regarding this account.
 No abusive language or threats were used during this call.

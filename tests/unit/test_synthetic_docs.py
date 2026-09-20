@@ -42,8 +42,23 @@ def test_no_document_contains_a_real_looking_pan_aadhaar_or_account_pattern(tmp_
 
 def test_layout_and_date_format_vary_across_the_same_doc_type():
     rng = random.Random(7)
-    samples = {generate_document("kfs", rng) for _ in range(20)}
+    samples = {generate_document("kfs", rng)[0] for _ in range(20)}
     assert len(samples) > 1
+
+
+def test_generated_facts_are_a_subset_of_the_doc_types_registered_fields():
+    """Every ground-truth key generate_document emits for a doc_type must be a field this
+    codebase's own registry declares for that doc_type — otherwise the extraction_core suite
+    built from these fixtures would compare against a field extraction never even attempts."""
+    from app.schema.registry import FieldRegistry
+
+    registry = FieldRegistry("app/schema/fields.yaml")
+    rng = random.Random(11)
+    for doc_type in _GENERATORS:
+        valid_keys = {spec.key for spec in registry.for_doc_type(doc_type)}
+        for _ in range(5):
+            _, facts = generate_document(doc_type, rng)
+            assert set(facts) <= valid_keys, f"{doc_type}: {set(facts) - valid_keys}"
 
 
 def test_deterministic_given_the_same_seed(tmp_path):

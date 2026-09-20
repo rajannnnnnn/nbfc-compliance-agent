@@ -1,8 +1,8 @@
 *** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
 
 COLLECTIONS CALL TRANSCRIPT
-Date/time of call: 08 August 2026 21:00 IST
-Agent: Deepak Rao (Apex Recovery Services)
+Date/time of call: 2026-01-28 14:00 IST
+Agent: Deepak Rao (Clearline Collections Pvt. Ltd.)
 Agent identified themself and the agency before proceeding with the call.
 Days past due at time of contact: 35
 Call was recorded; recording will be retained for 90 days.

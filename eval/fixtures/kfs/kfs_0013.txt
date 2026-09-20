@@ -1,13 +1,13 @@
 *** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
 
 KEY FACTS STATEMENT
-Loan proposal number: LN-SYN-2026-86350
+Loan proposal number: LN-SYN-2026-51114
 Type of loan: consumer_durable
-Sanctioned loan amount: Rs. 250,000
+Sanctioned loan amount: INR 100,000.00
 Loan term: 180 days
 Interest rate: 21.00% p.a. (floating)
-Total fees and charges: INR 1,000.00
-Annual Percentage Rate (APR): 21.60% p.a.
-Cooling-off / look-up period: 3 days. No prepayment penalty applies if the borrower exits within this period.
-Grievance redressal officer: Deepak Rao, phone 1800-798-5088, email grievance@meridian.example
-This Key Facts Statement is valid for 3 working days from the date of issue, 03 February 2026.
+Total fees and charges: INR 7,500.00
+Annual Percentage Rate (APR): 22.97% p.a.
+Cooling-off / look-up period: 1 days. No prepayment penalty applies if the borrower exits within this period.
+Grievance redressal officer: Farha Sheikh, phone 1800-145-8144, email grievance@northbridge.example
+This Key Facts Statement is valid for 7 working days from the date of issue, 02/05/2026.

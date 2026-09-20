@@ -1,13 +1,13 @@
 *** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
 
--- KFS (Key Facts Statement) --
-Ref no.: LN-SYN-2025-31417
-Product: consumer_durable loan
-Amount sanctioned: INR 100,000.00
-Tenure: 365 days
-Rate of interest: 21.00% per annum, floating basis
-Fees payable: Rs. 2,500
-APR (all-inclusive): 22.08%
-Look-up / cooling-off period: 1 days; no prepayment charge within this window.
-Grievance officer: Farha Sheikh | Tel: 1800-510-5386 | Email: grievance@northbridge.example
-Validity of this statement: 3 working days from 23 May 2026.
+KEY FACTS STATEMENT
+Loan proposal number: LN-SYN-2025-31417
+Type of loan: consumer_durable
+Sanctioned loan amount: INR 100,000.00
+Loan term: 1095 days
+Interest rate: 21.00% p.a. (floating)
+Total fees and charges: INR 2,500.00
+Annual Percentage Rate (APR): 23.13% p.a.
+Cooling-off / look-up period: 7 days. No prepayment penalty applies if the borrower cxits within this period.
+Grievance redressal officer: Vikram Chauhan, phone 1800-324-6313, email grievance@northbridge.example
+This Key Facts Statement is valid for 3 working days from the date of issue, 23 May 2026.

@@ -21,8 +21,8 @@ from app.db.engine import get_sessionmaker
 from app.llm.client import LLMClient
 from app.schema.registry import FieldRegistry
 from eval.loader import load_suite
-from eval.metrics import compute_verdict_metrics
-from eval.runner import run_case
+from eval.metrics import compute_extraction_metrics, compute_verdict_metrics
+from eval.runner import run_case, run_extraction_case
 
 REPORTS_DIR = Path("reports")
 
@@ -51,20 +51,36 @@ async def run_suite(
     if not cases:
         raise ValueError(f"suite {suite!r} has zero cases in eval/cases/{suite}/")
 
-    started_at = datetime.now(UTC)
-    outcomes = []
-    for case in cases:
-        outcome = await run_case(
-            session,
-            case,
-            snapshot_id=snapshot_id,
-            settings=settings,
-            registry=registry,
-            client=client,
-        )
-        outcomes.append(outcome)
+    stages = {c.stage for c in cases}
+    if len(stages) != 1:
+        raise ValueError(f"suite {suite!r} mixes stages {stages!r} — one suite, one stage")
+    stage = stages.pop()
 
-    metrics = compute_verdict_metrics(cases, outcomes)
+    started_at = datetime.now(UTC)
+    outcomes: list[Any] = []
+    if stage == "extraction":
+        for case in cases:
+            outcome = await run_extraction_case(
+                session,
+                case,
+                settings=settings,
+                registry=registry,
+                client=client,
+            )
+            outcomes.append(outcome)
+        metrics: Any = compute_extraction_metrics(outcomes)
+    else:
+        for case in cases:
+            outcome = await run_case(
+                session,
+                case,
+                snapshot_id=snapshot_id,
+                settings=settings,
+                registry=registry,
+                client=client,
+            )
+            outcomes.append(outcome)
+        metrics = compute_verdict_metrics(cases, outcomes)
     finished_at = datetime.now(UTC)
 
     eval_run_id = uuid7()
@@ -124,6 +140,27 @@ async def run_suite(
         )
         eval_case_id = eval_case_row.scalar_one()
 
+        if stage == "extraction":
+            actual_payload = {
+                "fields": [
+                    {
+                        "field_key": fo.field_key,
+                        "expected_present": fo.expected_present,
+                        "actual_present": fo.actual_present,
+                        "value_match": fo.value_match,
+                        "span_verified": fo.span_verified,
+                    }
+                    for fo in outcome.fields
+                ]
+            }
+        else:
+            actual_payload = {
+                "verdict": outcome.verdict,
+                "check_key": outcome.check_key,
+                "decisive_citations": outcome.decisive_citations,
+                "context_citations": outcome.context_citations,
+            }
+
         await session.execute(
             text("""
                 INSERT INTO eval_result (id, eval_run_id, eval_case_id, passed, actual, diff)
@@ -134,14 +171,7 @@ async def run_suite(
                 "run_id": str(eval_run_id),
                 "case_id": str(eval_case_id),
                 "passed": outcome.passed,
-                "actual": json.dumps(
-                    {
-                        "verdict": outcome.verdict,
-                        "check_key": outcome.check_key,
-                        "decisive_citations": outcome.decisive_citations,
-                        "context_citations": outcome.context_citations,
-                    }
-                ),
+                "actual": json.dumps(actual_payload),
                 "diff": json.dumps(outcome.diff),
             },
         )

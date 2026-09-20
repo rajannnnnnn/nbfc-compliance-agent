@@ -1,0 +1,12 @@
+{
+  "doc_type": "sanction_letter",
+  "facts": {
+    "loan_type": "vehicle",
+    "sanctioned_amount": "25000000",
+    "interest_rate_bps": "1450",
+    "processing_fee": "500000",
+    "fees_total": "500000",
+    "loan_term_days": "730",
+    "apr_bps": "1594"
+  }
+}

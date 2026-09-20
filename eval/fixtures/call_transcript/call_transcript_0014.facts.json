@@ -1,0 +1,18 @@
+{
+  "doc_type": "call_transcript",
+  "facts": {
+    "contact_datetime": "2026-02-19T09:00:00",
+    "contact_channel": "call",
+    "agent_name": "Vikram Chauhan",
+    "agency_name": "Apex Recovery Services",
+    "agent_id_disclosed_flag": "true",
+    "recovery_agent_identity_notified_before_contact_flag": "true",
+    "days_past_due_at_contact": "65",
+    "call_recorded_flag": "true",
+    "recording_retention_days": "180",
+    "third_party_contacted_flag": "false",
+    "third_party_relationship": "none",
+    "abusive_language_flag": "false",
+    "threat_made_flag": "false"
+  }
+}

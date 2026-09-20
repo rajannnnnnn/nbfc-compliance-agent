@@ -1,14 +1,14 @@
 *** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
 
 LOAN AGREEMENT
-This agreement is made between Sunrise Capital NBFC Ltd. ("the Lender") and Sunita Yadav ("the Borrower").
-Agreement reference: LA-SYN-2026-52176
-Type of loan: gold
-Sanctioned amount: ₹500,000/-
-Rate of interest: 21.00% p.a.
+This agreement is made between Northbridge Finance Ltd. ("the Lender") and Asha Devi ("the Borrower").
+Agreement reference: LA-SYN-2025-60940
+Type of loan: consumer_durable
+Sanctioned amount: ₹750,000/-
+Rate of interest: 12.00% p.a.
 Disbursal shall be credited to the Borrower's own bank account.
 Repayment shall be debited directly from the Borrower's own bank account; no pass-through or pooling account is used.
-Cooling-off period: 1 days; no prepayment penalty within this period.
+Cooling-off period: 3 days; no prepayment penalty within this period.
 The particulars of the Key Facts Statement are reproduced as a summary box forming part of this Agreement.
-Grievance escalation mechanism is described in clause 7.4 of this Agreement.
+Grievance escalation mechanism is described in clause 9.7 of this Agreement.
 This loan is not transferable without the Lender's prior written consent.

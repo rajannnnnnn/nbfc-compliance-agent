@@ -1,13 +1,13 @@
 *** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
 
--- KFS (Key Facts Statement) --
-Ref no.: LN-SYN-2025-96474
-Product: business loan
-Amount sanctioned: Rs. 750,000
-Tenure: 730 days
-Rate of interest: 12.00% per annum, floating basis
-Fees payable: Rs. 2,500
-APR (all-inclusive): 13.88%
-Look-up / cooling-off period: 7 days; no prepayment charge within this window.
-Grievance officer: Vikram Chauhan | Tel: 1800-305-6107 | Email: grievance@sunrise.example
-Validity of this statement: 7 working days from 03 February 2026.
+KEY FACTS STATEMENT
+Loan proposal number: LN-SYN-2026-24322
+Type of loan: gold
+Sanctioned loan amount: Rs. 100,000
+Loan term: 365 days
+Interest rate: 12.00% p.a. (fixed)
+Total fees and charges: INR 7,500.00
+Annual Percentage Rate (APR): 13.87% p.a.
+Cooling-off / look-up period: 3 days. No prepayment penalty applies if the borrower exits within this period.
+Grievance redressal officer: Deepak Rao, phone 1800-532-4006, email grievance@sunrise.example
+This Key Facts Statement is valid for 5 working days from the date of issue, 22/01/2026.

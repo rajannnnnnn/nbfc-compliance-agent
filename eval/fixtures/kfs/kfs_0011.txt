@@ -1,13 +1,13 @@
 *** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
 
 KEY FACTS STATEMENT
-Loan proposal number: LN-SYN-2026-96951
-Type of loan: gold
-Sanctioned loan amount: INR 1,200,000.00
-Loan term: 180 days
-Interest rate: 16.50% p.a. (fixed)
-Total fees and charges: ₹1,000/-
-Annual Percentage Rate (APR): 18.41% p.a.
-Cooling-off / look-up period: 1 days. No prepayment penalty applies if the borrower exits within this period.
-Grievance redressal officer: Farha Sheikh, phone 1800-388-4450, email grievance@meridian.example
-This Key Facts Statement is valid for 5 working days from the date of issue, 27-08-2026.
+Loan proposal number: LN-SYN-2025-64040
+Type of loan: personal
+Sanctioned loan amount: INR 250,000.00
+Loan term: 365 days
+Interest rate: 14.50% p.a. (floating)
+Total fees and charges: Rs. 2,500
+Annual Percentage Rate (APR): 17.00% p.a.
+Cooling-off / look-up period: 3 days. No prepayment penalty applies if the borrower exits within this period.
+Grievance redressal officer: Vikram Chauhan, phone 1800-984-5065, email grievance@sunrise.example
+This Key Facts Statement is valid for 3 working days from the date of issue, 2026-07-20.
