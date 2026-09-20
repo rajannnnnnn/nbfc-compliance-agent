@@ -981,9 +981,18 @@ is `docs/CORPUS.md`, not working code.
   construction methodology (deliberately withholding the one fact each rule reads, so
   `MissingFact` forces `NotApplicable` while the underlying clause stays retrieval-eligible,
   driving `assess_fact()`'s real fallthrough path, `check_key="F:<field_key>"`). Built and
-  unit-verified **entirely without live LLM calls** per explicit user instruction; not yet
-  run against the live API — decisive_citations reflect a documented best-effort assumption
-  about what `retrieve_candidates()` will rank top, to be reconciled on the first live run.
+  unit-verified **entirely without live LLM calls** per explicit user instruction, then run
+  live on explicit authorization: `verdict_accuracy=0.25`, `hallucinated_citation_rate=0.0`,
+  `citation_validity=1.0` (16 cases). See ADR-047 for the full, root-caused breakdown — not
+  guessed: R09's 2 failures are a real model behavior (choosing `no_clause_found` over
+  `ambiguous` given a present-but-inconclusive value, confirmed by re-querying
+  `retrieve_candidates()` directly and finding the candidate WAS there); R20's 10 failures
+  are a real, pre-existing retrieval gap confirmed the same way (`third_party_relationship`
+  isn't pinned, **every clause in the corpus has `embedding IS NULL`** — vector search has
+  never worked in this environment for any field — and the lexical fallback's query text
+  shares no vocabulary with the clause text). The corpus has never been embedded here
+  (`make ingest`'s embed step is deliberately off for routine runs); flagged to the user as
+  a real fix candidate (56 short clauses, trivial cost) rather than done unilaterally.
 - **Depends on** M6-T04
 - **Files** `eval/loader.py`, `eval/metrics.py`, `eval/runner.py`, `eval/harness.py`,
   `eval/cases/{numeric_rules,temporal,abstention,verdict}/*.json`,
@@ -995,7 +1004,7 @@ is `docs/CORPUS.md`, not working code.
   make eval suite=numeric_rules && jq -e '.metrics.hallucinated_citation_rate == 0' reports/eval_numeric_rules_latest.json
   make eval suite=temporal      && jq -e '.metrics.hallucinated_citation_rate == 0' reports/eval_temporal_latest.json
   make eval suite=abstention    && jq -e '.metrics.abstention_correctness == 1.0' reports/eval_abstention_latest.json
-  make eval suite=verdict       # not yet run live — pending explicit go-ahead (real spend)
+  make eval suite=verdict       # run live: verdict_accuracy=0.25, hallucinated_citation_rate=0 (see ADR-047)
   make eval-report
   ```
   `hallucinated_citation_rate` **exactly 0** on every suite actually run live so far —

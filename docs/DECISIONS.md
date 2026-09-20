@@ -1188,7 +1188,82 @@ with `F:`, the trigger field is the one fact provided, and every rule consuming 
 returns `NotApplicable` — so a future change to R09 or R20's preconditions that quietly turns
 a case rule-decided again fails CI rather than silently degrading the suite's purpose.
 `eval/loader.py::load_suite("verdict")` parses all 16 cases cleanly. Full regression (236
-unit tests) and `ruff check` pass. Not run live in this pass — no `make eval suite=verdict` yet —
-per the explicit "no live calls yet" instruction; a live run is the natural next step once
-authorized, and is expected to also validate or correct the `decisive_citations` assumption
-above.
+unit tests) and `ruff check` pass.
+
+---
+
+## ADR-047 — First live `verdict` run: `verdict_accuracy=0.25`, root-caused, not guessed
+
+**Context.** Following explicit authorization, `make eval suite=verdict` was run live
+(`CC_EMBEDDING_API_KEY` enabled for this one deliberate run, then unset again immediately
+after per the routine-test-run convention documented next to it in `.env`). Result:
+
+```
+verdict_accuracy: 0.25   citation_validity: 1.0   hallucinated_citation_rate: 0.0
+abstention_correctness: 1.0   false_violation_rate: 0.0   case_count: 16
+```
+
+`hallucinated_citation_rate=0.0` confirms the one invariant that actually matters most
+(CLAUDE.md §2.1) held throughout — every citation the model tried to make resolved to a real,
+in-window clause. The low `verdict_accuracy` is a real accuracy finding, root-caused below
+rather than assumed, per the project's own stated methodology for reading a bad number
+(compare ADR-042/ADR-045: check the harness and ground truth before blaming the model).
+
+**Two distinct causes, not one.**
+
+1. **R09 (6 cases): 4/6 passed.** The 2 failures are both the `unknown`-value cases
+   (`EV-VERDICT-R09-003`, `-006`), expected `ambiguous`, actual `no_clause_found` with zero
+   citations either side. Confirmed live and directly, not assumed: a standalone
+   `retrieve_candidates()` call with the exact same field/value/as_of returns
+   `DL2025/p9/ii` as a real candidate (pinning is field-key-keyed, not value-keyed, so the
+   clause is present regardless of the fact's value) — so this is not a retrieval gap. The
+   model itself chose `no_clause_found` given a governing clause and a genuinely undisclosed
+   value. `app/prompts/verdict/assess_fact.v2.md`'s own `no_clause_found` definition ("no
+   candidate clause governs this fact") is arguably being over-applied here — a clause on
+   exactly this topic *is* a candidate, and `app/verdict/validator.py`'s own
+   `single_decisive_citation_recorded` branch exists precisely to accept an `ambiguous`
+   verdict backed by one decisive citation, so the system's own design anticipates this
+   shape of case. Read as real, not an artifact of a badly-built eval case: the model
+   under-uses `ambiguous` relative to `no_clause_found` when a value is present but
+   inconclusive, at least in this sample.
+2. **R20 (10 cases): 0/10 passed.** All ten came back `no_clause_found` with zero citations.
+   Root-caused directly, not assumed: a standalone `retrieve_candidates()` call with the
+   exact same parameters (field `third_party_relationship`, `as_of=2027-01-10`,
+   `entity_type=nbfc`) returns **zero candidates and zero context_only** — the model never
+   saw `RBC-AMD2026/p100X` at all, so `no_clause_found` was the only honest answer it could
+   give. Three compounding, now-confirmed facts:
+   - `pinning.yaml` pins `third_party_contacted_flag` to `RBC-AMD2026/p100X` but not
+     `third_party_relationship` — the very field ADR-046 chose as this suite's trigger
+     because the *contacted* flag had to stay absent for `MissingFact` to fire.
+   - Every clause in the corpus has `embedding IS NULL` (confirmed directly: `SELECT
+     count(*) FROM clause WHERE embedding IS NULL` = 56 of 56) — vector search has never
+     contributed a single candidate in this environment, for any field, because the corpus
+     has never been through a real `embed()` pass. This predates this suite; `numeric_rules`/
+     `temporal`/`abstention` never surfaced it because every field they exercise happens to
+     be pinned.
+   - The lexical fallback (`app/retrieve/lexical.py::build_lexical_query`) queries on
+     `field_label` alone when the value has no numeric tokens — `"Relationship of third
+     party contacted"` shares no stemmed vocabulary with the clause text ("relative, friend,
+     colleague or employer"), so `websearch_to_tsquery`'s implicit AND matches nothing.
+     Confirmed by re-running the same query text directly against Postgres.
+
+**What this is and isn't.** This is a real, pre-existing retrieval gap (the corpus has never
+been embedded in this environment) that this suite is the first to expose, not a defect
+introduced by building it — every field the three shipped suites exercise happens to be
+pinned, so nothing before now depended on vector or lexical recall actually working. It is
+outside this task's scope to embed the corpus unilaterally: `make ingest`'s embedding step
+was deliberately left off for routine runs (real API cost, free-tier quota), and turning it
+on for the whole corpus is a scope and spend decision for the user, not something to do
+silently mid-eval-run. Flagged to the user directly with a cost estimate (56 short clauses is
+a trivial embedding bill) rather than assumed authorized by "run it live."
+
+**What is not being done in response to this.** The two R09 "unknown" cases are not being
+"fixed" by changing their expected verdict to `no_clause_found` — that would just encode the
+model's current under-use of `ambiguous` as correct rather than reporting it as a real
+accuracy gap. Ground truth stays `ambiguous`, matching the system's own documented design
+(`single_decisive_citation_recorded`).
+
+**Verification.** Live run output above, both root causes reproduced directly and
+independently outside the harness (`retrieve_candidates()` called standalone with the exact
+case parameters), not inferred from the diff alone. `reports/eval_verdict_latest.json` holds
+the full per-case results (gitignored per CLAUDE.md §6, not committed).
