@@ -18,11 +18,11 @@ from uuid6 import uuid7
 from app.config import Settings, get_settings
 from app.corpus.snapshot import get_active_snapshot_id
 from app.db.engine import get_sessionmaker
-from app.llm.client import LLMClient
+from app.llm.client import LLMClient, PermanentLLMError, TransientLLMError
 from app.schema.registry import FieldRegistry
 from eval.loader import load_suite
 from eval.metrics import compute_extraction_metrics, compute_verdict_metrics
-from eval.runner import run_case, run_extraction_case
+from eval.runner import ExtractionOutcome, run_case, run_extraction_case
 
 REPORTS_DIR = Path("reports")
 
@@ -59,16 +59,31 @@ async def run_suite(
     started_at = datetime.now(UTC)
     outcomes: list[Any] = []
     if stage == "extraction":
+        errored_cases: list[dict[str, str]] = []
         for case in cases:
-            outcome = await run_extraction_case(
-                session,
-                case,
-                settings=settings,
-                registry=registry,
-                client=client,
-            )
+            try:
+                outcome = await run_extraction_case(
+                    session,
+                    case,
+                    settings=settings,
+                    registry=registry,
+                    client=client,
+                )
+            except (TransientLLMError, PermanentLLMError) as exc:
+                # A real provider-side failure on one case (e.g. ADR-041: Gemini's
+                # structured-output mode rejecting a large per-doc-type schema outright)
+                # must not lose every other case's real results — recorded honestly as a
+                # zero-field, failed outcome and excluded from field-level metrics (never
+                # counted as a false success), not silently swallowed or faked as passing.
+                outcome = ExtractionOutcome(
+                    case_ref=case.case_ref, fields=[], passed=False, diff={"error": str(exc)}
+                )
+                errored_cases.append({"case_ref": case.case_ref, "error": str(exc)})
             outcomes.append(outcome)
-        metrics: Any = compute_extraction_metrics(outcomes)
+        metrics_source = [o for o in outcomes if o.fields]
+        if not metrics_source:
+            raise RuntimeError(f"suite {suite!r}: every case errored before producing a field")
+        metrics: Any = compute_extraction_metrics(metrics_source)
     else:
         for case in cases:
             outcome = await run_case(
@@ -190,6 +205,8 @@ async def run_suite(
             for c, o in zip(cases, outcomes, strict=True)
         ],
     }
+    if stage == "extraction" and errored_cases:
+        report["errored_cases"] = errored_cases
     REPORTS_DIR.mkdir(exist_ok=True)
     ts = started_at.strftime("%Y%m%dT%H%M%SZ")
     report_path = REPORTS_DIR / f"eval_{suite}_{ts}.json"

@@ -95,13 +95,51 @@ def _provider_of(model: str) -> str:
     return model.split("/", 1)[0] if "/" in model else "unknown"
 
 
+_SCHEMA_KEYS_DROPPED_FOR_GENERATION = {
+    "$defs",
+    "minimum",
+    "maximum",
+    "exclusiveMinimum",
+    "exclusiveMaximum",
+    "description",
+    "title",
+}
+
+
 def _inline_refs(node: Any, defs: dict[str, Any]) -> Any:
+    """Also strips numeric bound keywords (`minimum`/`maximum`/...) live-discovered against
+    Gemini's structured-output mode: a bounded field (e.g. `FieldExtraction.confidence`,
+    `ge=0.0, le=1.0`) repeated once per inlined field on a large per-doc-type schema (34
+    fields for loan_agreement) produced a 400 "schema produces a constraint that has too
+    many states for serving" — Gemini's own wording names exactly this pattern. These bounds
+    are validation concerns, not generation-shape concerns: Pydantic still enforces them when
+    the response is parsed back (`parse_or_repair`/`model_validate_json`), so dropping them
+    from the schema shown to the provider loses no real safety."""
     if isinstance(node, dict):
         ref = node.get("$ref")
         if ref is not None:
             def_name = ref.rsplit("/", 1)[-1]
             return _inline_refs(defs[def_name], defs)
-        return {k: _inline_refs(v, defs) for k, v in node.items() if k != "$defs"}
+        any_of = node.get("anyOf")
+        if isinstance(any_of, list) and len(any_of) == 2:
+            non_null = [b for b in any_of if b.get("type") != "null"]
+            has_null = any(b.get("type") == "null" for b in any_of)
+            if has_null and len(non_null) == 1:
+                # Pydantic's `X | None` becomes anyOf: [{type: X}, {type: null}] — Gemini's
+                # constrained decoder counts each anyOf branch as extra states, which is what
+                # tipped a 34-field schema (loan_agreement) over its "too many states" limit.
+                # Gemini's own schema dialect uses a `nullable` flag instead of a union, so
+                # collapse the common Optional-field case to that lighter form.
+                collapsed = {**non_null[0], "nullable": True}
+                for k in ("default",):
+                    if k in node:
+                        collapsed[k] = node[k]
+                return _inline_refs(collapsed, defs)
+        return {
+            k: _inline_refs(v, defs)
+            for k, v in node.items()
+            if k not in _SCHEMA_KEYS_DROPPED_FOR_GENERATION
+        }
     if isinstance(node, list):
         return [_inline_refs(item, defs) for item in node]
     return node
@@ -112,7 +150,8 @@ def _inlined_json_schema(model_cls: type[BaseModel]) -> dict[str, Any]:
     `$ref`/`$defs` — a nested Pydantic model (e.g. `FieldExtraction` reused across every field
     of an extraction schema) must appear inline at every use site, not as a shared reference.
     Pydantic's own `model_json_schema()` always emits `$defs` for any nested model, so this
-    resolves every `$ref` against `$defs` and drops `$defs` from the result."""
+    resolves every `$ref` against `$defs` and drops `$defs` from the result — see
+    `_inline_refs` for the numeric-bound stripping this also performs."""
     schema = model_cls.model_json_schema()
     defs = schema.get("$defs", {})
     return cast(dict[str, Any], _inline_refs(schema, defs))

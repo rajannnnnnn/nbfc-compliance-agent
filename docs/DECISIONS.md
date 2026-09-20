@@ -866,3 +866,47 @@ project's own synthetic corpus produces — not a broader "accept anything" rela
 **Verification.** New unit test `test_money_with_trailing_slash_dash_suffix` in
 `tests/unit/extract/test_normalise.py` asserts both `"₹7,500/-"` and `"7,500/-"` normalise to
 750000 paise. Full regression (304 tests) passes.
+
+## ADR-041 — Gemini's structured-output mode rejects `loan_agreement`'s 34-field schema outright
+
+**Context.** Resuming the live `extraction_core` run after ADR-040's fix, `loan_agreement`
+cases (34 registered fields, the largest doc_type by field count — `kfs`'s 25 fields run
+fine) failed every time with a 400: `"The specified schema produces a constraint that has
+too many states for serving"`, naming "schemas with lots of text ... long array length
+limits ... complex value matchers (integers/numbers with minimum/maximum bounds or strings
+with complex formats)" as typical causes.
+
+`app/llm/client.py`'s `_inline_refs` was extended twice to test this directly: first
+stripping `minimum`/`maximum` (the exact bound `FieldExtraction.confidence: float = Field(ge=0.0,
+le=1.0)` carries, repeated once per inlined field), then also `description`/`title`, then
+collapsing Pydantic's `X | None` → `anyOf: [{type: X}, {type: null}]` pattern into Gemini's
+lighter `nullable: true` form. None of these individually or together fixed the 400 for
+`loan_agreement`'s 34-field schema — `kfs`'s 25-field schema with the same nested shape works
+without any of these changes, so the blocker is the sheer number of free-text (`value_raw`,
+`quoted_span`) properties in one constrained-decoding request, not a specific schema
+keyword. All three changes are kept regardless: dropping validation-only bounds/metadata from
+the *generation* schema (Pydantic still enforces them parsing the response back) and
+preferring `nullable` over an `anyOf`-null union are correct simplifications on their own
+terms, independent of whether they alone clear this particular limit.
+
+**Decision.** Do not attempt a deeper architectural fix (e.g. splitting a large doc_type's
+extraction into multiple smaller model calls grouped by field) unreviewed and mid-session —
+that changes `extract_document`'s per-doc-type call contract and cost profile, a decision
+for the person who owns this budget, not one to make silently while iterating on a live key.
+Instead: `eval/harness.py`'s `run_suite` now catches `TransientLLMError`/`PermanentLLMError`
+per extraction case, records it as a real zero-field failed outcome (excluded from
+field-level metrics — never counted as a false pass), and continues the suite rather than
+losing every other case's real results to one doc_type's known failure mode. The report's
+`errored_cases` key lists exactly which cases hit this so it's never silently absent from the
+numbers.
+
+**Path to a real fix**, when the budget owner wants it: split `extract_raw_fields()`'s single
+schema-constrained call per doc_type into N calls over field groups small enough to stay under
+whatever field-count threshold Gemini's serving stack enforces (empirically strictly between
+25 and 34 fields for this schema shape) — a genuine design change to `app/extract/extractor.py`,
+not an eval-harness workaround.
+
+**Verification.** `eval/harness.py`'s new per-case catch is exercised by the live
+`extraction_core` run itself (loan_agreement cases fail and are recorded; kfs/sanction_letter/
+call_transcript/closure_statement cases succeed and are scored normally). Full regression
+(304 tests) passes.
