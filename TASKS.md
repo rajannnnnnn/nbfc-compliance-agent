@@ -787,7 +787,7 @@ is `docs/CORPUS.md`, not working code.
   (PRD §14 Q3) wherever the corpus actually has one.
 
 ### M5-T06 — `numeric_rules` and `temporal` suites
-- **Status** partial — 28 numeric cases (up from 15), covering boundary conditions for the
+- **Status** partial — 31 numeric cases (up from 15), covering boundary conditions for the
   same 7 of the LLD §11's nine "pure date or money arithmetic" rules (R03 is decided by
   `conflicts/detector.py` rather than a standalone rule evaluation and R16 is fully covered
   in the `temporal` suite below, so neither gets a dedicated numeric case): R01 (30-day
@@ -804,10 +804,14 @@ is `docs/CORPUS.md`, not working code.
   prior-intimation: the pre-existing boundary plus a 7-day compliant extreme and a MissingFact
   violation with no intimation on record at all), R24 (restoration compensation: the
   pre-existing zero/one-hour pair plus a 10-hour violation at a larger compensation
-  multiplier). All 28 verified at `verdict_accuracy == 1.0` against the real corpus
-  (`tests/integration/eval/test_harness.py::test_numeric_rules_suite_boundaries_are_exact`).
-  Still short of the LLD's ≥60 minimum — same honest-scope-reduction pattern as
-  ADR-034/ADR-035, not a fabricated count.
+  multiplier). Also adds R02b (the lost-documents limb of R02, same RBC2025 §F arithmetic
+  family — an extended 60-day window rather than R02's 30, plus its own not-assisted
+  violation path): a rule the LLD's named list of nine does not separately enumerate but
+  which is the same kind of pure date arithmetic. All 31 verified at `verdict_accuracy ==
+  1.0` against the real corpus (`tests/integration/eval/
+  test_harness.py::test_numeric_rules_suite_boundaries_are_exact`). Still short of the LLD's
+  ≥60 minimum — same honest-scope-reduction pattern as ADR-034/ADR-035, not a fabricated
+  count.
   12 temporal cases (6 pairs, up from 4 pairs/8 cases): the PRD §11 pair (`EV-TEMPORAL-001`/
   `-002`, R16 contact window), 3 pairs across the 2027-01-01 RBC-AMD2026 commencement date
   (R18 recording retention, R22 prior-visit intimation, R24 restoration compensation), and 2

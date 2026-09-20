@@ -1,0 +1,30 @@
+{
+  "case_ref": "EV-NUM-031",
+  "suite": "numeric_rules",
+  "stage": "verdict",
+  "doc_type": "docs_release_ack",
+  "input_ref": null,
+  "event_date": "2026-05-02",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "docs_lost_flag": "true",
+      "duplicate_docs_assistance_offered_flag": "true",
+      "full_repayment_date": "2026-03-02",
+      "original_docs_released_date": "2026-05-02"
+    },
+    "check_key": "R02b_lost_documents",
+    "verdict": "violation",
+    "decisive_citations": ["RBC2025/p40"],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Boundary: 61 days exceeds the extended 60-day window by one day, even with duplicates assisted — violation. Pairs with EV-NUM-030's exact-boundary compliant case."
+}
