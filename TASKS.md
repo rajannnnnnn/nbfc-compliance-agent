@@ -336,21 +336,23 @@ is `docs/CORPUS.md`, not working code.
   is false; `UPDATE`/`DELETE` on `audit_event` are denied.
 
 ### M2-T04 — FastAPI skeleton
-- **Status** open
+- **Status** done — 4/4 health tests + 8/8 documents/assessments flow tests
+  (`tests/integration/api/`). Built: `app/main.py` (app factory, request-id middleware, error
+  handlers, lifespan running boot assertions), `app/api/deps.py` (bearer-token tenant auth via
+  `tenant.api_key_hash`, RLS-scoped session dependency, an injectable `get_llm_client` seam
+  tests override), `app/api/errors.py` (the full LLD §16 code->status table), and
+  `app/api/v1/{health,corpus,loans,documents,assessments}.py`. `/readyz` checks database, an
+  active snapshot and pinning validation. `/v1/corpus` is unauthenticated and includes
+  `verification_status`/`verification_note` per instrument. POST documents implements
+  hash-mismatch, duplicate-doc, doctype-classification-floor and `Idempotency-Key` replay, all
+  proven against real Postgres with a stub LLM client injected via
+  `app.dependency_overrides`. SQ-09 resolved as ADR-033 (the boot assertion and `/readyz`'s
+  own check guard different failure modes, not the same one).
+  **Note on test infra**: tests drive the app via `httpx.AsyncClient(transport=ASGITransport(...))`
+  on the pytest-asyncio loop, not `fastapi.testclient.TestClient` — the latter runs the app in
+  a separate thread/loop that collides with this codebase's cached module-level SQLAlchemy
+  engine the moment a test also touches the database directly.
 - **Depends on** M2-T02
-- **Files** `app/main.py`, `app/deps.py`, `app/api/v1/{router,corpus,schemas}.py`, `tests/integration/api/test_health.py`
-- **Acceptance**
-  ```bash
-  curl -sf localhost:8000/healthz | jq -e '.status=="ok"'
-  curl -s -o /dev/null -w '%{http_code}' localhost:8000/readyz            # 503 with no active snapshot
-  curl -sf localhost:8000/v1/corpus | jq -e '.instruments|length==5'      # unauthenticated
-  pytest tests/integration/api/test_health.py -q
-  ```
-  `/readyz` checks database, Redis, an active snapshot and pinning validation, and returns
-  `CC-503-CORPUS-UNAVAILABLE` when any fails. `/v1/corpus` requires no bearer token and
-  includes `verification_status` and `verification_note` per instrument.
-  **[SPEC]** Boot assertion §2.2 kills the process when no snapshot is active, which makes the
-  `/readyz` 503 above unreachable on a fresh database — see SQ-09.
 
 ### M2-T05 — Celery wiring
 - **Status** done — 5/5 wiring tests (`tests/integration/tasks/test_wiring.py`) + 9/9 task
@@ -375,18 +377,18 @@ is `docs/CORPUS.md`, not working code.
 - **Depends on** M0-T02
 
 ### M2-T07 — Boot assertions
-- **Status** open
+- **Status** done — 8/8 tests (`tests/integration/test_boot.py`). `app/boot.py`'s
+  `run_boot_assertions` raises `BootAssertionError` (tests assert on the exception directly,
+  the more precise signal); `boot_or_exit` wraps it with `sys.exit(1)` and is what
+  `app.main`'s lifespan actually calls. All five LLD §2 checks: embedding dimension vs. the
+  live `clause.embedding` column width (via `pg_attribute.atttypmod`); exactly one active
+  snapshot (proven two ways — the assertion itself, and that `uq_snapshot_active`'s partial
+  unique index makes a second active row genuinely impossible to insert in the first place);
+  every pinning path resolves; every **non-shadow** rule's clause paths resolve (a rule that's
+  currently shadow because its instrument isn't `rbi_verified` is exempt, since its clause
+  basis isn't citable regardless of whether the path exists); `alembic current == heads`.
+  `fail_boot_on_pinning_mismatch=false` accepted only when `env='ci'`.
 - **Depends on** M2-T02, M2-T04, M1-T12
-- **Files** `app/main.py` (lifespan), `tests/integration/test_boot.py`
-- **Acceptance**
-  ```bash
-  pytest tests/integration/test_boot.py -q
-  ```
-  One test per assertion in LLD §2, each proving the process **exits non-zero**: embedding
-  dimension mismatch against the live column; zero or two active snapshots; an unresolved
-  pinning path; a rule whose clause paths do not resolve and which is not marked shadow;
-  `alembic current != heads`. Plus: `fail_boot_on_pinning_mismatch=false` is accepted in `ci`
-  and **rejected** in `local` and `prod`.
 
 ---
 
@@ -915,29 +917,30 @@ is `docs/CORPUS.md`, not working code.
 
 # SESSION CHECKPOINT (resume here)
 
-As of commit `1f15bc2`, M0–M7 (minus M7-T01b, M7-T04, M7-T05) are done: 234 tests passing,
-ruff/black/mypy --strict clean on `app/`. Nothing is checked out uncommitted.
+M0–M2 (all of M2 including T04/T05/T06/T07) and M3–M7 (minus M7-T01b, M7-T04, M7-T05) are
+done: 266 tests passing, ruff/black/mypy --strict clean on `app/`. A real FastAPI app exists
+(`app/main.py`) with working auth, health checks, document submission with sync extraction,
+and assessment retrieval; Celery is wired; boot assertions run in the lifespan. Nothing is
+checked out uncommitted as of the commit that lands this note.
 
-**Next up, in order**: M2-T04 (FastAPI skeleton — `app/main.py`, `app/deps.py`,
-`app/api/v1/{router,corpus,schemas}.py`, `/healthz`, `/readyz`, unauthenticated `/v1/corpus`),
-M2-T05 (Celery wiring — `app/tasks/celery_app.py`, queue routing per LLD §14), M2-T06
-(structured logging with the content denylist), M2-T07 (boot assertions). None of these have
-any files yet.
+**Next up**: M2-T06's own follow-up — Prometheus metrics (`cc_http_requests_total`,
+`cc_llm_calls_total`, `cc_citation_rejected_total`, `cc_verdicts_total`, etc., the full list
+in LLD §18) and a `/metrics` endpoint; none of that exists yet, only the structured-logging
+half of §18. After that: M7-T04 (`report.py` + `/v1/loans/{id}/report`), M6-T05/M7-T05 (the
+eval harness and its suites — nothing in `eval/` exists yet at all, this is a from-scratch
+build: `make eval`, `eval/cases/*.json`, `reports/eval_*.json`), M7-T01b (the 9 deferred
+conflict groups, blocked on new clause-grounded rules), then M8 (deploy — mostly blocked on
+hosting account decisions, SQ-20) and M9 (fine-tune comparison).
 
-Two spec gaps to resolve with an ADR when this work starts, same pattern as ADR-025/026/029
-(document the choice, don't guess silently):
-1. **Auth**: LLD §15 says "Bearer token; tenant resolved from the token" but the DDL (§3) has
-   no `api_key`/token column anywhere. Needs a new migration adding a hashed
-   `tenant.api_key_hash` column (never store the raw token) plus a FastAPI dependency that
-   hashes the incoming bearer token and looks up the tenant.
-2. **Idempotency**: §15 requires `Idempotency-Key` "stored for 24 hours against the request
-   hash" but no such table exists in the DDL. Needs a new migration for an `idempotency_key`
-   table (tenant_id, key, request_hash, response body, status code, expiry) and RLS on it
-   consistent with migration 0008's pattern.
-
-After that: M7-T04 (`report.py` + `/v1/loans/{id}/report`), M7-T05 (`conflicts`/`end_to_end`
-eval suites — depends on M6-T05's eval harness existing first), then M8 (deploy — mostly
-blocked on hosting account decisions, SQ-20) and M9 (fine-tune comparison).
+Two testing patterns worth knowing before touching `app/api/`:
+1. Tests drive the app via `httpx.AsyncClient(transport=ASGITransport(app=app))` on the
+   pytest-asyncio loop, never `fastapi.testclient.TestClient` — the latter runs the app in a
+   separate thread with its own event loop, which collides with this codebase's cached
+   module-level SQLAlchemy engine the moment a test also touches the database directly.
+2. The LLM client is injected via `Depends(get_llm_client)` (`app/api/deps.py`) specifically
+   so tests can override it with `app.dependency_overrides[get_llm_client] = lambda: stub`
+   rather than making a real network call — see
+   `tests/integration/api/test_documents_and_assessments.py`.
 
 ---
 

@@ -518,3 +518,49 @@ rule's consumed fields reaches the same rule. This is simpler than resolving all
 consumed fields and re-running each (which would also work, but re-assesses fields a
 conflict didn't actually touch) and keeps `assess.check`'s own point — a *scoped*
 re-assessment — intact.
+
+---
+
+## ADR-032 — `doc_type -> lifecycle_stage` mapping, chosen by which stage each doc_type's
+fields are drawn from
+
+`document.lifecycle_stage` (DDL §3) is `NOT NULL`, but nothing in the LLD derives it from
+anything — `fields.yaml` maps `field_key -> lifecycle_stage`, not `doc_type -> lifecycle_stage`,
+and a single document (e.g. a KFS) contributes fields to only one stage in practice even
+though the schema doesn't force that. `app/api/v1/documents.py`'s `DOC_TYPE_LIFECYCLE_STAGE`
+is a static dict, one entry per `doc_type`, chosen by inspecting which stage the bulk of that
+doc_type's fields in `fields.yaml` actually belong to (`kfs`/`loan_agreement`/
+`sanction_letter`/`mitc` -> `sanction`, `closure_statement`/`noc`/`docs_release_ack`/
+`charge_satisfaction` -> `closure`, etc.). `unknown` maps to `origination` as the least
+consequential default, since a document that fails classification has no fields extracted
+against it yet regardless.
+
+Rejected: deriving it per-field at extraction time and taking a majority vote, which would
+make the same `doc_type` land on different stages document-to-document depending on which
+fields happened to be present — inconsistent with the document being a single row with one
+`lifecycle_stage` column, and harder to reason about than a fixed table.
+
+---
+
+## ADR-033 — boot-time "exactly one active snapshot" and `/readyz`'s own active-snapshot
+check are complementary, not contradictory (SQ-09)
+
+`docs/SPEC_QUERIES.md` (SQ-09) flags that LLD §2's boot assertion ("exactly one active
+snapshot, or exit") appears to make LLD §15.4's own `/readyz` behaviour ("503 when no active
+snapshot") unreachable — if the process exits at boot when no snapshot is active, `/readyz`
+can never observe that state and return 503 for it instead.
+
+Resolved: the two checks run at different times against different failure modes and both
+stay as specified. The boot assertion (`app/boot.py`, run once in `app.main`'s lifespan)
+guards against a **fresh or misconfigured deploy** — a database that was migrated but never
+ingested, or ended up with a corrupted snapshot count — and refusing to accept a single
+request against such a database is exactly the point of a boot assertion. `/readyz`
+(`app/api/v1/health.py`) re-checks the same condition **on every call**, which matters for a
+**process that already booted successfully** and later loses its active snapshot at runtime —
+an operator re-running `make ingest` without `--activate`, or a bug in the activation
+sequence deactivating the old snapshot before the new one commits. A load balancer or
+orchestrator polling `/readyz` needs to see that transition without the process necessarily
+having restarted; the boot assertion cannot see it at all, since it only runs once. Both
+checks are real and neither makes the other redundant — SQ-09's "unreachable" framing
+assumed the only way to reach a zero-snapshot state was before boot, which is one of two ways
+it can happen, not the only one.
