@@ -41,7 +41,15 @@ def normalise_date(raw: str) -> date:
 
 
 def normalise_time(raw: str) -> time:
+    """'11:00 IST' -> time(11, 0). The trailing 'IST' timezone label is stripped before
+    matching — live-discovered against a real collections-call transcript extraction, where
+    a model-returned 'HH:MM IST' contact_datetime (the exact format
+    scripts/gen_synthetic_docs.py's own call_transcript generator produces) made this
+    function reject every value, silently turning contact_datetime into is_absent for every
+    call_transcript case in the extraction_core suite (field_accuracy=0.0 on that field)."""
     raw = raw.strip()
+    if raw.upper().endswith(" IST"):
+        raw = raw[: -len(" IST")].strip()
     if m := _TIME_24H_RE.match(raw):
         return time(int(m.group(1)), int(m.group(2)))
     if m := _TIME_12H_RE.match(raw):

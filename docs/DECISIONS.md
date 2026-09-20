@@ -925,3 +925,45 @@ caught) and that the error still wraps to `PermanentLLMError`.
 the live `extraction_core` run itself (loan_agreement cases fail and are recorded;
 kfs/sanction_letter/call_transcript/closure_statement cases succeed and are scored normally).
 Full regression (305 tests) passes.
+
+## ADR-042 — `extraction_core` first real baseline, and a real datetime-parsing gap it found
+
+**Context.** With ADR-039's quota blocker resolved (billing enabled) and ADR-040/041's fixes
+landed, the full 125-case `extraction_core` suite ran live against `gemini/gemini-2.5-flash`
+for the first time (`reports/eval_extraction_core_latest.json`, `git_sha` `e7ccbf4`+):
+
+- 100/125 cases produced real field-level results (`loan_agreement`'s 25 cases errored per
+  ADR-041's known schema-size limit, excluded from metrics rather than counted as failures).
+- `field_accuracy=0.825`, `absence_accuracy=0.933`, `span_grounding=0.486` in aggregate.
+- Total cost for the full run: **$0.465** (~110 calls at ~$0.004-0.005 each).
+
+Per-field, the worst score was `contact_datetime` at `exact_match=0.0`,
+`absence_accuracy=0.0` — every one of the 25 `call_transcript` cases disagreed with ground
+truth on presence, not just value. Root cause (confirmed with a direct live call against
+`eval/fixtures/call_transcript/call_transcript_0000.txt`): the model correctly returned
+`value_raw='03/04/2026 11:00 IST'` (matching the fixture's own text and
+`scripts/gen_synthetic_docs.py`'s own generator format), but `app/extract/normalise.py`'s
+`normalise_time()` only matched bare `HH:MM` or `HH:MM AM/PM` — the trailing `IST` timezone
+label (a real, common Indian-document convention, and this project's own synthetic corpus's
+own format) made the regex fail, so `_typed_value` caught the `NormalisationError` and
+`extract_document` silently stored the field as absent instead of wrong-but-recoverable.
+
+**Decision.** `normalise_time()` now strips a trailing `" IST"` (case-insensitive) before
+matching. This is the third live-discovered real-world format gap this pass (after
+ADR-040's `/-` money suffix) — each is a targeted fix for a notation this project's own
+corpus and a real model actually produce, not a speculative broadening of what the function
+accepts.
+
+**What the baseline says, honestly.** `field_accuracy=0.825` and `span_grounding=0.486` are
+real numbers from real model output, not fabricated — and they are not "done": several
+per-field regressions (`sanctioned_amount` 0.62, `fees_total` 0.66, `kfs_validity_days` 0.6,
+several boolean flags at 0.32) are still open and untriaged past the one traced above, and
+`loan_agreement`'s 25 cases still produce zero data pending ADR-041's real fix (splitting a
+large doc_type's extraction into multiple smaller calls). This ADR records the baseline as
+it stands, not as a target met.
+
+**Verification.** New unit test `test_time_24h_with_ist_suffix` in
+`tests/unit/extract/test_normalise.py` asserts both `"11:00 IST"` and `"11:00 ist"` parse
+correctly. Full regression (306 tests) passes. The fix was not re-run against the live suite
+in this pass (each re-run costs real, budget-owner money) — `contact_datetime`'s specific
+0.0 is expected to improve on the next live run, not yet re-verified against the API.

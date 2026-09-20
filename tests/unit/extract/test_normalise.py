@@ -84,6 +84,15 @@ def test_time_12h_am():
     assert normalise_time("8:10 AM") == time(8, 10)
 
 
+def test_time_24h_with_ist_suffix():
+    """'IST' is the timezone label scripts/gen_synthetic_docs.py's call_transcript
+    generator (and a real live model response) appends to contact_datetime — live-discovered
+    turning every call_transcript's contact_datetime into is_absent (field_accuracy=0.0)
+    before this fix."""
+    assert normalise_time("11:00 IST") == time(11, 0)
+    assert normalise_time("11:00 ist") == time(11, 0)
+
+
 def test_duration_bare_days():
     assert normalise_duration_days("30") == 30
 

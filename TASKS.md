@@ -522,34 +522,35 @@ is `docs/CORPUS.md`, not working code.
   generated document contains a value drawn from a real-looking PAN/Aadhaar/account pattern.
 
 ### M3-T08 — `extraction_core` suite — **first published baseline**
-- **Status** blocked *(real, infrastructure-only: Gemini free-tier daily quota exhausted,
-  ADR-039)* — everything code-side is now done and proven live. SQ-03 (no live LLM provider
-  credentials) is resolved: a real Gemini key (`gemini/gemini-2.5-flash`, via LiteLLM) is
-  configured. A live smoke test of `extract_raw_fields()` against `eval/fixtures/kfs/kfs_0000.txt`
-  surfaced and fixed a real bug first (ADR-038): `LLMClient.structured()` only requested
-  `response_format={"type": "json_object"}` (valid-JSON-only, no shape enforcement), so
-  Gemini validly returned a JSON array instead of the keyed object the per-doc-type
-  extraction schema requires. Fixed by passing the actual JSON Schema with `$ref`/`$defs`
-  fully inlined; covered by new unit tests in `tests/unit/llm/test_client.py`.
-  `scripts/gen_synthetic_docs.py`'s generators now return `(text, facts_dict)` — the exact
-  values used to render each fixture, written alongside it as `<fixture>.facts.json`, never
-  separately authored. `eval/runner.py` has a real `run_extraction_case()` (creates a real
-  `document` row, calls `extract_document()` against fixture text — no ground truth injected
-  pre-extraction) and `eval/metrics.py` has `compute_extraction_metrics()` implementing LLD
-  §17.2's `field_accuracy`/`absence_accuracy`/`span_grounding` formulas per field and in
-  aggregate; `eval/harness.py` dispatches by `case.stage`. 125 real cases exist in
-  `eval/cases/extraction_core/*.json` (5 doc types with registered fields x 25 fixtures;
-  `mitc` has zero registered fields and is out of scope). One live case
-  (`EV-EXTRACT-KFS-0000`) ran end to end against the real API before quota ran out:
-  `field_accuracy=1.0`, `absence_accuracy=1.0`, `span_grounding=0.6` on that case — a real,
-  if partial, data point, and the 0.6 span_grounding is itself a genuine finding worth
-  tracking (see ADR-039). The remaining ~110 cases are blocked purely on Gemini's free-tier
-  cap of 20 `gemini-2.5-flash` requests/day (confirmed via the API's own 429 response,
-  `quotaId: GenerateRequestsPerDayPerProjectPerModel-FreeTier`) — not a code or design gap.
-  Unblocks on: 24h quota reset, billing enabled on the Google AI Studio project, or a
-  higher-quota model swapped into `CC_EXTRACT_MODEL`. `scripts/run_paced_eval.py` (throttled
-  to respect the separate 5 req/min limit) is ready to re-run as soon as daily quota allows —
-  no further code changes needed.
+- **Status** done, first real baseline published — `reports/eval_extraction_core_latest.json`.
+  SQ-03 resolved (real Gemini key, billing enabled after two account-side blockers: a
+  free-tier 20 req/day cap, ADR-039, and then a separate monthly spend cap on the AI Studio
+  project that also needed manually raising). Full pipeline built and proven live this pass:
+  `LLMClient.structured()` now sends a real JSON Schema with `$ref`/`$defs` inlined and
+  validation-only bounds/metadata stripped (ADR-038, ADR-041), `litellm.BadRequestError` is
+  wrapped as `PermanentLLMError` (ADR-041), `scripts/gen_synthetic_docs.py`'s generators
+  return `(text, facts_dict)` — the exact values used to render each fixture, written
+  alongside it as `<fixture>.facts.json`, never separately authored — `eval/runner.py` has a
+  real `run_extraction_case()` (creates a real `document` row, calls `extract_document()`
+  against fixture text, no ground truth injected pre-extraction), `eval/metrics.py` has
+  `compute_extraction_metrics()` implementing LLD §17.2's formulas per field and in
+  aggregate, and `eval/harness.py` isolates a per-case LLM failure so one doc_type's known
+  issue doesn't lose every other case's real results.
+  **Real baseline (125 cases, 100 scored, git_sha e7ccbf4+, ADR-042):**
+  `field_accuracy=0.825`, `absence_accuracy=0.933`, `span_grounding=0.486`. Total cost for
+  the full run: $0.465. Two real bugs found and fixed live during this run: `/-` Indian
+  currency suffix rejected by `normalise_money_to_paise` (ADR-040), and an `IST` timezone
+  suffix rejected by `normalise_time`, which had been zeroing out `contact_datetime` on
+  every `call_transcript` case (ADR-042) — fixed after this run, not yet re-verified live.
+  **Known open gaps, stated honestly, not closed by this task:** `loan_agreement`'s 25 cases
+  (34 registered fields) still produce zero data — Gemini's structured-output mode rejects
+  that large a schema outright (ADR-041); several per-field scores are still low and
+  untriaged beyond the one fix above (`sanctioned_amount` 0.62, `fees_total` 0.66,
+  `kfs_validity_days` 0.6, several boolean flags at 0.32); `span_grounding` at 0.486 means
+  roughly half of correctly-valued fields have no verifiable quoted span, a real defect
+  category of its own. A real fix for `loan_agreement` (splitting a large doc_type's
+  extraction into multiple smaller model calls) is a genuine design change to
+  `app/extract/extractor.py`, out of scope for this task.
 - **Depends on** M3-T05, M3-T06, M3-T07
 - **Files** `eval/harness.py`, `eval/cases/extraction_core/*.json`, `Makefile` (`make eval`, `make eval-report`), `reports/`
 - **Acceptance**
