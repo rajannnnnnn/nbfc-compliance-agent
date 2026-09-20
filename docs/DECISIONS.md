@@ -800,3 +800,45 @@ non-absent KFS fields returned as a correctly-shaped object with matching `value
 fully inlined for a nested-model case shaped like the real extraction schema. Full regression
 (302 tests) passes with no changes needed to any other test — no existing test asserted on
 the literal `{"type": "json_object"}` value.
+
+## ADR-039 — `gemini-2.5-flash` free-tier hard daily cap blocks a full `extraction_core` run (M3-T08)
+
+**Context.** With ADR-038's fix landed and 125 real `extraction_core` cases generated from
+genuine per-fixture ground truth (`scripts/gen_synthetic_docs.py`'s own render-time values,
+reshaped by `scripts/gen_extraction_eval_cases.py`), a single live case
+(`EV-EXTRACT-KFS-0000`) was run end to end against the real Gemini API to prove the new
+`eval.runner.run_extraction_case()` / `eval.metrics.compute_extraction_metrics()` path:
+15/15 present fields matched ground truth exactly (`field_accuracy=1.0`,
+`absence_accuracy=1.0`), with `span_grounding=0.6` (9/15 fields' quoted spans verified
+literally against the source text — a real, smaller finding of its own: fields like
+`grievance_officer_phone`/`cooling_off_period_days` are correctly *valued* but the model's
+quoted span for them doesn't literal-match, dropped by `app/extract/spans.py`'s grounding
+check rather than passed through ungrounded).
+
+Attempting the full 125-case run next (`scripts/run_paced_eval.py`, pacing calls to stay
+under the previously-seen 5 requests/minute limit) failed at a 429 whose `quotaId` is
+`GenerateRequestsPerDayPerProjectPerModel-FreeTier`, `quotaValue: "20"` — `gemini-2.5-flash`'s
+free tier caps at **20 requests/day**, not just per-minute. Pacing (the correct fix for a
+per-minute limit) cannot fix a per-day cap; the only ways forward are waiting for the
+24-hour window to reset, enabling billing on the Google AI Studio project, or switching
+`CC_EXTRACT_MODEL` to a different free-tier model with a higher daily allowance.
+
+**Decision.** Do not fabricate the remaining ~110 cases' numbers to "complete" the baseline
+this pass — CLAUDE.md forbids inventing regulatory facts and, by the same principle, this
+harness never invents eval outcomes either. `extraction_core`'s harness code
+(`run_extraction_case`, `compute_extraction_metrics`, `eval/harness.py`'s stage dispatch) is
+complete, real, and proven against the live API on the one case that quota allowed; the
+125-case suite itself is real (ground truth traced to generator source, not authored by
+guess). What is missing is only the *quota* to run all of it in one sitting — an
+infrastructure constraint, not a code or design defect. Per the user's standing instruction,
+this is exactly the class of blocker to stop and report on rather than work around with a
+sleep-retry loop or a smaller/fabricated substitute claimed as "the baseline."
+
+**Path to a real full baseline**, once quota allows (24h reset, billing enabled, or a
+higher-quota model swapped into `CC_EXTRACT_MODEL`): re-run
+`python3 scripts/run_paced_eval.py extraction_core` (or `make eval suite=extraction_core`
+once a non-rate-limited key is configured) — no further code changes needed.
+
+**Verification.** `tests/unit/llm/`, `tests/unit/test_synthetic_docs.py`, and the full 303-test
+deterministic regression all pass with the new extraction-stage code paths in place. The one
+live case that quota permitted is documented above as a genuine (if partial) real-data point.
