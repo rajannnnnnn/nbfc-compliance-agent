@@ -840,44 +840,55 @@ is `docs/CORPUS.md`, not working code.
 # M7 — Conflicts and state
 
 ### M7-T01 — `conflicts.yaml`
-- **Status** open
+- **Status** partial — 9/9 unit tests (`tests/unit/conflicts/test_loader.py`). Shipped with
+  **3 of the 12** named groups (`apr`, `closure_release_window`, `cure_notice_sequence`) —
+  exactly the three the LLD gives full YAML for, all pointing at real registered rule ids.
+  See ADR-029: the other 9 (`sanctioned_amount`, `interest_rate`, `tenor`, `instalment`,
+  `fees`, `closure_charge_satisfaction`, `closure_noc_order`, `grievance_officer_contact`,
+  `cooling_off`) have no corresponding registered rule to serve as `raises_check` today —
+  inventing one would repeat the exact defect class CLAUDE.md §2.6 forbids for clause
+  citations, one level removed. **M7-T01b** (new, open): add the missing rules (or clause
+  lookups) these 9 groups need, then extend `conflicts.yaml` to the full 12.
 - **Depends on** M2-T01
-- **Files** `app/rules/conflicts.yaml`, `app/conflicts/loader.py`, `tests/unit/conflicts/test_loader.py`
+
+### M7-T01b — Extend `conflicts.yaml` to all 12 named groups *(new — see ADR-029)*
+- **Status** open
+- **Depends on** M7-T01
+- **Files** `app/rules/conflicts.yaml`, new rule files under `app/rules/` as needed,
+  `docs/DECISIONS.md`
 - **Acceptance**
   ```bash
   pytest tests/unit/conflicts/test_loader.py -q
   python -c "from app.conflicts.loader import load; assert len(load().groups)==12"
   ```
-  Exactly the twelve groups named in LLD §12; every `field` resolves in `fields.yaml`; every
-  `doc_type` is in the `doc_type` enum; every `raises_check` resolves to a registered rule id.
+  For each of `sanctioned_amount`, `interest_rate`, `tenor`, `instalment`, `fees`,
+  `closure_charge_satisfaction`, `closure_noc_order`, `grievance_officer_contact`,
+  `cooling_off`: either a new clause-grounded rule is registered to serve as `raises_check`
+  (with real `clause_paths` validated against the ingested corpus, per CLAUDE.md §2.6), or the
+  group is dropped from the LLD's list with a documented reason. No group may point at a rule
+  whose subject matter doesn't match the group's own fact pattern.
 
 ### M7-T02 — `detector.py`
-- **Status** open
+- **Status** done — 21/21 unit tests (`tests/unit/conflicts/test_detector.py`, pure
+  `compare()`) + 4/4 integration tests (`tests/integration/conflicts/test_detector_integration.py`,
+  against real persisted `extracted_fact`/`document` rows). Enqueuing `assess_check.delay(...)`
+  is explicitly out of scope here — Celery isn't wired yet (M8) — so `detect_for_fact` returns
+  the detected conflicts for the caller to act on; `persist_conflicts` writes `fact_conflict`
+  rows. Found and fixed one detector-internal bug during testing: date_order comparisons must
+  be ordered by the group's own listed member order (earlier member first), not by
+  trigger-fact-vs-counterpart-fact — the two are unrelated when the *later*-listed member is
+  the one that happens to trigger detection.
 - **Depends on** M7-T01, M5-T02
-- **Files** `app/conflicts/detector.py`, `app/tasks/assess_tasks.py`, `tests/unit/conflicts/test_detector.py`
-- **Acceptance**
-  ```bash
-  pytest tests/unit/conflicts/test_detector.py -q
-  ```
-  One test per operator (`equal`, `equal_within`, `date_order` with `direction`/`within_days`,
-  `strictly_increasing`); comparison uses `value_normalized` only, never `value_raw`
-  (asserted); a type mismatch raises `ConflictComparisonError`; a detected conflict enqueues
-  **exactly** `group.raises_check` for that account and nothing else (asserted on the task
-  call list). Note: the §12 call `assess_check.delay(account_id, group.raises_check)` omits
-  `tenant_id` and `request_id` from the §14 signature — RLS makes that a hard failure.
 
 ### M7-T03 — `loan_compliance_state` recomputation
-- **Status** open
+- **Status** done — 2/2 integration tests (`tests/integration/verdict/test_state.py`).
+  `app/verdict/state.py`'s `recompute_loan_compliance_state` excludes both `is_shadow` and
+  `is_whatif` assessments from every count and from `highest_severity` (ADR-006 already gave
+  these separate columns, so SQ-19 was resolved at the schema level in M2 — nothing left to
+  block on here). Wired into `assess.py`: called once per `assess_fact` invocation, after
+  persistence, skipped entirely when `is_whatif=True` so a what-if run never touches real
+  state.
 - **Depends on** M6-T04, M7-T02
-- **Files** `app/verdict/assess.py`, `tests/integration/verdict/test_state.py`
-- **Acceptance**
-  ```bash
-  pytest tests/integration/verdict/test_state.py -q
-  ```
-  Counts reflect only non-superseded assessments; shadow assessments are **excluded** from
-  `open_violations` and from `highest_severity`; `state_version` increments on every
-  recomputation; `corpus_snapshot_id` records the snapshot that produced the state.
-  Blocked in part by SQ-19 (which "shadow" is being excluded).
 
 ### M7-T04 — `report.py`
 - **Status** open

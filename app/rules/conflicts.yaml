@@ -1,0 +1,43 @@
+# Cross-document conflict groups. LLD §12.
+#
+# Per ADR-029: the LLD names twelve groups (§12: apr, sanctioned_amount, interest_rate,
+# tenor, instalment, fees, closure_release_window, closure_charge_satisfaction,
+# closure_noc_order, cure_notice_sequence, grievance_officer_contact, cooling_off) but gives
+# full YAML for only three of them (apr, closure_release_window, cure_notice_sequence) — and
+# every group's `raises_check` must resolve to a rule actually registered in
+# app/rules/registry.py (M7-T01's own acceptance criterion). Inventing a `raises_check` that
+# doesn't correspond to a real, clause-grounded rule would be exactly the "invent a citation
+# basis" defect CLAUDE.md §2.6 forbids, just one level removed — a conflict that raises a
+# non-existent check is a dead end that never re-assesses anything. Shipping only the three
+# groups the LLD fully specifies, all pointing at real registered rules, keeps this file
+# honest; the remaining nine need either a new clause-grounded rule (most of them currently
+# have no corresponding rule at all — R03/R04 exist as intentional stubs precisely for this
+# gap) or a clause lookup that does not yet exist in the ingested corpus. Extending this file
+# is tracked as M7-T01b in TASKS.md rather than guessed at here.
+version: 1
+groups:
+  - key: apr
+    members:
+      - { doc_type: kfs, field: apr_bps }
+      - { doc_type: loan_agreement, field: apr_bps }
+      - { doc_type: sanction_letter, field: apr_bps }
+    operator: equal_within
+    tolerance: 1 # basis points
+    raises_check: R03_apr_consistency
+
+  - key: closure_release_window
+    members:
+      - { doc_type: closure_statement, field: full_repayment_date }
+      - { doc_type: docs_release_ack, field: original_docs_released_date }
+    operator: date_order
+    params: { direction: after, within_days: 30 }
+    raises_check: R01_docs_release_30d
+
+  - key: cure_notice_sequence
+    members:
+      - { doc_type: reminder_notice, field: cure_notice_21day_sent_date }
+      - { doc_type: reminder_notice, field: cure_notice_7day_sent_date }
+      - { doc_type: field_visit_report, field: device_restriction_applied_date }
+    operator: date_order
+    params: { direction: strictly_increasing }
+    raises_check: R23_device_restriction_preconditions

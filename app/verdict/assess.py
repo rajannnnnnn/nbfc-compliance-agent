@@ -29,6 +29,7 @@ from app.rules.base import FactIndex, FactRecord, MissingFact, NotApplicable, Ru
 from app.rules.registry import is_shadow, rules_for_field
 from app.schema.registry import FieldRegistry
 from app.verdict.severity import severity_for
+from app.verdict.state import recompute_loan_compliance_state
 from app.verdict.validator import RejectedCitation, validate
 
 PROMPT_VERSION = "assess_fact.v2"
@@ -405,6 +406,13 @@ async def assess_fact(
         results.append(result)
 
     if any_rule_decided:
+        if not is_whatif:
+            await recompute_loan_compliance_state(
+                session,
+                tenant_id=account.tenant_id,
+                loan_account_id=fact.loan_account_id,
+                corpus_snapshot_id=snapshot_id,
+            )
         return results
 
     borrower_class = (
@@ -501,4 +509,11 @@ async def assess_fact(
         rejected=validated.rejected,
     )
     results.append(result)
+    if not is_whatif:
+        await recompute_loan_compliance_state(
+            session,
+            tenant_id=account.tenant_id,
+            loan_account_id=fact.loan_account_id,
+            corpus_snapshot_id=snapshot_id,
+        )
     return results

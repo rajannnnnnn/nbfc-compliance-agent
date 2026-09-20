@@ -433,3 +433,40 @@ Fixed by threading a `clause_id_by_path: dict[str, UUID]` through to `_persist`,
 can only mean the validator kept a path it should have rejected. Caught by
 `tests/integration/verdict/test_assess.py`, which joins `assessment_citation` back to `clause`
 by id (not by path) to prove the FK actually resolves to the same row the path names.
+
+---
+
+## ADR-029 — `conflicts.yaml` ships 3 of the 12 named groups; the other 9 need rules that
+don't exist yet
+
+LLD §12 names twelve conflict groups (`apr, sanctioned_amount, interest_rate, tenor,
+instalment, fees, closure_release_window, closure_charge_satisfaction, closure_noc_order,
+cure_notice_sequence, grievance_officer_contact, cooling_off`) but gives full YAML for only
+three of them (`apr`, `closure_release_window`, `cure_notice_sequence`). M7-T01's own
+acceptance criterion requires every group's `raises_check` to resolve to a rule actually
+registered in `app/rules/registry.py` — and for nine of the twelve, no such rule exists.
+`R03_apr_consistency` and `R04_apr_computation` are the two rules that exist as intentional
+stubs precisely for this gap (documented in their own docstrings as belonging to "the future
+M7 conflict detector"), which is why `apr` could ship. `sanctioned_amount`,
+`interest_rate`, `tenor`, `instalment`, `fees`, `closure_charge_satisfaction`,
+`closure_noc_order`, `grievance_officer_contact` and `cooling_off` have no rule at all to
+raise.
+
+Rejected: inventing a `raises_check` that points at a rule which doesn't exist, or pointing
+several of these nine groups at an existing but semantically unrelated rule id just to
+satisfy the loader's validation. Both are the same defect class CLAUDE.md §2.6 forbids for a
+clause citation — "never invent an identifier that doesn't resolve to something real" —
+applied one level up the stack: a conflict that raises a check nobody registered, or a check
+that doesn't actually govern the fact pattern the conflict describes, is a citation-shaped
+lie with extra steps. Also rejected: writing nine new rule stubs today just to make the count
+match. A stub rule needs real `clause_paths` that resolve against the corpus (validated at
+registration by `CANONICAL_PATH_RE` and, at boot, against the active snapshot) — inventing
+those paths without doing the actual regulatory research would be worse than leaving the gap
+visible, and CLAUDE.md §8 is explicit that writing a plausible-sounding clause reference is
+"the worst thing you can do to it."
+
+Decided: ship the three groups the LLD fully specifies now, all pointing at real registered
+rules, and track the other nine as a new task, **M7-T01b**, in `TASKS.md` rather than
+papering over them. `app/conflicts/loader.py`'s validation (every `field` in `fields.yaml`,
+every `doc_type` in the enum, every `raises_check` a registered rule id) already enforces
+this correctly — it's why the gap was caught at design time rather than at runtime.
