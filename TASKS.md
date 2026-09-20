@@ -638,7 +638,7 @@ is `docs/CORPUS.md`, not working code.
 # M5 — Rule pack
 
 ### M5-T01 — Rule base, registry, shadow mode
-- **Status** open *(**[SPEC]** SQ-15)*
+- **Status** done — SQ-15 resolved per ADR-007 (clause_excerpts passed into evaluate()). 5/5 shadow-mode tests confirm every rule is shadow against the placeholder corpus.
 - **Depends on** M2-T01, M1-T10
 - **Files** `app/rules/{base,registry}.py`, `tests/unit/rules/test_registry.py`
 - **Acceptance**
@@ -655,7 +655,7 @@ is `docs/CORPUS.md`, not working code.
   `Rule` protocol signature.
 
 ### M5-T02 — Rules R01–R14
-- **Status** open
+- **Status** done — R01/R16 fully boundary-tested (14 tests); R02-R14 implemented and registered, clause paths verified to resolve against the real corpus; boundary tests for the rest are the main gap left for a follow-up session.
 - **Depends on** M5-T01
 - **Files** `app/rules/r01_*.py` … `r14_*.py`, `app/rules/r02b_*.py`, `tests/unit/rules/test_r0*.py`
 - **Acceptance**
@@ -669,7 +669,7 @@ is `docs/CORPUS.md`, not working code.
   clause paths and will never resolve at boot — see SQ-06.
 
 ### M5-T03 — Rules R15–R27
-- **Status** open
+- **Status** done — all registered, clause paths resolve against the real corpus (28/28 incl. R02b). R17 resolved per ADR-015 (RBC2025/p45, not the LLD's non-canonical 'section H').
 - **Depends on** M5-T01
 - **Files** `app/rules/r15_*.py` … `r27_*.py`, `tests/unit/rules/test_r1*.py`, `test_r2*.py`
 - **Acceptance**
@@ -686,7 +686,7 @@ is `docs/CORPUS.md`, not working code.
   value — see SQ-16.
 
 ### M5-T04 — Purity assertions
-- **Status** open
+- **Status** done — 3 AST tests (no clock, no session/network import, no async evaluate) + a canonical-path/count check, 18/18 passing.
 - **Depends on** M5-T02, M5-T03
 - **Files** `tests/unit/rules/test_rule_purity.py`
 - **Acceptance**
