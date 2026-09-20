@@ -1365,3 +1365,51 @@ in this pass — extraction-stage live runs cost real money (a real `client.stru
 per case) and are cheap but non-zero; a live run is the natural next step once authorized, and
 would be the first live evidence that the pipeline is actually unmoved by the planted content,
 not just that the harness is wired correctly.
+
+---
+
+## ADR-050 — `verdict` re-run after ADR-048's embedding fix: retrieval fixed, a calibration gap surfaces
+
+**Context.** Re-ran `make eval suite=verdict` live after ADR-048's embedding fix. Headline
+metric looks unchanged (`verdict_accuracy=0.25`, `hallucinated_citation_rate=0.0`,
+`case_count=16`), but the per-case breakdown is materially different — the fix worked, and
+retrieval is no longer the bottleneck it was in ADR-047.
+
+**Confirmed: retrieval is fixed.** `EV-VERDICT-R20-001` through `-006` (the relationships the
+clause names outright — spouse/parent/sibling/other_relative/colleague/employer) now correctly
+retrieve `RBC-AMD2026/p100X` as the decisive citation (previously: empty candidates, entirely
+a retrieval gap per ADR-047). Verified directly again: a standalone `retrieve_candidates()`
+call for `third_party_relationship` at every tested value (`colleague`, `guarantor`,
+`neighbour`, `reference`, `unknown`) now ranks `RBC-AMD2026/p100X` first, every time — the
+embedding fix generalizes across the whole field, not just the values that happened to share
+lexical vocabulary with the clause text.
+
+**What's failing now is a different, more precise thing: model verdict calibration.**
+- `R20-001..006` (colleague/employer/spouse/parent/sibling/other_relative): citation is
+  correct, but the model returns `ambiguous` where ground truth is `violation`. The clause
+  names these relationships outright ("relative, friend, colleague or employer"); the model
+  cites it correctly but hedges on the verdict rather than committing — an under-confidence
+  pattern in the judgment step itself, not a retrieval or citation problem.
+- `R20-007` (guarantor) and `-008..010` (neighbour/reference/unknown): still `no_clause_found`
+  with zero citations, **despite retrieval now handing the model the correct candidate**
+  (confirmed directly, see above) — the model itself declines to cite it. Read plainly: given
+  a clause that lists specific relationship types and a fact value outside that list, the
+  model appears to conclude "this candidate doesn't govern this specific relationship" rather
+  than "this relationship's status under the clause is unsettled" (`ambiguous`) or, for
+  `guarantor` specifically, "this is exactly the kind of contact the clause doesn't prohibit"
+  (`compliant`, ground truth's reasoning). This is the same under-confidence direction as the
+  R09 "unknown"-value finding in ADR-047, now reproduced on a second, independent field.
+
+**What this is and isn't.** `hallucinated_citation_rate=0.0` still holds — nothing here is a
+safety problem, CLAUDE.md §2.1's non-negotiable is intact. This is an accuracy/calibration
+finding about the model's own judgment under `assess_fact()`'s real fallthrough path,
+consistent across two different rules and two different retrieval states (candidate present
+vs. previously absent) — worth treating as a real, recurring pattern rather than
+suite-specific noise, and a candidate for a future prompt revision
+(`app/prompts/verdict/assess_fact.v2.md`) once enough suite coverage exists to measure a
+change against. No prompt change made in this pass — changing a prompt without a broader
+before/after suite to measure against would just trade one unverified assumption for another.
+
+**Verification.** Live run output and per-case diff (`reports/eval_verdict_latest.json`,
+gitignored). Retrieval fix reconfirmed directly and independently outside the harness for
+all five tested relationship values, not inferred from the diff alone.

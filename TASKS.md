@@ -984,8 +984,12 @@ is `docs/CORPUS.md`, not working code.
   previously-latent bug (`clause.embedding`'s raw-SQL insert bound a bare Python list to a
   pgvector column, rejected outright once embedding was actually turned on) and re-ran
   `make ingest` live — all 56 clauses in the active snapshot now carry real embeddings for
-  the first time in this environment. A confirming re-run of `verdict` after the fix is
-  still pending (see Remaining). `adversarial` is new this pass: **8 cases** (short of the
+  the first time in this environment. Confirming re-run done: retrieval is confirmed fixed
+  (all 10 R20 cases now retrieve the correct clause, verified directly outside the harness
+  too), but this surfaced a distinct, more precise finding — real model verdict-calibration
+  under-confidence (`ambiguous`/`no_clause_found` where ground truth is `violation`/
+  `compliant`, even with the correct citation in hand), consistent with R09's own ADR-047
+  finding — see ADR-050. `adversarial` is new this pass: **8 cases** (short of the
   LLD's 30-case minimum, extraction-stage only — see ADR-049 for why the combined
   "extraction + verdict" stage the LLD names isn't built yet), covering prompt injection,
   planted fake (decimal-numbered, i.e. CLAUDE.md §2.6-forbidden) clause references, and
@@ -1003,7 +1007,7 @@ is `docs/CORPUS.md`, not working code.
   make eval suite=numeric_rules && jq -e '.metrics.hallucinated_citation_rate == 0' reports/eval_numeric_rules_latest.json
   make eval suite=temporal      && jq -e '.metrics.hallucinated_citation_rate == 0' reports/eval_temporal_latest.json
   make eval suite=abstention    && jq -e '.metrics.abstention_correctness == 1.0' reports/eval_abstention_latest.json
-  make eval suite=verdict       # run live pre-embedding-fix: verdict_accuracy=0.25, hallucinated_citation_rate=0 (ADR-047); re-run pending (ADR-048)
+  make eval suite=verdict       # run live twice: 0.25 pre-fix (ADR-047), 0.25 post-fix but retrieval confirmed fixed, calibration gap found (ADR-050)
   make eval suite=adversarial   # cases built, not yet run live (ADR-049)
   make eval-report
   ```
@@ -1017,9 +1021,12 @@ is `docs/CORPUS.md`, not working code.
   technique (inject/fakeclause/ocrnoise) is constructed as documented.
 - **Remaining** `conflicts`/`end_to_end` suites (zero cases each; `end_to_end` also needs the
   harness's first combined extraction+verdict runner, which `adversarial`'s full LLD shape
-  needs too — see ADR-049), growing `verdict` past 16 and `adversarial` past 8, a confirming
-  live re-run of `verdict` post-embedding-fix, and the first live run of `adversarial` —
-  tracked as follow-up, not a release blocker for the harness itself since the harness
+  needs too — see ADR-049), growing `verdict` past 16 and `adversarial` past 8, the first live
+  run of `adversarial`, and — newly identified, ADR-050 — a real model verdict-calibration
+  under-confidence pattern (reaching for `ambiguous`/`no_clause_found` over a committed
+  `violation`/`compliant` even with the correct citation retrieved) worth a future prompt
+  revision once broader suite coverage exists to measure a change against — tracked as
+  follow-up, not a release blocker for the harness itself since the harness
   mechanics are proven end to end against real Postgres.
 
 ---
