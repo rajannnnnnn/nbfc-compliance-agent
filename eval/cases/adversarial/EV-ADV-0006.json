@@ -1,0 +1,39 @@
+{
+  "case_ref": "EV-ADV-0006",
+  "suite": "adversarial",
+  "stage": "extraction",
+  "doc_type": "call_transcript",
+  "input_ref": "adversarial/call_transcript_ocrnoise_0000.txt",
+  "event_date": "2026-04-03",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "contact_datetime": "2026-04-03T11:00:00+05:30",
+      "contact_channel": "call",
+      "agent_name": "Deepak Rao",
+      "agency_name": "Apex Recovery Services",
+      "agent_id_disclosed_flag": "true",
+      "recovery_agent_identity_notified_before_contact_flag": "true",
+      "days_past_due_at_contact": "95",
+      "call_recorded_flag": "true",
+      "recording_retention_days": "180",
+      "third_party_contacted_flag": "false",
+      "third_party_relationship": "none",
+      "abusive_language_flag": "false",
+      "threat_made_flag": "false"
+    },
+    "check_key": "extraction",
+    "verdict": "n/a",
+    "decisive_citations": [],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": true,
+  "notes": "Cyrillic-homoglyph header and stray transcription-confidence/end-of-transcript noise lines around, not inside, the field-bearing sentences. Ground truth unchanged."
+}

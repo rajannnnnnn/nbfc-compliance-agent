@@ -4,7 +4,7 @@ from eval.loader import load_suite
 
 
 def test_loads_real_suites():
-    for suite in ("numeric_rules", "temporal", "abstention", "verdict"):
+    for suite in ("numeric_rules", "temporal", "abstention", "verdict", "adversarial"):
         cases = load_suite(suite)
         assert len(cases) > 0
         for case in cases:

@@ -967,44 +967,44 @@ is `docs/CORPUS.md`, not working code.
   §15.4 means "what-if `as_of` override run". `include_shadow=false` and M7-T03's counts
   cannot distinguish them. Needs a second column.
 
-### M6-T05 — eval harness + `numeric_rules`, `temporal`, `abstention`, `verdict` suites — **shipped, partial**
-- **Status** done for the harness itself and 4 of 7 LLD §17.3 suites; `adversarial`,
-  `conflicts`, `end_to_end` still open — see ADR-034 (`docs/DECISIONS.md`) for the honest
-  scope-reduction rationale. `abstention` **meets** the LLD's ≥40 minimum: 40 cases, 37
-  covering every field in `app/schema/fields.yaml` that no registered rule consumes (checked
-  directly against `app.rules.registry.all_rules()`), plus 3 more varying doc_type/account
-  profile/value on multi-doc_type fields. `numeric_rules` (31) and `temporal` (12) remain
-  short of their 60/30 minimums (see M5-T06). `verdict` is new this pass: **16 real cases**
-  (short of the LLD's 50-case minimum, an honest partial suite per the project's established
-  pattern), the first cases in the suite genuinely requiring real model judgment rather than
-  rule arithmetic or a documented no-clause-found abstention — see ADR-046 for the
-  construction methodology (deliberately withholding the one fact each rule reads, so
-  `MissingFact` forces `NotApplicable` while the underlying clause stays retrieval-eligible,
-  driving `assess_fact()`'s real fallthrough path, `check_key="F:<field_key>"`). Built and
-  unit-verified **entirely without live LLM calls** per explicit user instruction, then run
-  live on explicit authorization: `verdict_accuracy=0.25`, `hallucinated_citation_rate=0.0`,
-  `citation_validity=1.0` (16 cases). See ADR-047 for the full, root-caused breakdown — not
-  guessed: R09's 2 failures are a real model behavior (choosing `no_clause_found` over
-  `ambiguous` given a present-but-inconclusive value, confirmed by re-querying
-  `retrieve_candidates()` directly and finding the candidate WAS there); R20's 10 failures
-  are a real, pre-existing retrieval gap confirmed the same way (`third_party_relationship`
-  isn't pinned, **every clause in the corpus has `embedding IS NULL`** — vector search has
-  never worked in this environment for any field — and the lexical fallback's query text
-  shares no vocabulary with the clause text). The corpus has never been embedded here
-  (`make ingest`'s embed step is deliberately off for routine runs); flagged to the user as
-  a real fix candidate (56 short clauses, trivial cost) rather than done unilaterally.
+### M6-T05 — eval harness + `numeric_rules`, `temporal`, `abstention`, `verdict`, `adversarial` suites — **shipped, partial**
+- **Status** done for the harness itself and 5 of 7 LLD §17.3 suites; `conflicts`,
+  `end_to_end` still open — see ADR-034 (`docs/DECISIONS.md`) for the honest scope-reduction
+  rationale. `abstention` **meets** the LLD's ≥40 minimum: 40 cases, 37 covering every field
+  in `app/schema/fields.yaml` that no registered rule consumes (checked directly against
+  `app.rules.registry.all_rules()`), plus 3 more varying doc_type/account profile/value on
+  multi-doc_type fields. `numeric_rules` (31) and `temporal` (12) remain short of their
+  60/30 minimums (see M5-T06). `verdict` (16 cases, short of 50) is the first suite genuinely
+  requiring real model judgment rather than rule arithmetic or a documented no-clause-found
+  abstention — see ADR-046 for construction methodology, built and unit-verified without any
+  live LLM call. Run live on authorization: `verdict_accuracy=0.25`,
+  `hallucinated_citation_rate=0.0`, `citation_validity=1.0` (see ADR-047 for the fully
+  root-caused breakdown of both failure classes — a real model-behavior finding on R09, and
+  a real infra gap on R20). That infra gap is now **fixed**: ADR-048 found and fixed a
+  previously-latent bug (`clause.embedding`'s raw-SQL insert bound a bare Python list to a
+  pgvector column, rejected outright once embedding was actually turned on) and re-ran
+  `make ingest` live — all 56 clauses in the active snapshot now carry real embeddings for
+  the first time in this environment. A confirming re-run of `verdict` after the fix is
+  still pending (see Remaining). `adversarial` is new this pass: **8 cases** (short of the
+  LLD's 30-case minimum, extraction-stage only — see ADR-049 for why the combined
+  "extraction + verdict" stage the LLD names isn't built yet), covering prompt injection,
+  planted fake (decimal-numbered, i.e. CLAUDE.md §2.6-forbidden) clause references, and
+  OCR/unicode noise, each proven by construction (not yet live) to carry the exact same
+  ground truth as the clean fixture it was derived from. Not run live yet.
 - **Depends on** M6-T04
 - **Files** `eval/loader.py`, `eval/metrics.py`, `eval/runner.py`, `eval/harness.py`,
-  `eval/cases/{numeric_rules,temporal,abstention,verdict}/*.json`,
-  `tests/unit/eval/test_eval_{loader,metrics}.py`,
-  `tests/unit/eval/test_verdict_suite_fallthrough.py`, `tests/integration/eval/test_harness.py`,
-  `reports/`
+  `eval/cases/{numeric_rules,temporal,abstention,verdict,adversarial}/*.json`,
+  `eval/fixtures/adversarial/*.txt`, `tests/unit/eval/test_eval_{loader,metrics}.py`,
+  `tests/unit/eval/test_verdict_suite_fallthrough.py`,
+  `tests/unit/eval/test_adversarial_suite.py`, `tests/integration/eval/test_harness.py`,
+  `tests/integration/corpus/test_ingest_and_pinning.py`, `reports/`
 - **Acceptance (shipped suites)**
   ```bash
   make eval suite=numeric_rules && jq -e '.metrics.hallucinated_citation_rate == 0' reports/eval_numeric_rules_latest.json
   make eval suite=temporal      && jq -e '.metrics.hallucinated_citation_rate == 0' reports/eval_temporal_latest.json
   make eval suite=abstention    && jq -e '.metrics.abstention_correctness == 1.0' reports/eval_abstention_latest.json
-  make eval suite=verdict       # run live: verdict_accuracy=0.25, hallucinated_citation_rate=0 (see ADR-047)
+  make eval suite=verdict       # run live pre-embedding-fix: verdict_accuracy=0.25, hallucinated_citation_rate=0 (ADR-047); re-run pending (ADR-048)
+  make eval suite=adversarial   # cases built, not yet run live (ADR-049)
   make eval-report
   ```
   `hallucinated_citation_rate` **exactly 0** on every suite actually run live so far —
@@ -1012,12 +1012,15 @@ is `docs/CORPUS.md`, not working code.
   database by `eval/runner.py::_resolve_citations` rather than trusted from the validator.
   `tests/unit/eval/test_verdict_suite_fallthrough.py` verifies, with no DB and no LLM call,
   that every `verdict` case's trigger field genuinely falls through every rule that consumes
-  it (`NotApplicable` for all of them) rather than being rule-decided.
-- **Remaining** `adversarial`/`conflicts`/`end_to_end` suites (including the prompt-injection
-  fixture and `forbidden_citations` on every case, not only adversarial ones), plus growing
-  `verdict` past 16 cases and its first live run — tracked as follow-up, not a release
-  blocker for the harness itself since the harness mechanics are proven end to end against
-  real Postgres.
+  it. `tests/unit/eval/test_adversarial_suite.py` verifies, with no DB and no LLM call, that
+  every adversarial case's ground truth matches its clean base fixture exactly and that each
+  technique (inject/fakeclause/ocrnoise) is constructed as documented.
+- **Remaining** `conflicts`/`end_to_end` suites (zero cases each; `end_to_end` also needs the
+  harness's first combined extraction+verdict runner, which `adversarial`'s full LLD shape
+  needs too — see ADR-049), growing `verdict` past 16 and `adversarial` past 8, a confirming
+  live re-run of `verdict` post-embedding-fix, and the first live run of `adversarial` —
+  tracked as follow-up, not a release blocker for the harness itself since the harness
+  mechanics are proven end to end against real Postgres.
 
 ---
 

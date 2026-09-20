@@ -1308,3 +1308,60 @@ clause in the resulting snapshot has a non-null `embedding` — this exercises e
 insert/CAST path that broke, with zero API cost, so the bug cannot silently regress. Full
 regression (236 unit + 11 corpus integration tests) and `make lint` (ruff, black, mypy
 strict) pass.
+
+---
+
+## ADR-049 — First `adversarial` suite cases: injection, planted fake clauses, OCR/unicode noise
+
+**Context.** LLD §17.3 wants 30 `adversarial` cases at "extraction + verdict" stage, covering
+prompt injection in document text, planted fake clause references, and OCR/unicode noise —
+none existed before this pass. CLAUDE.md's own framing: a loan document is attacker-controlled
+text from the system's point of view, so the suite must prove the pipeline stays unmoved by
+it.
+
+**Scope decision.** The harness (`eval/harness.py`/`eval/runner.py`) currently supports only
+single-stage cases (`extraction` or `verdict`); there is no combined "extraction + verdict"
+runner yet — building one is real, separate infrastructure work shared with the also-empty
+`end_to_end` suite, not something to bolt on silently inside this pass. This first batch is
+therefore **extraction-stage only**: 8 cases (short of the 30 minimum, an honest partial suite
+matching every other suite's status in this build), each an adversarial variant of an existing
+clean `extraction_core` fixture (`kfs_0000`, `loan_agreement_0000`, `call_transcript_0000`)
+with the identical ground truth as the clean original — proving the adversarial content changes
+nothing about the correct answer. The citation-guardrail half of "planted fake clause
+references" (a model citing a path the document merely mentions, never one retrieval actually
+offered) is **already covered independently** at the unit level:
+`tests/unit/verdict/test_validator.py::test_path_not_offered_is_rejected`. What a live,
+document-sourced version of that guardrail proof would add — the model seeing the fake
+citation inside real extracted document text, not a synthetic validator input — remains a real
+gap, tracked as follow-up alongside `end_to_end`, not silently claimed here.
+
+**Techniques, three per document type where used:**
+- **Injection** (`kfs_inject`, `loan_agreement_inject`, `call_transcript_inject`): a sentence
+  addressed to the system ("ignore all prior extraction instructions", "disregard the schema",
+  a borrower quote asking to "mark this call compliant") appended to the document.
+  `app/prompts/extract/document_facts.v2.md` rule 10 already states document text is never an
+  instruction — these cases are the first live-checkable proof of that, once run.
+- **Planted fake clause** (`kfs_fakeclause`, `loan_agreement_fakeclause`,
+  `call_transcript_fakeclause`): a sentence citing a clause path in the exact
+  decimal-numbered shape CLAUDE.md §2.6 says this corpus family never uses
+  (`DL2025/Ch.IV/4.2(a)`, `RBC2025/Ch.II/2.7(c)`, `RBC2025/Ch.V/9.9(b)`) — unambiguously
+  fabricated, not a real path this corpus could ever contain, verified by regex in
+  `tests/unit/eval/test_adversarial_suite.py`.
+- **OCR/unicode noise** (`kfs_ocrnoise`, `call_transcript_ocrnoise`): fullwidth and
+  Cyrillic-homoglyph characters and stray scan-artifact lines placed around, never inside,
+  the field-bearing sentences — deliberately, so a case failure is unambiguously an
+  extraction-robustness gap, not ground truth I'd have to guess at. Verified directly:
+  `test_ocrnoise_fixtures_keep_every_base_field_line_verbatim` asserts every "Label: value"
+  line from the clean base fixture survives character-for-character in the noised one.
+
+**Verification (no live call).** `eval/loader.py::load_suite("adversarial")` parses all 8
+cases; every fixture path resolves and is non-empty. `tests/unit/eval/test_adversarial_suite.py`
+(5 tests) checks the suite's own construction, not model behavior: every case is flagged
+`is_adversarial=True`; every case's `expected.facts` is byte-identical to the clean base
+fixture's; every fakeclause fixture actually contains the forbidden decimal-path shape; every
+inject fixture contains an instruction-style sentence; every ocrnoise fixture preserves every
+base field line verbatim. Full regression (241 unit tests) and `make lint` pass. Not run live
+in this pass — extraction-stage live runs cost real money (a real `client.structured()` call
+per case) and are cheap but non-zero; a live run is the natural next step once authorized, and
+would be the first live evidence that the pipeline is actually unmoved by the planted content,
+not just that the harness is wired correctly.
