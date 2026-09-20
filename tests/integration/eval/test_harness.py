@@ -76,9 +76,12 @@ async def test_numeric_rules_suite_boundaries_are_exact(snapshot_id):
     delays), and MissingFact code paths (a fact recorded as disclosed vs. never disclosed at
     all), so the suite exercises more than one arithmetic edge per rule. Also covers R02b
     (the lost-documents limb of R02, same RBC2025 §F arithmetic family: an extended 60-day
-    window rather than R02's 30, plus its own not-assisted violation path), a rule the LLD's
-    named list of nine does not enumerate separately but which is the same kind of pure date
-    arithmetic."""
+    window rather than R02's 30, plus its own not-assisted violation path) and, at LLD §17.3's
+    own named boundary (18:59/19:00/19:01), R16 and R17's shared 08:00-19:00 contact window —
+    R16 (RBC-AMD2026, post-2027 for any borrower) and R17 (RBC2025, pre-2027 for a
+    microfinance borrower specifically) apply the identical window from different clauses,
+    so both get their own boundary set. Neither R16/R17 nor R02b is in the LLD's named list
+    of nine, but all three are the same kind of pure date/time arithmetic."""
     settings = get_settings()
     sm = get_sessionmaker(settings)
     registry = FieldRegistry("app/schema/fields.yaml")
@@ -94,7 +97,7 @@ async def test_numeric_rules_suite_boundaries_are_exact(snapshot_id):
             client=client,
         )
 
-    assert report["case_count"] == 31
+    assert report["case_count"] == 38
     assert report["metrics"]["verdict_accuracy"] == 1.0
     assert report["metrics"]["hallucinated_citation_rate"] == 0.0
     assert all(r["passed"] for r in report["results"])

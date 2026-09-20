@@ -787,10 +787,10 @@ is `docs/CORPUS.md`, not working code.
   (PRD §14 Q3) wherever the corpus actually has one.
 
 ### M5-T06 — `numeric_rules` and `temporal` suites
-- **Status** partial — 31 numeric cases (up from 15), covering boundary conditions for the
-  same 7 of the LLD §11's nine "pure date or money arithmetic" rules (R03 is decided by
-  `conflicts/detector.py` rather than a standalone rule evaluation and R16 is fully covered
-  in the `temporal` suite below, so neither gets a dedicated numeric case): R01 (30-day
+- **Status** partial — 38 numeric cases (up from 15), covering boundary conditions for 8 of
+  the LLD §11's nine "pure date or money arithmetic" rules (R03 is decided by
+  `conflicts/detector.py` rather than a standalone rule evaluation, so it alone gets no
+  dedicated numeric case): R01 (30-day
   release window: the pre-existing ±1-day boundary plus a same-day zero-delay compliant case
   and a 60-day grossly-non-compliant violation), R02 (₹5,000/day compensation: the
   pre-existing 45-day exact-payment/underpaid pair plus the tightest 31-day compliant
@@ -804,11 +804,15 @@ is `docs/CORPUS.md`, not working code.
   prior-intimation: the pre-existing boundary plus a 7-day compliant extreme and a MissingFact
   violation with no intimation on record at all), R24 (restoration compensation: the
   pre-existing zero/one-hour pair plus a 10-hour violation at a larger compensation
-  multiplier). Also adds R02b (the lost-documents limb of R02, same RBC2025 §F arithmetic
-  family — an extended 60-day window rather than R02's 30, plus its own not-assisted
-  violation path): a rule the LLD's named list of nine does not separately enumerate but
-  which is the same kind of pure date arithmetic. All 31 verified at `verdict_accuracy ==
-  1.0` against the real corpus (`tests/integration/eval/
+  multiplier), and R16/R17 at LLD §17.3's own named 18:59/19:00/19:01 boundary for the
+  shared 08:00-19:00 contact window (R16 from RBC-AMD2026, governing post-2027 for any
+  borrower; R17 from RBC2025, governing pre-2027 for a microfinance borrower specifically —
+  same window, different clause basis, so both get their own boundary set: R16 gets
+  18:59/19:00/19:01/08:00/07:59, R17 gets 18:59/19:01). Also adds R02b (the lost-documents
+  limb of R02, same RBC2025 §F arithmetic family — an extended 60-day window rather than
+  R02's 30, plus its own not-assisted violation path). R02b and R16/R17 are not in the LLD's
+  named list of nine but are the same kind of pure date/time arithmetic. All 38 verified at
+  `verdict_accuracy == 1.0` against the real corpus (`tests/integration/eval/
   test_harness.py::test_numeric_rules_suite_boundaries_are_exact`). Still short of the LLD's
   ≥60 minimum — same honest-scope-reduction pattern as ADR-034/ADR-035, not a fabricated
   count.
