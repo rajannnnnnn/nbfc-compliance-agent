@@ -1044,3 +1044,24 @@ would introduce on a negated sentence.
 `threat_made_flag`) now return exactly `"true"` or `"false"`, correctly distinguishing the
 three true facts from the three negated ones in the same document. Full regression
 (308 tests) passes — no test asserted on the v1 prompt file or version string.
+
+**All 25 `call_transcript` cases re-run live** (targeted, not the full suite):
+`field_accuracy=0.92` (up from whatever the boolean bug was masking — the three previously
+`0.32` boolean fields are now `1.0` each), `absence_accuracy=0.992`. `contact_datetime`
+remains `exact_match=0.0` despite ADR-042's `IST`-suffix fix — a real DB inspection (direct
+`extract_document()` call, not the eval harness) shows the model itself is intermittently
+inconsistent on this specific field across identical re-runs, worth a separate, targeted
+follow-up rather than assumed fixed by the earlier normalisation change alone.
+
+`span_grounding` dropped sharply to `0.084` in this run — investigated directly (not assumed
+a regression): `call_transcript` documents are short (~400 characters) and CLAUDE.md §2.3's
+span budget (`span_budget_ratio = 0.15`, i.e. 15% of source characters) caps total quoted-span
+length per document. A direct DB inspection of one `extract_document()` call shows the first
+field's span consumes most of the ~60-character budget, and every subsequent field's span is
+correctly *not admitted* (`span_verified=False`, `quoted_span=None`) even though several of
+those fields' *values* are correct — this is the CLAUDE.md non-negotiable working as
+designed, not a defect. It does mean `span_grounding` is a poor standalone signal for
+short, boolean-flag-heavy doc_types; `field_accuracy`/`absence_accuracy` are the more
+meaningful metrics there. Not changed in this pass — flagged for whoever revisits the span
+budget's per-doc-type sizing, since a fixed percentage penalises short documents with many
+distinct facts more than long ones with few.
