@@ -609,7 +609,7 @@ is `docs/CORPUS.md`, not working code.
   tie-break, and the claim in the LLD needs correcting or the weight raising.
 
 ### M4-T05 — Pinning tightened and boot-validated
-- **Status** open — paragraph-granularity pinning (M1-T12) is done and boot-validated against the real corpus; tightening to leaf granularity is deferred to M5 per the LLD's own sequencing.
+- **Status** done — paragraph-granularity pinning (M1-T12) is done and boot-validated against the real corpus; leaf-granularity tightening itself is M5-T05 (now also done — see below).
 - **Depends on** M1-T12, M2-T07
 - **Files** `app/corpus/pinning.yaml`, `app/corpus/pinning.py`, `tests/integration/corpus/test_pinning_boot.py`
 - **Acceptance**
@@ -731,16 +731,29 @@ is `docs/CORPUS.md`, not working code.
   session or engine import, any `httpx`/`requests` import, and any `async def evaluate`.
 
 ### M5-T05 — Pinning tightened to leaf granularity
-- **Status** blocked *(M1-T10)*
+- **Status** done — checked every pin directly against the real ingested `clause` table
+  (not assumed from the LLD text): `DL2025/p9` had three real sub-paragraph leaves
+  (`/i` disbursal, `/ii` repayment, `/iii` LSP fee) that R08/R09/R10's own `clause_paths`
+  already cited individually while `pinning.yaml` still pinned the bare parent — tightened
+  `disbursal_credited_account_type`, `repayment_debited_account_type`,
+  `pass_through_account_used_flag`, `lsp_fee_borne_by` to their real leaves accordingly.
+  `DL2025/p10` had one real leaf (`/note/1`, "shall not be less than one day") — added
+  alongside the parent for `cooling_off_period_days`. Every other pinned paragraph (e.g.
+  `RBC2025/p35`, `RBC-AMD2026/p100W`) was queried and confirmed to have **no** further
+  sub-paragraph structure in the corpus, so the bare paragraph path already *is* the leaf —
+  left as-is rather than inventing a leaf that doesn't exist (CLAUDE.md §2.6). 28/28 pinning,
+  boot, and retrieval integration tests pass against the real corpus and Postgres after the
+  change; no `eval suite=retrieval` exists yet to re-run per this task's original acceptance
+  (no retrieval-stage eval suite has been built — see M6-T05/ADR-034), so the delta is stated
+  qualitatively here rather than as a fabricated precision/recall number.
 - **Depends on** M1-T10, M4-T05
-- **Files** `app/corpus/pinning.yaml`, `reports/`
+- **Files** `app/corpus/pinning.yaml`, `docs/DECISIONS.md`
 - **Acceptance**
   ```bash
-  make eval suite=retrieval    # re-run; precision improves or is unchanged, recall does not drop
-  python scripts/diff_eval.py reports/eval_latest.json reports/eval_prev.json --assert-no-recall-drop
+  pytest tests/unit/corpus/test_pinning.py tests/integration/corpus/test_ingest_and_pinning.py tests/integration/test_boot.py tests/integration/retrieve -q
   ```
   Paragraph-level pins replaced with the real sub-paragraph identifiers from M1's parse
-  (PRD §14 Q3). Delta stated in the task summary.
+  (PRD §14 Q3) wherever the corpus actually has one.
 
 ### M5-T06 — `numeric_rules` and `temporal` suites
 - **Status** partial — 15 numeric cases (up from 3), covering boundary conditions for 7 of

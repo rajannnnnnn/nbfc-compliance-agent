@@ -1,7 +1,11 @@
-# field_key -> clause_path[]. LLD §7. Paths below are pinned at paragraph granularity for M1
-# (LLD §7: "Pinning at paragraph granularity is correct at M1 ... tightened to leaf
-# granularity at M5"), against the placeholder corpus in data/raw/instruments/ — see
-# docs/DECISIONS.md ADR-001, ADR-015.
+# field_key -> clause_path[]. LLD §7. M5-T05 tightened pins to leaf granularity wherever the
+# ingested corpus actually parses a sub-paragraph leaf under the field's topic (DL2025/p9's
+# i/ii/iii, DL2025/p10's note/1) — checked directly against the real ingested clause table,
+# not assumed from the LLD text. Where a paragraph has no further sub-paragraph structure
+# (e.g. RBC2025/p35, RBC-AMD2026/p100W), the bare paragraph path already *is* the leaf, so it
+# stays as-is; there is nothing left to tighten there without inventing structure the corpus
+# doesn't have (CLAUDE.md §2.6). Against the placeholder corpus in data/raw/instruments/ — see
+# docs/DECISIONS.md ADR-001, ADR-015, and the M5-T05 ADR added alongside this change.
 version: 1
 pins:
   apr_bps:
@@ -11,16 +15,18 @@ pins:
     - DL2025/p8/ii
   cooling_off_period_days:
     - DL2025/p10
+    - DL2025/p10/note/1
   cooling_off_prepayment_penalty_flag:
     - DL2025/p10
   disbursal_credited_account_type:
-    - DL2025/p9
+    - DL2025/p9/i
   repayment_debited_account_type:
-    - DL2025/p9
+    - DL2025/p9/ii
   pass_through_account_used_flag:
-    - DL2025/p9
+    - DL2025/p9/i
+    - DL2025/p9/ii
   lsp_fee_borne_by:
-    - DL2025/p9
+    - DL2025/p9/iii
   original_docs_released_date:
     - RBC2025/p35
     - RBC2025/p36

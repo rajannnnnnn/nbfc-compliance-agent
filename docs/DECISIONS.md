@@ -653,4 +653,45 @@ Rejected: reusing an adjacent rule (`R04` for the five money/rate/tenor groups, 
 for the two closure groups) as a stand-in `raises_check`. A conflict that re-runs the wrong
 check produces a verdict that answers a different question than the one the conflict
 actually raised — worse than no group at all, because it looks resolved.
-boundary would not exercise anything sixty times over.
+
+## ADR-036 — M5-T05: pinning tightened to leaf granularity where the corpus actually has one
+
+`app/corpus/pinning.yaml` pinned several fields at bare-paragraph granularity
+(`DL2025/p9`, `DL2025/p10`) even though the corresponding rules (`R08_disbursal_to_borrower`,
+`R09_no_pool_account`, `R10_lsp_fee_borne_by_lender`) already cite the real sub-paragraph
+leaves (`DL2025/p9/i`, `/ii`, `/iii`) in their own `clause_paths` — the pin file had simply
+lagged the rule files. Verified directly against the real ingested `clause` table (`SELECT
+clause_path FROM clause WHERE clause_path = :p OR clause_path LIKE :p || '/%'`), not assumed
+from the LLD text:
+
+- `DL2025/p9` → three real leaves: `/i` (disbursal to borrower's own account), `/ii`
+  (repayment to lender only, no pass-through), `/iii` (LSP fee borne by lender). Retargeted
+  `disbursal_credited_account_type` → `/i`, `repayment_debited_account_type` → `/ii`,
+  `pass_through_account_used_flag` → `[/i, /ii]` (it concerns both legs),
+  `lsp_fee_borne_by` → `/iii`.
+- `DL2025/p10` → one real leaf, `/note/1` ("shall not be less than one day"), the specific
+  provision R07's minimum-days check is really about. Added alongside the parent for
+  `cooling_off_period_days` (the parent still grants the cooling-off option itself, so both
+  are decisive depending on which fact question is asked).
+  `cooling_off_prepayment_penalty_flag` stays at the bare parent — the "no prepayment
+  penalty" sentence lives in `p10`'s own text, not in a further leaf.
+- Every other pinned paragraph (`RBC2025/p35`–`p40`, `RBC-AMD2026/p100*`, `KFS2024/p1`,
+  `KFS2024/p2`, `DL2025/p8`, `DL2025/p11`, `DL2025/p13`) was queried the same way and
+  confirmed to have **no** further sub-paragraph rows in the corpus — the bare paragraph
+  path already *is* the leaf for those provisions. Left unchanged rather than inventing a
+  leaf identifier the parser never produced (CLAUDE.md §2.6's "never invent a clause
+  identifier" applies to pins exactly as it does to citations).
+
+Verified with 28/28 pinning, boot, and retrieval integration tests passing against the real
+corpus and Postgres (`tests/unit/corpus/test_pinning.py`,
+`tests/integration/corpus/test_ingest_and_pinning.py`, `tests/integration/test_boot.py`,
+`tests/integration/retrieve/`) after the change, plus the full 292-test regression.
+
+M5-T05's original acceptance criterion called for re-running `make eval suite=retrieval` and
+asserting no recall drop — no retrieval-stage eval suite exists yet (M6-T05/ADR-034 built
+verdict-stage suites only; `eval/metrics.py` has no `recall@k`/`MRR`/`pinning_hit_rate`
+implementation because no suite needs it yet). Publishing a precision/recall delta without
+that suite would mean fabricating the very numbers CLAUDE.md forbids inventing. The delta is
+therefore stated qualitatively (rule citations and pins now agree; verified by direct corpus
+query) rather than as an invented metric — a retrieval-stage suite is the correct trigger to
+re-open this ADR with real numbers, not a guess made to fill the acceptance template.
