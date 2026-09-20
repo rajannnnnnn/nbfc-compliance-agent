@@ -80,8 +80,13 @@ async def test_numeric_rules_suite_boundaries_are_exact(snapshot_id):
     own named boundary (18:59/19:00/19:01), R16 and R17's shared 08:00-19:00 contact window —
     R16 (RBC-AMD2026, post-2027 for any borrower) and R17 (RBC2025, pre-2027 for a
     microfinance borrower specifically) apply the identical window from different clauses,
-    so both get their own boundary set. Neither R16/R17 nor R02b is in the LLD's named list
-    of nine, but all three are the same kind of pure date/time arithmetic."""
+    so both get their own boundary set. Also covers R23 (device-restriction preconditions:
+    the 60-day past-due boundary, a below-minimum violation, a reversed-cure-notice-sequence
+    violation, and an unfinanced-device violation — four independent precondition-failure
+    paths) and R26 (KFS validity: the 3-working-day boundary, a below-minimum violation, a
+    missing-proposal-number violation, and a missing-validity-period violation). None of
+    R02b/R16/R17/R23/R26 is in the LLD's named list of nine, but all are the same kind of
+    pure date/time/sequencing arithmetic."""
     settings = get_settings()
     sm = get_sessionmaker(settings)
     registry = FieldRegistry("app/schema/fields.yaml")
@@ -97,7 +102,7 @@ async def test_numeric_rules_suite_boundaries_are_exact(snapshot_id):
             client=client,
         )
 
-    assert report["case_count"] == 38
+    assert report["case_count"] == 46
     assert report["metrics"]["verdict_accuracy"] == 1.0
     assert report["metrics"]["hallucinated_citation_rate"] == 0.0
     assert all(r["passed"] for r in report["results"])

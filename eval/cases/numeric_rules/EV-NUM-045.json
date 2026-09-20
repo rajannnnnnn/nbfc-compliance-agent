@@ -1,0 +1,29 @@
+{
+  "case_ref": "EV-NUM-045",
+  "suite": "numeric_rules",
+  "stage": "verdict",
+  "doc_type": "kfs",
+  "input_ref": null,
+  "event_date": "2026-05-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "kfs_validity_days": "5"
+    },
+    "check_key": "R26_kfs_validity",
+    "verdict": "violation",
+    "decisive_citations": [
+      "KFS2024/p1"
+    ],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Different code path from the validity-day boundaries above: no unique proposal number is disclosed on the KFS at all \u2014 violation regardless of the validity period."
+}
