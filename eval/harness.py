@@ -21,8 +21,12 @@ from app.db.engine import get_sessionmaker
 from app.llm.client import LLMClient, PermanentLLMError, TransientLLMError
 from app.schema.registry import FieldRegistry
 from eval.loader import load_suite
-from eval.metrics import compute_extraction_metrics, compute_verdict_metrics
-from eval.runner import ExtractionOutcome, run_case, run_extraction_case
+from eval.metrics import (
+    compute_conflict_metrics,
+    compute_extraction_metrics,
+    compute_verdict_metrics,
+)
+from eval.runner import ExtractionOutcome, run_case, run_conflict_case, run_extraction_case
 
 REPORTS_DIR = Path("reports")
 
@@ -84,6 +88,18 @@ async def run_suite(
         if not metrics_source:
             raise RuntimeError(f"suite {suite!r}: every case errored before producing a field")
         metrics: Any = compute_extraction_metrics(metrics_source)
+    elif suite == "conflicts":
+        # LLD §17.3: the `conflicts` suite runs at stage "end_to_end" — the same stage name
+        # the (still-empty) `end_to_end` suite itself will use, so dispatch here keys off the
+        # suite, not the stage, to avoid the two colliding once end_to_end cases exist. This
+        # only implements the cross-document conflict-detection half of "end_to_end"
+        # (deterministic, no LLM call — app/conflicts/detector.py) via run_conflict_case; a
+        # suite genuinely covering full account compliance state end to end is a distinct,
+        # larger runner not yet built (see ADR-051).
+        for case in cases:
+            outcome = await run_conflict_case(session, case, settings=settings, registry=registry)
+            outcomes.append(outcome)
+        metrics = compute_conflict_metrics(cases, outcomes)
     else:
         for case in cases:
             outcome = await run_case(
@@ -167,6 +183,11 @@ async def run_suite(
                     }
                     for fo in outcome.fields
                 ]
+            }
+        elif suite == "conflicts":
+            actual_payload = {
+                "conflict_detected": outcome.conflict_detected,
+                "raises_checks": outcome.raises_checks,
             }
         else:
             actual_payload = {

@@ -1,0 +1,23 @@
+{
+  "case_ref": "EV-CONF-APR-0000",
+  "suite": "conflicts",
+  "stage": "end_to_end",
+  "doc_type": null,
+  "input_ref": null,
+  "event_date": "2026-02-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": true,
+    "device_financed": false
+  },
+  "documents": [
+    { "doc_type": "kfs", "facts": { "apr_bps": "1508" } },
+    { "doc_type": "loan_agreement", "facts": { "apr_bps": "1508" } },
+    { "doc_type": "sanction_letter", "facts": { "apr_bps": "1509" } }
+  ],
+  "conflict_expected": { "conflict_expected": false, "raises_check": null },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "apr group, operator equal_within tolerance=1 bps. 1508/1508/1509 -- the largest pairwise gap is 1 bps, exactly at tolerance, so every pair is consistent. No conflict."
+}

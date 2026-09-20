@@ -183,6 +183,33 @@ async def test_temporal_suite_verdicts_correct_even_with_a_dumb_stub(snapshot_id
     assert report["metrics"]["hallucinated_citation_rate"] == 0.0
 
 
+async def test_conflicts_suite_deterministic(snapshot_id):
+    """8 real cases (short of the LLD's 25-case minimum) across all 4 registered conflicts.yaml
+    groups (apr, closure_release_window, cure_notice_sequence, cooling_off), one consistent
+    and one contradictory case per group. Runs entirely through app.conflicts.detector against
+    real Postgres -- no LLM call at all (the stub client is passed only because run_suite's
+    signature requires one; conflict detection never calls it), so this must be 100%."""
+    settings = get_settings()
+    sm = get_sessionmaker(settings)
+    registry = FieldRegistry("app/schema/fields.yaml")
+    client = _stub_client(settings)
+
+    async with sm() as session:
+        report = await run_suite(
+            "conflicts",
+            session=session,
+            snapshot_id=snapshot_id,
+            settings=settings,
+            registry=registry,
+            client=client,
+        )
+
+    assert report["case_count"] == 8
+    assert report["metrics"]["conflict_detection_accuracy"] == 1.0
+    assert report["metrics"]["raises_check_accuracy"] == 1.0
+    assert all(r["passed"] for r in report["results"])
+
+
 async def test_run_persists_eval_run_and_eval_result_rows(snapshot_id):
     settings = get_settings()
     sm = get_sessionmaker(settings)

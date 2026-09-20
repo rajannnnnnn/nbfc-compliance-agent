@@ -1413,3 +1413,58 @@ before/after suite to measure against would just trade one unverified assumption
 **Verification.** Live run output and per-case diff (`reports/eval_verdict_latest.json`,
 gitignored). Retrieval fix reconfirmed directly and independently outside the harness for
 all five tested relationship values, not inferred from the diff alone.
+
+---
+
+## ADR-051 — First `conflicts` suite cases: a new, deterministic eval stage, zero LLM cost
+
+**Context.** LLD §17.3 wants 25 `conflicts` cases at stage `end_to_end`, testing
+"contradictory document sets" — none existed before this pass, and the harness had no
+combined-document runner at all. `app/conflicts/detector.py` (M7-T02), however, is already a
+complete, deterministic, cross-document comparison engine with zero LLM dependency — it
+compares already-typed `extracted_fact` values across documents for the same loan account,
+never document prose or a model judgement (its own docstring: "a conflict is not a verdict").
+Building this suite is therefore pure harness work, not a live-spend decision.
+
+**What's built.** `eval/loader.py` gained `ConflictDocumentSpec` (one document's `doc_type` +
+`facts`) and `ConflictExpected` (`conflict_expected: bool`, `raises_check: str | None`) —
+plumbed onto `EvalCase` as `documents: list[ConflictDocumentSpec]` and
+`conflict_expected: ConflictExpected | None`, both optional so extraction/verdict cases are
+unaffected; `EvalCase.doc_type` and `.expected` also became optional/defaulted since a
+conflicts case has neither a single doc_type nor a verdict-shaped expectation. `eval/runner.py`
+gained `run_conflict_case()`: creates a tenant/loan_account, writes one `document` +
+`extracted_fact` row set per `documents` entry, and calls the real `detect_for_fact()` after
+each fact insert (mirroring exactly how the production pipeline invokes it per newly
+extracted fact), collecting every `raises_check` across all calls. `eval/metrics.py` gained
+`compute_conflict_metrics()` (`conflict_detection_accuracy`, `raises_check_accuracy`).
+`eval/harness.py` dispatches on `suite == "conflicts"`, not `stage`, deliberately: the LLD's
+own table gives this suite stage `end_to_end`, the same stage name the (still-empty)
+`end_to_end` suite itself will use, so keying off the suite name avoids the two colliding
+once real `end_to_end` cases exist — a real design constraint discovered live via a DB check
+constraint rejecting a first attempt to invent a non-taxonomy `"conflicts"` stage string
+(`eval_case_stage_check` only allows `extraction`/`retrieval`/`verdict`/`end_to_end`,
+migration 0007).
+
+**Cases.** 8 cases (short of the 25 minimum, honest partial suite), 2 per each of the 4
+groups actually defined in `app/rules/conflicts.yaml` (see ADR-029/M7-T01b for why only 4 of
+the LLD's 12 named groups are grounded in the corpus) — one internally consistent case and
+one genuinely contradictory case per group:
+- `apr` (equal_within, tolerance 1 bps): 1508/1508/1509 (no conflict, at tolerance) vs.
+  1508/1560/1508 (conflict, `R03_apr_consistency`).
+- `closure_release_window` (date_order, after, within 30 days): 19-day gap (no conflict) vs.
+  59-day gap (conflict, `R01_docs_release_30d`).
+- `cure_notice_sequence` (date_order, strictly_increasing across 21-day notice / 7-day notice
+  / device-restriction-applied): correctly ordered dates (no conflict) vs. the 7-day notice
+  dated before the 21-day notice (conflict, `R23_device_restriction_preconditions`).
+- `cooling_off` (equal): matching 7-day periods in KFS and loan agreement (no conflict) vs.
+  7 days in one, 3 in the other (conflict, `R07_cooling_off_disclosed`).
+
+**Verification.** Run live against real Postgres —genuinely zero LLM/embedding cost, since
+`detect_for_fact()` never calls `client`: `conflict_detection_accuracy=1.0`,
+`raises_check_accuracy=1.0` (8/8 cases). `tests/integration/eval/test_harness.py::
+test_conflicts_suite_deterministic` locks in both numbers at 100% (a stub client is passed
+only because `run_suite`'s signature requires one). Full regression (241 unit + 7 eval
+integration tests) and `make lint` pass. `eval/runner.py`'s pre-existing mypy gaps (rows that
+`Row[Any] | None` narrows imperfectly, a `uuid6.UUID`/`uuid.UUID` class distinction) are
+untouched by this change and were never in scope — `make lint`'s mypy step only checks
+`app/`, not `eval/`, per the Makefile.

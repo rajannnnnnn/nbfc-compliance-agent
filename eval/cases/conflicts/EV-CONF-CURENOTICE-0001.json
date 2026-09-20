@@ -1,0 +1,34 @@
+{
+  "case_ref": "EV-CONF-CURENOTICE-0001",
+  "suite": "conflicts",
+  "stage": "end_to_end",
+  "doc_type": null,
+  "input_ref": null,
+  "event_date": "2026-05-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": true
+  },
+  "documents": [
+    {
+      "doc_type": "reminder_notice",
+      "facts": {
+        "cure_notice_21day_sent_date": "2026-03-20",
+        "cure_notice_7day_sent_date": "2026-03-10"
+      }
+    },
+    {
+      "doc_type": "field_visit_report",
+      "facts": { "device_restriction_applied_date": "2026-03-28" }
+    }
+  ],
+  "conflict_expected": {
+    "conflict_expected": true,
+    "raises_check": "R23_device_restriction_preconditions"
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "cure_notice_sequence group. The 7-day notice (2026-03-10) is sent BEFORE the 21-day notice (2026-03-20) -- the sequence is out of order regardless of the device restriction date. Conflict, raises R23_device_restriction_preconditions."
+}

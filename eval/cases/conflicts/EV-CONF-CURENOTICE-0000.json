@@ -1,0 +1,31 @@
+{
+  "case_ref": "EV-CONF-CURENOTICE-0000",
+  "suite": "conflicts",
+  "stage": "end_to_end",
+  "doc_type": null,
+  "input_ref": null,
+  "event_date": "2026-05-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": true
+  },
+  "documents": [
+    {
+      "doc_type": "reminder_notice",
+      "facts": {
+        "cure_notice_21day_sent_date": "2026-03-01",
+        "cure_notice_7day_sent_date": "2026-03-20"
+      }
+    },
+    {
+      "doc_type": "field_visit_report",
+      "facts": { "device_restriction_applied_date": "2026-03-28" }
+    }
+  ],
+  "conflict_expected": { "conflict_expected": false, "raises_check": null },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "cure_notice_sequence group, operator date_order direction=strictly_increasing across the member list's own order (21-day notice, then 7-day notice, then device restriction applied). 2026-03-01 < 2026-03-20 < 2026-03-28 -- correctly increasing. No conflict."
+}

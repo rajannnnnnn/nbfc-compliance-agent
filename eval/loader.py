@@ -32,15 +32,31 @@ class ExpectedResult(BaseModel):
     forbidden_citations: list[str] = []
 
 
+class ConflictDocumentSpec(BaseModel):
+    """One document's worth of facts for a `stage: "conflicts"` case. A conflict is
+    cross-document by definition (LLD §12), so a single `doc_type`/`facts` pair on the case
+    itself (as extraction/verdict cases use) cannot express it."""
+
+    doc_type: str
+    facts: dict[str, str] = {}
+
+
+class ConflictExpected(BaseModel):
+    conflict_expected: bool
+    raises_check: str | None = None
+
+
 class EvalCase(BaseModel):
     case_ref: str
     suite: str
     stage: str
-    doc_type: str
+    doc_type: str | None = None
     input_ref: str | None = None
     event_date: str
     account_profile: AccountProfile
-    expected: ExpectedResult
+    expected: ExpectedResult = ExpectedResult(check_key="n/a", verdict="n/a")
+    documents: list[ConflictDocumentSpec] = []
+    conflict_expected: ConflictExpected | None = None
     tolerance: dict[str, Any] = {}
     is_adversarial: bool = False
     notes: str | None = None

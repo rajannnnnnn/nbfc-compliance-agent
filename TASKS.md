@@ -967,9 +967,10 @@ is `docs/CORPUS.md`, not working code.
   §15.4 means "what-if `as_of` override run". `include_shadow=false` and M7-T03's counts
   cannot distinguish them. Needs a second column.
 
-### M6-T05 — eval harness + `numeric_rules`, `temporal`, `abstention`, `verdict`, `adversarial` suites — **shipped, partial**
-- **Status** done for the harness itself and 5 of 7 LLD §17.3 suites; `conflicts`,
-  `end_to_end` still open — see ADR-034 (`docs/DECISIONS.md`) for the honest scope-reduction
+### M6-T05 — eval harness + 6 of 7 LLD §17.3 suites — **shipped, partial**
+- **Status** done for the harness itself and 6 of 7 LLD §17.3 suites; `end_to_end` (the full
+  "account compliance state" version, not the `conflicts` suite that also nominally runs at
+  that stage) still open — see ADR-034 (`docs/DECISIONS.md`) for the honest scope-reduction
   rationale. `abstention` **meets** the LLD's ≥40 minimum: 40 cases, 37 covering every field
   in `app/schema/fields.yaml` that no registered rule consumes (checked directly against
   `app.rules.registry.all_rules()`), plus 3 more varying doc_type/account profile/value on
@@ -994,10 +995,23 @@ is `docs/CORPUS.md`, not working code.
   "extraction + verdict" stage the LLD names isn't built yet), covering prompt injection,
   planted fake (decimal-numbered, i.e. CLAUDE.md §2.6-forbidden) clause references, and
   OCR/unicode noise, each proven by construction (not yet live) to carry the exact same
-  ground truth as the clean fixture it was derived from. Not run live yet.
+  ground truth as the clean fixture it was derived from. Not run live yet. `conflicts` is
+  also new this pass: **8 cases** (short of the 25 minimum), 2 per each of the 4 groups
+  actually grounded in the corpus (`apr`, `closure_release_window`, `cure_notice_sequence`,
+  `cooling_off` — see ADR-029/M7-T01b for why the other 8 LLD-named groups aren't), one
+  consistent and one contradictory case per group, run against the real, deterministic
+  `app.conflicts.detector` — **zero LLM cost**, since conflict detection never calls a model.
+  Required a new eval-harness stage (`eval/loader.py`'s `ConflictDocumentSpec`/
+  `ConflictExpected`, `eval/runner.py::run_conflict_case`, `eval/metrics.py::
+  compute_conflict_metrics`) since a conflict is cross-document by definition and no existing
+  case shape could express it — see ADR-051, including a real DB constraint that caught an
+  attempt to invent a non-taxonomy stage name before the fix (the LLD's own stage for this
+  suite is `end_to_end`, dispatched on `suite`, not `stage`, so it won't collide once the
+  actual `end_to_end` suite gets cases). Run live: `conflict_detection_accuracy=1.0`,
+  `raises_check_accuracy=1.0` (8/8).
 - **Depends on** M6-T04
 - **Files** `eval/loader.py`, `eval/metrics.py`, `eval/runner.py`, `eval/harness.py`,
-  `eval/cases/{numeric_rules,temporal,abstention,verdict,adversarial}/*.json`,
+  `eval/cases/{numeric_rules,temporal,abstention,verdict,adversarial,conflicts}/*.json`,
   `eval/fixtures/adversarial/*.txt`, `tests/unit/eval/test_eval_{loader,metrics}.py`,
   `tests/unit/eval/test_verdict_suite_fallthrough.py`,
   `tests/unit/eval/test_adversarial_suite.py`, `tests/integration/eval/test_harness.py`,
@@ -1009,20 +1023,23 @@ is `docs/CORPUS.md`, not working code.
   make eval suite=abstention    && jq -e '.metrics.abstention_correctness == 1.0' reports/eval_abstention_latest.json
   make eval suite=verdict       # run live twice: 0.25 pre-fix (ADR-047), 0.25 post-fix but retrieval confirmed fixed, calibration gap found (ADR-050)
   make eval suite=adversarial   # cases built, not yet run live (ADR-049)
+  make eval suite=conflicts     && jq -e '.metrics.conflict_detection_accuracy == 1.0' reports/eval_conflicts_latest.json
   make eval-report
   ```
-  `hallucinated_citation_rate` **exactly 0** on every suite actually run live so far —
-  computed over persisted citations, after validation, independently re-derived from the
-  database by `eval/runner.py::_resolve_citations` rather than trusted from the validator.
-  `tests/unit/eval/test_verdict_suite_fallthrough.py` verifies, with no DB and no LLM call,
-  that every `verdict` case's trigger field genuinely falls through every rule that consumes
-  it. `tests/unit/eval/test_adversarial_suite.py` verifies, with no DB and no LLM call, that
-  every adversarial case's ground truth matches its clean base fixture exactly and that each
-  technique (inject/fakeclause/ocrnoise) is constructed as documented.
-- **Remaining** `conflicts`/`end_to_end` suites (zero cases each; `end_to_end` also needs the
-  harness's first combined extraction+verdict runner, which `adversarial`'s full LLD shape
-  needs too — see ADR-049), growing `verdict` past 16 and `adversarial` past 8, the first live
-  run of `adversarial`, and — newly identified, ADR-050 — a real model verdict-calibration
+  `hallucinated_citation_rate` **exactly 0** on every citation-bearing suite actually run
+  live so far — computed over persisted citations, after validation, independently
+  re-derived from the database by `eval/runner.py::_resolve_citations` rather than trusted
+  from the validator. `tests/unit/eval/test_verdict_suite_fallthrough.py` verifies, with no
+  DB and no LLM call, that every `verdict` case's trigger field genuinely falls through
+  every rule that consumes it. `tests/unit/eval/test_adversarial_suite.py` verifies, with no
+  DB and no LLM call, that every adversarial case's ground truth matches its clean base
+  fixture exactly and that each technique (inject/fakeclause/ocrnoise) is constructed as
+  documented. `tests/integration/eval/test_harness.py::test_conflicts_suite_deterministic`
+  locks in 100% on both conflict metrics against real Postgres.
+- **Remaining** the full `end_to_end` suite (zero cases; needs the harness's first combined
+  extraction+verdict runner, which `adversarial`'s full LLD shape needs too — see ADR-049),
+  growing `verdict` past 16, `adversarial` past 8, and `conflicts` past 8, the first live run
+  of `adversarial`, and — newly identified, ADR-050 — a real model verdict-calibration
   under-confidence pattern (reaching for `ambiguous`/`no_clause_found` over a committed
   `violation`/`compliant` even with the correct citation retrieved) worth a future prompt
   revision once broader suite coverage exists to measure a change against — tracked as

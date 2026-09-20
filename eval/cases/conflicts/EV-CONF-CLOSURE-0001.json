@@ -1,0 +1,22 @@
+{
+  "case_ref": "EV-CONF-CLOSURE-0001",
+  "suite": "conflicts",
+  "stage": "end_to_end",
+  "doc_type": null,
+  "input_ref": null,
+  "event_date": "2026-03-15",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "documents": [
+    { "doc_type": "closure_statement", "facts": { "full_repayment_date": "2026-01-01" } },
+    { "doc_type": "docs_release_ack", "facts": { "original_docs_released_date": "2026-03-01" } }
+  ],
+  "conflict_expected": { "conflict_expected": true, "raises_check": "R01_docs_release_30d" },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "closure_release_window group. Docs released 59 days after full repayment -- exceeds the 30-day window. Conflict, raises R01_docs_release_30d."
+}

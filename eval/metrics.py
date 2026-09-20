@@ -5,7 +5,7 @@ eval/loader.py's own note)."""
 from dataclasses import dataclass, field
 
 from eval.loader import EvalCase
-from eval.runner import CaseOutcome, ExtractionOutcome
+from eval.runner import CaseOutcome, ConflictOutcome, ExtractionOutcome
 
 
 @dataclass
@@ -146,5 +146,46 @@ def compute_extraction_metrics(outcomes: list[ExtractionOutcome]) -> ExtractionM
             total_span_grounded / total_correct_present if total_correct_present else 1.0
         ),
         per_field=per_field,
+        case_count=n,
+    )
+
+
+@dataclass
+class ConflictMetrics:
+    conflict_detection_accuracy: float
+    raises_check_accuracy: float
+    case_count: int
+
+
+def compute_conflict_metrics(
+    cases: list[EvalCase], outcomes: list[ConflictOutcome]
+) -> ConflictMetrics:
+    n = len(cases)
+    if n == 0:
+        raise ValueError("cannot compute metrics over zero cases")
+    for c in cases:
+        if c.conflict_expected is None:
+            raise ValueError(f"{c.case_ref}: conflicts-stage case requires conflict_expected")
+
+    correct_detection = sum(
+        1
+        for c, o in zip(cases, outcomes, strict=True)
+        if o.conflict_detected == c.conflict_expected.conflict_expected  # type: ignore[union-attr]
+    )
+
+    cases_naming_check = [
+        c for c in cases if c.conflict_expected.raises_check is not None  # type: ignore[union-attr]
+    ]
+    correct_checks = sum(
+        1
+        for c, o in zip(cases, outcomes, strict=True)
+        if c.conflict_expected.raises_check is not None  # type: ignore[union-attr]
+        and c.conflict_expected.raises_check in o.raises_checks  # type: ignore[union-attr]
+    )
+    raises_check_accuracy = correct_checks / len(cases_naming_check) if cases_naming_check else 1.0
+
+    return ConflictMetrics(
+        conflict_detection_accuracy=correct_detection / n,
+        raises_check_accuracy=raises_check_accuracy,
         case_count=n,
     )
