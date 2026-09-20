@@ -8,7 +8,7 @@ A test walks the AST of app/ to assert this (tests/unit/llm/test_no_provider_sdk
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 import litellm
 from pydantic import BaseModel, ValidationError
@@ -93,6 +93,29 @@ class CircuitBreaker:
 
 def _provider_of(model: str) -> str:
     return model.split("/", 1)[0] if "/" in model else "unknown"
+
+
+def _inline_refs(node: Any, defs: dict[str, Any]) -> Any:
+    if isinstance(node, dict):
+        ref = node.get("$ref")
+        if ref is not None:
+            def_name = ref.rsplit("/", 1)[-1]
+            return _inline_refs(defs[def_name], defs)
+        return {k: _inline_refs(v, defs) for k, v in node.items() if k != "$defs"}
+    if isinstance(node, list):
+        return [_inline_refs(item, defs) for item in node]
+    return node
+
+
+def _inlined_json_schema(model_cls: type[BaseModel]) -> dict[str, Any]:
+    """Gemini's (and some other providers') structured-output schema mode does not support
+    `$ref`/`$defs` — a nested Pydantic model (e.g. `FieldExtraction` reused across every field
+    of an extraction schema) must appear inline at every use site, not as a shared reference.
+    Pydantic's own `model_json_schema()` always emits `$defs` for any nested model, so this
+    resolves every `$ref` against `$defs` and drops `$defs` from the result."""
+    schema = model_cls.model_json_schema()
+    defs = schema.get("$defs", {})
+    return cast(dict[str, Any], _inline_refs(schema, defs))
 
 
 class LLMClient:
@@ -207,13 +230,30 @@ class LLMClient:
         stage: str,
         adapter_id: str | None = None,
     ) -> tuple[BaseModel, CallRecord]:
-        """Structured-output enforcement with one repair attempt (LLD §7.5)."""
+        """Structured-output enforcement with one repair attempt (LLD §7.5).
+
+        `response_format={"type": "json_object"}` only demands *valid JSON*, not any
+        particular shape — found live against Gemini (ADR-038): with only a natural-language
+        field table in the prompt and no example JSON, it validly returned a JSON *array* of
+        field records instead of the keyed object `model_cls` requires, where GPT-family
+        models happened to infer the object shape from context. Passing the actual JSON
+        schema (`{"type": "json_schema", ...}`, OpenAI's format, translated per-provider by
+        LiteLLM — including Gemini's `response_schema`) constrains the shape structurally
+        instead of relying on the model to guess it from prose.
+        """
+        response_format = {
+            "type": "json_schema",
+            "json_schema": {
+                "name": model_cls.__name__,
+                "schema": _inlined_json_schema(model_cls),
+            },
+        }
         raw, record = await self.complete(
             model=model,
             messages=messages,
             stage=stage,
             adapter_id=adapter_id,
-            response_format={"type": "json_object"},
+            response_format=response_format,
         )
 
         def _repair(bad_output: str, error: str) -> str:
@@ -241,7 +281,7 @@ class LLMClient:
                 messages=repair_messages,
                 stage=stage,
                 adapter_id=adapter_id,
-                response_format={"type": "json_object"},
+                response_format=response_format,
             )
             try:
                 parsed = model_cls.model_validate_json(raw2)

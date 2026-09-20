@@ -522,19 +522,26 @@ is `docs/CORPUS.md`, not working code.
   generated document contains a value drawn from a real-looking PAN/Aadhaar/account pattern.
 
 ### M3-T08 — `extraction_core` suite — **first published baseline**
-- **Status** blocked *(SQ-03: no live LLM provider credentials in this environment)* — no
-  longer blocked on M3-T07 (150 synthetic fixtures now exist, committed under
-  `eval/fixtures/`). What remains genuinely blocked is producing a **real** baseline: this
-  suite's numbers (`span_grounding`, per-field `exact_match`) must come from actually
-  running Stage A extraction against a live model on all 150 fixtures — a stub client (the
-  only thing available in this sandbox, same limitation noted at M3-T06) always returns
-  `is_absent` for every field, which would produce a baseline of all-zero exact_match, not a
-  real measurement. Publishing that as "the first published baseline" would be exactly the
-  fabricated-number defect CLAUDE.md forbids, one level removed. Once a provider key is
-  available: extend `eval/loader.py`'s `EvalCase`/`eval/runner.py` to a genuine `extraction`
-  stage (source fixture text in, per-field expected values the generator already knows,
-  compare `extracted_fact.value_normalized` and `span_verified` against them), generate
-  `eval/cases/extraction_core/*.json` from `eval/fixtures/` ground truth, then run for real.
+- **Status** in progress — SQ-03 (no live LLM provider credentials) is resolved: a real
+  Gemini key (`gemini/gemini-2.5-flash`, via LiteLLM) is now configured in this environment.
+  A live smoke test of `extract_raw_fields()` against `eval/fixtures/kfs/kfs_0000.txt`
+  surfaced and fixed a real bug first (ADR-038): `LLMClient.structured()` only requested
+  `response_format={"type": "json_object"}` (valid-JSON-only, no shape enforcement), so
+  Gemini validly returned a JSON array instead of the keyed object the per-doc-type
+  extraction schema requires. Fixed by passing the actual JSON Schema
+  (`{"type": "json_schema", ...}`) with `$ref`/`$defs` fully inlined (Gemini's schema mode
+  rejects `$ref`); verified against the live API (all 15 non-absent KFS fields extracted
+  correctly) and covered by new unit tests in `tests/unit/llm/test_client.py`; full
+  regression (302 tests) green. What remains before a real baseline can be published: (1)
+  `scripts/gen_synthetic_docs.py`'s generator functions return only fixture text today, not
+  a companion ground-truth dict — needs extending to emit `(text, facts_dict)` so
+  `eval/cases/extraction_core/*.json` can be generated from real known values, not
+  fabricated ones; (2) `eval/runner.py` only implements `stage="verdict"` (injects
+  `expected.facts` directly, bypassing extraction) — needs a genuine `extraction` stage that
+  creates a real `document` row and calls `extract_document()`/`extract_raw_fields()` against
+  fixture text, then compares `extracted_fact.value_normalized`/`span_verified` to ground
+  truth. Once both exist: generate the ≥150 cases and run for real against the now-fixed
+  Gemini path.
 - **Depends on** M3-T05, M3-T06, M3-T07
 - **Files** `eval/harness.py`, `eval/cases/extraction_core/*.json`, `Makefile` (`make eval`, `make eval-report`), `reports/`
 - **Acceptance**

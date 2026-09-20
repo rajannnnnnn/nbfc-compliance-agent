@@ -741,3 +741,62 @@ and `"twenty-four"` recall `DL2025/p13` — proven against the real corpus after
 `alembic upgrade head` applied migration 0010 to the sandbox's live Postgres. Full regression
 (299 tests, including `tests/integration/db/test_migrations.py`'s migration-order and
 single-head assertions updated for the new `0010` head) passes.
+
+## ADR-038 — `LLMClient.structured()` must pass a real JSON Schema, not bare `json_object` (M3-T08)
+
+**Context.** M3-T08 (extraction_core eval suite) requires a live model, so this pass was the
+first time `extract_raw_fields()` ran against a real provider (Gemini, via LiteLLM) instead
+of the `_stub_client` every prior eval-harness test used. Against
+`eval/fixtures/kfs/kfs_0000.txt`, the per-doc-type extraction model built by
+`build_model_for_doc_type()` (`app/schema/generated.py`) failed Pydantic validation:
+`pydantic_core.ValidationError: Input should be an object ... input_type=list`. Gemini had
+returned a JSON *array* of `{field_name, value_raw, ...}` records instead of the keyed object
+the schema requires.
+
+Root cause: `LLMClient.structured()` requested `response_format={"type": "json_object"}`
+unconditionally. That mode is a valid-JSON contract only — it says nothing about shape. Only
+the prompt's prose (a natural-language field table, `app/prompts/extract/document_facts.v1.md`)
+communicated the intended keyed-object shape. GPT-family models, tested earlier in this
+project against the same prompt, happened to infer the object shape from that prose; Gemini,
+equally validly per the `json_object` contract, did not.
+
+A second, related problem surfaced fixing the first: `build_model_for_doc_type()` reuses one
+`FieldExtraction` model across every field of a per-doc-type schema (by construction — every
+extracted field carries the same `value_raw`/`is_absent`/`quoted_span`/`confidence` shape).
+Pydantic's `model_json_schema()` therefore emits that shared shape once under `$defs` and
+`$ref`s it from every field. Gemini's structured-output schema mode (`response_schema`, which
+LiteLLM maps `{"type": "json_schema", ...}` to per-provider) rejects `$ref`/`$defs`.
+
+**Decision.** In `app/llm/client.py`:
+
+- `structured()` now builds `response_format = {"type": "json_schema", "json_schema":
+  {"name": model_cls.__name__, "schema": _inlined_json_schema(model_cls)}}` once per call and
+  passes it to both the initial `complete()` and the one-shot repair-path `complete()` (both
+  previously built independent, hardcoded `{"type": "json_object"}` dicts). This is OpenAI's
+  structured-output wire format; LiteLLM translates it per-provider, including to Gemini's
+  `response_schema`, so no provider-specific branch is needed in `app/llm/`.
+- A new `_inlined_json_schema()` / `_inline_refs()` pair recursively resolves every `$ref`
+  against the model's own `$defs` and drops `$defs` from the result, so the schema handed to
+  the provider has the nested `FieldExtraction` shape written out inline at every field, not
+  shared by reference. This is general — it fixes the problem for any current or future
+  Pydantic model passed to `structured()` that reuses a nested model, not just extraction.
+
+**Why not a prompt fix.** The failure was a contract-enforcement gap in the LLM client, not
+an ambiguity in the prompt text (the field table already fully specifies each field's shape
+in prose). Making the prompt more insistent would still leave shape enforcement dependent on
+model-specific inference rather than the structural mechanism the provider already offers for
+exactly this purpose. Fixing it in `LLMClient.structured()` benefits every caller (Stage A
+extraction and Stage C verdict-by-model both call `structured()`) rather than patching one
+prompt for one provider.
+
+**Verification.** Live smoke test re-run against the same real Gemini call
+(`extract_raw_fields()` over `eval/fixtures/kfs/kfs_0000.txt`) after the fix: all 15
+non-absent KFS fields returned as a correctly-shaped object with matching `value_raw` and
+`quoted_span` per field. New unit tests in `tests/unit/llm/test_client.py`
+(`test_structured_passes_json_schema_response_format_not_bare_json_object`,
+`test_structured_repair_reuses_json_schema_response_format`,
+`test_inlined_json_schema_resolves_refs_for_nested_model`) assert the schema-based
+`response_format` is sent on both the initial and repair calls, and that `$ref`/`$defs` are
+fully inlined for a nested-model case shaped like the real extraction schema. Full regression
+(302 tests) passes with no changes needed to any other test — no existing test asserted on
+the literal `{"type": "json_object"}` value.

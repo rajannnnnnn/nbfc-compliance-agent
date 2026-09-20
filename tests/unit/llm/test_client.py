@@ -5,7 +5,13 @@ import litellm
 import pytest
 
 from app.config import Settings
-from app.llm.client import CircuitBreaker, LLMClient, PermanentLLMError, TransientLLMError
+from app.llm.client import (
+    CircuitBreaker,
+    LLMClient,
+    PermanentLLMError,
+    TransientLLMError,
+    _inlined_json_schema,
+)
 from app.llm.structured import StructuredOutputError
 
 
@@ -135,3 +141,72 @@ async def test_structured_succeeds_first_try():
             model_cls=Out, model="openai/gpt-4o", messages=[], stage="verdict"
         )
     assert parsed.x == 5
+
+
+async def test_structured_passes_json_schema_response_format_not_bare_json_object():
+    """ADR-038: `{"type": "json_object"}` only demands valid JSON, not any particular shape —
+    live-discovered against Gemini, which validly returned a JSON array instead of the keyed
+    object a per-doc-type extraction model requires. `structured()` must instead pass the
+    actual JSON schema so shape is enforced structurally, not inferred by the model from
+    prose."""
+    client = LLMClient(_settings())
+    from pydantic import BaseModel
+
+    class Out(BaseModel):
+        x: int
+
+    good = _fake_response(content='{"x": 5}')
+    with (
+        patch("litellm.acompletion", new=AsyncMock(return_value=good)) as mock_call,
+        patch("litellm.completion_cost", return_value=0.0),
+    ):
+        await client.structured(model_cls=Out, model="openai/gpt-4o", messages=[], stage="verdict")
+
+    kwargs = mock_call.call_args.kwargs
+    assert kwargs["response_format"]["type"] == "json_schema"
+    assert kwargs["response_format"]["json_schema"]["name"] == "Out"
+    assert (
+        kwargs["response_format"]["json_schema"]["schema"]["properties"]["x"]["type"] == "integer"
+    )
+
+
+async def test_structured_repair_reuses_json_schema_response_format():
+    client = LLMClient(_settings())
+    from pydantic import BaseModel
+
+    class Out(BaseModel):
+        x: int
+
+    bad = _fake_response(content="not json")
+    good = _fake_response(content='{"x": 7}')
+    with (
+        patch("litellm.acompletion", new=AsyncMock(side_effect=[bad, good])) as mock_call,
+        patch("litellm.completion_cost", return_value=0.0),
+    ):
+        parsed, _ = await client.structured(
+            model_cls=Out, model="openai/gpt-4o", messages=[], stage="verdict"
+        )
+    assert parsed.x == 7
+    assert mock_call.call_count == 2
+    for call in mock_call.call_args_list:
+        assert call.kwargs["response_format"]["type"] == "json_schema"
+
+
+def test_inlined_json_schema_resolves_refs_for_nested_model():
+    """Gemini's (and some other providers') schema mode rejects `$ref`/`$defs` — a nested
+    model reused across multiple fields (as `FieldExtraction` is across every field of a
+    per-doc-type extraction model) must be inlined at every use site."""
+    from pydantic import BaseModel
+
+    class Nested(BaseModel):
+        value: str
+
+    class Outer(BaseModel):
+        a: Nested
+        b: Nested
+
+    schema = _inlined_json_schema(Outer)
+    assert "$defs" not in schema
+    assert "$ref" not in str(schema)
+    assert schema["properties"]["a"]["properties"]["value"]["type"] == "string"
+    assert schema["properties"]["b"]["properties"]["value"]["type"] == "string"
