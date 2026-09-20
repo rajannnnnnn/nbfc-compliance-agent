@@ -26,9 +26,12 @@ ORDER  BY score DESC
 LIMIT  :k
 """
 
-_NUMERIC_TOKEN_RE = re.compile(
-    r"\b\d[\d,.:]*\b|\b(?:one|two|three|thirty|sixty|ninety)\b", re.IGNORECASE
+_NUMBER_WORDS = (
+    "one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|"
+    "thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|"
+    "twenty|twenty-four|thirty|forty|fifty|sixty|seventy|eighty|ninety"
 )
+_NUMERIC_TOKEN_RE = re.compile(rf"\b\d[\d,.:]*\b|\b(?:{_NUMBER_WORDS})\b", re.IGNORECASE)
 
 
 def numeric_tokens(value_summary: str) -> list[str]:

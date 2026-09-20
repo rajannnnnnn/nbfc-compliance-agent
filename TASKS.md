@@ -580,7 +580,17 @@ is `docs/CORPUS.md`, not working code.
   before the query. A clause outside the window never appears in results at any `k`.
 
 ### M4-T03 — `lexical.py`
-- **Status** done — exercised indirectly via `tests/integration/retrieve/test_retrieve_service.py` (apr_bps pinned-candidate resolution) against the real corpus; a dedicated numeric-token-recall test against real clause text is still open.
+- **Status** done — exercised indirectly via `tests/integration/retrieve/test_retrieve_service.py` (apr_bps pinned-candidate resolution); dedicated numeric-token-recall test added
+  (`tests/integration/retrieve/test_lexical_numeric_recall.py`, 7/7 passing against the real
+  corpus). Building it surfaced and fixed a real gap: `numeric_tokens`'s number-word list was
+  missing "six", "four", "twenty-four", etc. (only recognised one/two/three/thirty/sixty/
+  ninety) — widened to a full one-to-ninety word list. It also surfaced and *documented* (not
+  fixed) a second, real gap: a digit token ("24") never matches a clause that spells the same
+  number as words ("twenty-four") under `websearch_to_tsquery`, which has no numeral/word
+  synonym dictionary — proven directly (`test_digit_form_does_not_recall_a_word_spelled_clause`).
+  Fixing that for real needs a synonym dictionary added to the FTS configuration — **new
+  follow-up, not solved here**, since it changes the tsvector/tsquery pipeline shared by every
+  field, not just this one test's fixture.
 - **Depends on** M4-T01
 - **Files** `app/retrieve/lexical.py`, `tests/integration/retrieve/test_lexical.py`
 - **Acceptance**
@@ -619,6 +629,24 @@ is `docs/CORPUS.md`, not working code.
   Every pinned field key exists in `fields.yaml`; every pinned path resolves in the active
   snapshot; booting against a snapshot missing one pinned clause exits non-zero with every
   missing path named.
+
+### M4-T03b — FTS numeral/word synonym dictionary *(new — found while testing M4-T03)*
+- **Status** open
+- **Depends on** M4-T03
+- **Files** `app/retrieve/lexical.py`, likely a Postgres text search configuration/dictionary
+  migration
+- **Acceptance**
+  ```bash
+  pytest tests/integration/retrieve/test_lexical_numeric_recall.py::test_digit_form_does_not_recall_a_word_spelled_clause -q
+  ```
+  should assert the digit-form query **does** recall `DL2025/p13` once fixed (the test's
+  current assertion, documenting today's gap, gets inverted at that point).
+  A digit token ("24") and its spelled-word form ("twenty-four") should both match a clause
+  stating the same number, regardless of which form the clause or the query uses. Needs a
+  numeral synonym dictionary (e.g. a small custom Postgres text search dictionary mapping
+  1-99 digit forms to word forms and back) wired into the `tsv` generation and query path —
+  not solved in this pass because it changes the tsvector/tsquery pipeline shared by every
+  field, not just one test's fixture.
 
 ### M4-T06 — Reference-hop expansion
 - **Status** done — `tests/integration/retrieve/test_reference_hop.py` proves DL2025/p8/i --incorporates--> KFS2024 is followed at depth 1 against the real ingested corpus, tagged `source="reference_hop"`.
@@ -860,15 +888,16 @@ is `docs/CORPUS.md`, not working code.
   schema) so the model cannot influence it.
 
 ### M6-T04 — Assessment persistence and provenance
-- **Status** partial — DB persistence and provenance done (covered by
+- **Status** done — DB persistence and provenance done (covered by
   `tests/integration/verdict/test_assess.py`: `corpus_snapshot_id`, `serving_mode`,
   `prompt_version`, per-stage ms/tokens/`cost_usd` all persisted; re-running a check sets
-  `superseded_by_id`). The `app/api/v1/assessments.py` HTTP surface (including
-  `verification_status` on each citation in the response) is not built — that's M8's job;
-  every citation row already carries enough (`clause_id` join to `regulation_instrument`) for
-  the endpoint to compute it. SQ-19 (`is_shadow` overload) already resolved at schema level —
-  `assessment.is_whatif` (ADR-006) is a separate column from `is_shadow`, so M7-T03's counts
-  and `include_shadow=false` can distinguish the two meanings cleanly whenever the API is built.
+  `superseded_by_id`). The `app/api/v1/assessments.py` HTTP surface was built in the M2/M7
+  FastAPI work — `GET /v1/loans/{id}/assessments` joins every citation back to `clause`/
+  `regulation_instrument` and returns `verification_status` on each one, non-optional per
+  §15.2 (`tests/integration/api/test_documents_and_assessments.py`). SQ-19 (`is_shadow`
+  overload) resolved at schema level — `assessment.is_whatif` (ADR-006) is a separate column
+  from `is_shadow`, so M7-T03's counts and `include_shadow=false` distinguish the two
+  meanings cleanly.
 - **Depends on** M6-T02, M6-T03
 - **Files** `app/verdict/assess.py`, `app/api/v1/assessments.py`, `tests/integration/verdict/test_persistence.py`
 - **Acceptance**
