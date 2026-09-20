@@ -1104,3 +1104,91 @@ implausible, suspicious 0.0 across every case, not because of a systematic check
 validity check) passes unchanged. Full regression (308 tests) passes. Not yet re-verified
 against the live API in this pass (each re-run costs real, budget-owner money) — expected to
 resolve `contact_datetime` to a real, non-zero score on the next live `call_transcript` run.
+
+---
+
+## ADR-046 — First real `verdict` suite cases: forcing genuine model judgment via `MissingFact`
+
+**Context.** M6-T05 shipped `numeric_rules`, `temporal` and `abstention`, but had zero cases
+in `verdict` — the suite whose whole point (LLD §17.3) is to exercise `assess_fact()`'s real
+fallthrough to `retrieve_candidates()` + a real model call, not a rule's own arithmetic. Every
+existing suite either lets a rule decide deterministically or documents a genuine
+no-clause-found abstention; neither exercises actual model judgment over ambiguous document
+language against a retrieved clause. Built entirely without live LLM calls, per explicit
+instruction, since case construction (choosing scenarios, writing expected facts) needs no
+model or embedding call — only a live *run* of the suite does.
+
+**The mechanism.** `app/verdict/assess.py::assess_fact()` runs every rule that
+`consumes` the input fact's field; a rule catching its own `MissingFact` and returning
+`NotApplicable` is skipped, and if *no* non-shadow rule decided the field
+(`any_rule_decided=False`), assessment falls through to real retrieval and a real
+`client.structured()` call, persisted with `check_key=f"F:{field_key}"` — never a rule id.
+So a genuine verdict case needs a rule-covered field whose rule's `NotApplicable` trigger
+still leaves the governing clause retrieval-eligible, as opposed to a trigger (typically an
+entity-type mismatch like `not account.is_digital_lending`) that would exclude the clause from
+retrieval too, which just reproduces `abstention`'s no-clause-found outcome under a different
+name.
+
+**Selection.** Read every multi-field-`consumes` rule (`R01/R02/R02b/R04/R07/R09/R11/R13/R18/
+R20/R22/R23/R26`) for a rule whose primary boolean/date gate raises `MissingFact` while a
+*second*, still-present fact carries genuinely ambiguous evidentiary content the rule itself
+never interprets. Two qualified cleanly:
+- **R09_no_pool_account** (`DL2025/p9/ii`): reads only `pass_through_account_used_flag`; when
+  that's absent, `MissingFact` fires even though `account.is_digital_lending` is `True`, so the
+  clause stays eligible. `repayment_debited_account_type` (present, `consumes`-listed but never
+  read by the rule) becomes the trigger fact — its enum value (`lender_own`/`lsp_pool`/
+  `unknown`) is exactly what a model must read against the clause text.
+- **R20_no_third_party_contact** (`RBC-AMD2026/p100X`): reads `third_party_contacted_flag`
+  first; absent, `MissingFact` fires with no entity-type gate at all (R20 has none), so the
+  clause stays eligible for every account. `third_party_relationship` becomes the trigger.
+
+R07/R13/R18 were rejected: their `MissingFact` path returns a `RuleOutcome` directly (R07,
+R13) rather than falling through, or their "absent" case resolves via `flag_of(default=False)`
+to a deterministic `False` rather than a genuine ambiguity (R13, R18) — no real judgment call
+exists there for the model to make. R01/R02/R02b/R04/R23/R26's only `NotApplicable` paths are
+date- or entity-gated, which would also gate retrieval — the `abstention` duplication problem.
+R22 was considered (`first_visit_date` absent, `MissingFact`, no entity gate) but rejected as
+weaker: without a visit date on record at all, there is no defensible ground-truth verdict to
+reason to from the intimation date alone — every case would tend toward `ambiguous` for lack
+of information, not for a genuine reading-comprehension judgment call, which would make the
+suite thin rather than honest.
+
+**Ground truth.** Ground truth is not a rule computation to check for the `verdict` cases —
+that would defeat the point — but a reasoned reading of the real, ingested clause text
+(queried directly from `clause`, not assumed):
+- `DL2025/p9/ii`: "All loan repayments shall be collected back only into the bank account of
+  the regulated entity, without any pass-through account of the lending service provider."
+  `lender_own` → compliant; `lsp_pool` → violation (the value names exactly what the clause
+  forbids); `unknown` → ambiguous (routing genuinely undisclosed).
+- `RBC-AMD2026/p100X`: "shall not contact any relative, friend, colleague or employer of the
+  borrower for the purpose of intimidating or shaming the borrower into payment." Relationships
+  the clause names outright (`spouse`/`parent`/`sibling`/`other_relative` as "relative",
+  `colleague`, `employer`) → violation; `guarantor` → compliant (contacting a guarantor is
+  ordinary recovery practice the clause does not target, mirroring the rule's own confirmed-
+  contact code path); `neighbour`/`reference`/`unknown` → ambiguous, since the clause's own
+  list does not name them and a reasonable reader could go either way — this is the genuine
+  judgment call the suite exists to exercise.
+
+16 cases shipped (6 for R09, 10 for R20; the LLD's 50-case minimum is not met — an honest
+partial suite, matching every other suite's status in this build), varying `event_date`,
+`product_type` and `is_digital_lending` across cases. `decisive_citations` in every case
+assumes `retrieve_candidates()` ranks the one on-topic clause top for that field's
+label/description — plausible given the placeholder corpus has exactly one clause per topic,
+but **unverified**, since no `embed()` or `structured()` call was made building this suite;
+this is stated in every case's own `notes` field and must be reconciled against real output on
+the suite's first live run, at which point `decisive_citations`/`context_citations` may need
+correcting rather than treating a mismatch there as a model failure.
+
+**Verification (no live call).** Confirmed directly, in Python, against the real rule objects
+— not assumed from reading the source: `R09NoPoolAccount().evaluate()` and
+`R20NoThirdPartyContact().evaluate()` both return `NotApplicable` given exactly each case's
+`expected.facts` and `account_profile`. `tests/unit/eval/test_verdict_suite_fallthrough.py`
+makes this permanent: for every case in `eval/cases/verdict/`, it asserts `check_key` starts
+with `F:`, the trigger field is the one fact provided, and every rule consuming that field
+returns `NotApplicable` — so a future change to R09 or R20's preconditions that quietly turns
+a case rule-decided again fails CI rather than silently degrading the suite's purpose.
+`eval/loader.py::load_suite("verdict")` parses all 16 cases cleanly. Full regression (236
+unit tests) and `ruff check` pass. Not run live in this pass — no `make eval suite=verdict` yet —
+per the explicit "no live calls yet" instruction; a live run is the natural next step once
+authorized, and is expected to also validate or correct the `decisive_citations` assumption
+above.

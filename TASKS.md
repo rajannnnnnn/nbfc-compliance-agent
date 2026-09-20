@@ -967,36 +967,48 @@ is `docs/CORPUS.md`, not working code.
   §15.4 means "what-if `as_of` override run". `include_shadow=false` and M7-T03's counts
   cannot distinguish them. Needs a second column.
 
-### M6-T05 — eval harness + `numeric_rules`, `temporal`, `abstention` suites — **shipped, partial**
-- **Status** done for the harness itself and 3 of 7 LLD §17.3 suites; `verdict`,
-  `adversarial`, `conflicts`, `end_to_end`, `extraction_core` still open — see ADR-034
-  (`docs/DECISIONS.md`) for the honest-scope-reduction rationale. `abstention` now **meets**
-  the LLD's ≥40 minimum — the first suite in this build to reach its literal target: 40 cases
-  (up from 2), 37 covering every field in `app/schema/fields.yaml` that no registered rule
-  consumes (checked directly against `app.rules.registry.all_rules()`, not assumed — each a
-  real abstention scenario since no rule can fire and no ingested clause governs the field
-  directly), plus 3 more varying doc_type/account_profile/value on fields declared against
-  more than one doc_type (genuinely distinct scenarios, not a repeated case).
-  `numeric_rules` (31) and `temporal` (12) remain short of their 60/30 minimums (see M5-T06).
+### M6-T05 — eval harness + `numeric_rules`, `temporal`, `abstention`, `verdict` suites — **shipped, partial**
+- **Status** done for the harness itself and 4 of 7 LLD §17.3 suites; `adversarial`,
+  `conflicts`, `end_to_end` still open — see ADR-034 (`docs/DECISIONS.md`) for the honest
+  scope-reduction rationale. `abstention` **meets** the LLD's ≥40 minimum: 40 cases, 37
+  covering every field in `app/schema/fields.yaml` that no registered rule consumes (checked
+  directly against `app.rules.registry.all_rules()`), plus 3 more varying doc_type/account
+  profile/value on multi-doc_type fields. `numeric_rules` (31) and `temporal` (12) remain
+  short of their 60/30 minimums (see M5-T06). `verdict` is new this pass: **16 real cases**
+  (short of the LLD's 50-case minimum, an honest partial suite per the project's established
+  pattern), the first cases in the suite genuinely requiring real model judgment rather than
+  rule arithmetic or a documented no-clause-found abstention — see ADR-046 for the
+  construction methodology (deliberately withholding the one fact each rule reads, so
+  `MissingFact` forces `NotApplicable` while the underlying clause stays retrieval-eligible,
+  driving `assess_fact()`'s real fallthrough path, `check_key="F:<field_key>"`). Built and
+  unit-verified **entirely without live LLM calls** per explicit user instruction; not yet
+  run against the live API — decisive_citations reflect a documented best-effort assumption
+  about what `retrieve_candidates()` will rank top, to be reconciled on the first live run.
 - **Depends on** M6-T04
 - **Files** `eval/loader.py`, `eval/metrics.py`, `eval/runner.py`, `eval/harness.py`,
-  `eval/cases/{numeric_rules,temporal,abstention}/*.json`,
-  `tests/unit/eval/test_eval_{loader,metrics}.py`, `tests/integration/eval/test_harness.py`,
+  `eval/cases/{numeric_rules,temporal,abstention,verdict}/*.json`,
+  `tests/unit/eval/test_eval_{loader,metrics}.py`,
+  `tests/unit/eval/test_verdict_suite_fallthrough.py`, `tests/integration/eval/test_harness.py`,
   `reports/`
 - **Acceptance (shipped suites)**
   ```bash
   make eval suite=numeric_rules && jq -e '.metrics.hallucinated_citation_rate == 0' reports/eval_numeric_rules_latest.json
   make eval suite=temporal      && jq -e '.metrics.hallucinated_citation_rate == 0' reports/eval_temporal_latest.json
   make eval suite=abstention    && jq -e '.metrics.abstention_correctness == 1.0' reports/eval_abstention_latest.json
+  make eval suite=verdict       # not yet run live — pending explicit go-ahead (real spend)
   make eval-report
   ```
-  `hallucinated_citation_rate` **exactly 0** on every shipped suite — computed over
-  persisted citations, after validation, independently re-derived from the database by
-  `eval/runner.py::_resolve_citations` rather than trusted from the validator.
-- **Remaining** `verdict`/`adversarial`/`conflicts`/`end_to_end`/`extraction_core` suites
-  (including the prompt-injection fixture and `forbidden_citations` on every case, not
-  only adversarial ones) — tracked as follow-up, not a release blocker for the harness
-  itself since the harness mechanics are proven end to end against real Postgres.
+  `hallucinated_citation_rate` **exactly 0** on every suite actually run live so far —
+  computed over persisted citations, after validation, independently re-derived from the
+  database by `eval/runner.py::_resolve_citations` rather than trusted from the validator.
+  `tests/unit/eval/test_verdict_suite_fallthrough.py` verifies, with no DB and no LLM call,
+  that every `verdict` case's trigger field genuinely falls through every rule that consumes
+  it (`NotApplicable` for all of them) rather than being rule-decided.
+- **Remaining** `adversarial`/`conflicts`/`end_to_end` suites (including the prompt-injection
+  fixture and `forbidden_citations` on every case, not only adversarial ones), plus growing
+  `verdict` past 16 cases and its first live run — tracked as follow-up, not a release
+  blocker for the harness itself since the harness mechanics are proven end to end against
+  real Postgres.
 
 ---
 
