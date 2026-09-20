@@ -522,7 +522,19 @@ is `docs/CORPUS.md`, not working code.
   generated document contains a value drawn from a real-looking PAN/Aadhaar/account pattern.
 
 ### M3-T08 — `extraction_core` suite — **first published baseline**
-- **Status** blocked *(M3-T06)*
+- **Status** blocked *(SQ-03: no live LLM provider credentials in this environment)* — no
+  longer blocked on M3-T07 (150 synthetic fixtures now exist, committed under
+  `eval/fixtures/`). What remains genuinely blocked is producing a **real** baseline: this
+  suite's numbers (`span_grounding`, per-field `exact_match`) must come from actually
+  running Stage A extraction against a live model on all 150 fixtures — a stub client (the
+  only thing available in this sandbox, same limitation noted at M3-T06) always returns
+  `is_absent` for every field, which would produce a baseline of all-zero exact_match, not a
+  real measurement. Publishing that as "the first published baseline" would be exactly the
+  fabricated-number defect CLAUDE.md forbids, one level removed. Once a provider key is
+  available: extend `eval/loader.py`'s `EvalCase`/`eval/runner.py` to a genuine `extraction`
+  stage (source fixture text in, per-field expected values the generator already knows,
+  compare `extracted_fact.value_normalized` and `span_verified` against them), generate
+  `eval/cases/extraction_core/*.json` from `eval/fixtures/` ground truth, then run for real.
 - **Depends on** M3-T05, M3-T06, M3-T07
 - **Files** `eval/harness.py`, `eval/cases/extraction_core/*.json`, `Makefile` (`make eval`, `make eval-report`), `reports/`
 - **Acceptance**
