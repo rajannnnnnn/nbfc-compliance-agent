@@ -8,15 +8,19 @@ call rather than caching a boolean, because a snapshot can be reactivated after 
 a process restart, and a stale "ready" would be worse than the extra query.
 """
 
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy import text
+from starlette.responses import Response
 
 from app.config import Settings, get_settings
 from app.corpus.pinning import PinningMismatchError, load_and_validate
 from app.corpus.snapshot import get_active_snapshot_id
 from app.db.engine import get_sessionmaker
+from app.obs.metrics import REGISTRY, active_snapshot_age_seconds
 
 router = APIRouter(tags=["health"])
 
@@ -53,3 +57,19 @@ async def readyz(settings: Settings = Depends(get_settings)) -> dict[str, Any]:
         ) from exc
 
     return {"status": "ready", "checks": checks}
+
+
+@router.get("/metrics")
+async def metrics(settings: Settings = Depends(get_settings)) -> Response:
+    sessionmaker = get_sessionmaker(settings)
+    async with sessionmaker() as session:
+        row = (
+            await session.execute(
+                text("SELECT created_at FROM corpus_snapshot WHERE is_active = true")
+            )
+        ).first()
+    if row is not None:
+        age = (datetime.now(UTC) - row.created_at).total_seconds()
+        active_snapshot_age_seconds.set(age)
+
+    return Response(content=generate_latest(REGISTRY), media_type=CONTENT_TYPE_LATEST)

@@ -27,6 +27,7 @@ from app.domain.facts import (
     MoneyValue,
     RateValue,
 )
+from app.obs.metrics import conflicts_detected_total
 
 _FACT_VALUE_ADAPTER: TypeAdapter[FactValue] = TypeAdapter(FactValue)
 
@@ -306,6 +307,7 @@ async def persist_conflicts(
 ) -> list[UUID]:
     ids: list[UUID] = []
     for c in conflicts:
+        conflicts_detected_total.labels(group_key=c.group_key, conflict_type=c.conflict_type).inc()
         conflict_id = uuid7()
         await session.execute(
             text("""

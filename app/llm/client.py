@@ -15,6 +15,32 @@ from pydantic import BaseModel, ValidationError
 
 from app.config import Settings
 from app.llm.structured import StructuredOutputError, parse_or_repair
+from app.obs.metrics import (
+    llm_breaker_state,
+    llm_calls_total,
+    llm_cost_usd_total,
+    llm_duration_seconds,
+    llm_tokens_total,
+)
+
+
+def _record_metrics(record: "CallRecord") -> None:
+    llm_calls_total.labels(
+        provider=record.provider, model=record.model, stage=record.stage, outcome=record.outcome
+    ).inc()
+    llm_duration_seconds.labels(
+        provider=record.provider, model=record.model, stage=record.stage
+    ).observe(record.wall_clock_ms / 1000)
+    if record.outcome == "success":
+        llm_tokens_total.labels(
+            provider=record.provider, model=record.model, stage=record.stage, direction="in"
+        ).inc(record.tokens_in)
+        llm_tokens_total.labels(
+            provider=record.provider, model=record.model, stage=record.stage, direction="out"
+        ).inc(record.tokens_out)
+        llm_cost_usd_total.labels(
+            provider=record.provider, model=record.model, stage=record.stage
+        ).inc(record.cost_usd)
 
 
 class TransientLLMError(Exception):
@@ -126,6 +152,8 @@ class LLMClient:
                 outcome="transient_error",
             )
             self.call_log.append(record)
+            _record_metrics(record)
+            llm_breaker_state.labels(provider=provider).set(1 if breaker.is_open else 0)
             raise TransientLLMError(str(exc)) from exc
         except litellm.APIError as exc:  # type: ignore[attr-defined]
             record = CallRecord(
@@ -140,6 +168,7 @@ class LLMClient:
                 outcome="permanent_error",
             )
             self.call_log.append(record)
+            _record_metrics(record)
             raise PermanentLLMError(str(exc)) from exc
 
         breaker.record_success()
@@ -164,6 +193,8 @@ class LLMClient:
             outcome="success",
         )
         self.call_log.append(record)
+        _record_metrics(record)
+        llm_breaker_state.labels(provider=provider).set(0)
         content = resp.choices[0].message.content
         return content, record
 

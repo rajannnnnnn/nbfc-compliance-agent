@@ -376,6 +376,24 @@ is `docs/CORPUS.md`, not working code.
   would appear if stdout were ever reopened, e.g. after a log-rotation signal).
 - **Depends on** M0-T02
 
+### M2-T06b — Prometheus metrics *(new — the other half of LLD §18)*
+- **Status** done — 3/3 unit tests (`tests/unit/obs/test_metrics.py`, including one that
+  locks the exact metric-name set so a rename can't slip through unnoticed) + 2/2 integration
+  tests (`tests/integration/api/test_metrics_endpoint.py`). `app/obs/metrics.py` declares
+  every metric named in LLD §18, including the ones nothing increments yet
+  (`cc_queue_depth`, `cc_corpus_drift_status`, `cc_rule_model_divergence_total` — these need
+  Celery queue inspection, the corpus-drift detector, and rule/model divergence tracking
+  respectively, none of which exist yet) — a dashboard built against the fixed name list
+  should never 404 on a metric that's merely stuck at zero. Wired and incrementing for real:
+  `cc_http_requests_total`/`cc_http_request_duration_seconds` (main.py's middleware),
+  `cc_llm_calls_total`/`cc_llm_duration_seconds`/`cc_llm_tokens_total`/`cc_llm_cost_usd_total`/
+  `cc_llm_breaker_state` (app/llm/client.py), `cc_verdicts_total`/`cc_citation_rejected_total`
+  (app/verdict/assess.py), `cc_conflicts_detected_total` (app/conflicts/detector.py),
+  `cc_facts_extracted_total`/`cc_span_grounding_failures_total`/
+  `cc_span_budget_exhausted_total` (app/extract/service.py). `GET /metrics` (unauthenticated,
+  Prometheus text format) also computes `cc_active_snapshot_age_seconds` at scrape time.
+- **Depends on** M2-T06, M2-T04
+
 ### M2-T07 — Boot assertions
 - **Status** done — 8/8 tests (`tests/integration/test_boot.py`). `app/boot.py`'s
   `run_boot_assertions` raises `BootAssertionError` (tests assert on the exception directly,
@@ -917,20 +935,18 @@ is `docs/CORPUS.md`, not working code.
 
 # SESSION CHECKPOINT (resume here)
 
-M0–M2 (all of M2 including T04/T05/T06/T07) and M3–M7 (minus M7-T01b, M7-T04, M7-T05) are
-done: 266 tests passing, ruff/black/mypy --strict clean on `app/`. A real FastAPI app exists
-(`app/main.py`) with working auth, health checks, document submission with sync extraction,
-and assessment retrieval; Celery is wired; boot assertions run in the lifespan. Nothing is
+M0–M2 (all of it, including T04/T05/T06/T06b/T07) and M3–M7 (minus M7-T01b, M7-T04, M7-T05)
+are done: 271 tests passing, ruff/black/mypy --strict clean on `app/`. A real FastAPI app
+exists (`app/main.py`) with working auth, health checks, document submission with sync
+extraction, assessment retrieval, and a `/metrics` endpoint; Celery is wired; boot assertions
+run in the lifespan; both halves of LLD §18 (logging and metrics) are done. Nothing is
 checked out uncommitted as of the commit that lands this note.
 
-**Next up**: M2-T06's own follow-up — Prometheus metrics (`cc_http_requests_total`,
-`cc_llm_calls_total`, `cc_citation_rejected_total`, `cc_verdicts_total`, etc., the full list
-in LLD §18) and a `/metrics` endpoint; none of that exists yet, only the structured-logging
-half of §18. After that: M7-T04 (`report.py` + `/v1/loans/{id}/report`), M6-T05/M7-T05 (the
-eval harness and its suites — nothing in `eval/` exists yet at all, this is a from-scratch
-build: `make eval`, `eval/cases/*.json`, `reports/eval_*.json`), M7-T01b (the 9 deferred
-conflict groups, blocked on new clause-grounded rules), then M8 (deploy — mostly blocked on
-hosting account decisions, SQ-20) and M9 (fine-tune comparison).
+**Next up**: M7-T04 (`report.py` + `/v1/loans/{id}/report`), M6-T05/M7-T05 (the eval harness
+and its suites — nothing in `eval/` exists yet at all, this is a from-scratch build: `make
+eval`, `eval/cases/*.json`, `reports/eval_*.json`), M7-T01b (the 9 deferred conflict groups,
+blocked on new clause-grounded rules), then M8 (deploy — mostly blocked on hosting account
+decisions, SQ-20) and M9 (fine-tune comparison).
 
 Two testing patterns worth knowing before touching `app/api/`:
 1. Tests drive the app via `httpx.AsyncClient(transport=ASGITransport(app=app))` on the

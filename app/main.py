@@ -1,5 +1,6 @@
-"""FastAPI app factory. LLD §15 / M2-T04, M2-T07."""
+"""FastAPI app factory. LLD §15 / M2-T04, M2-T07, M2-T06 metrics follow-up."""
 
+import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
@@ -13,6 +14,7 @@ from app.boot import boot_or_exit
 from app.config import get_settings
 from app.db.engine import get_sessionmaker
 from app.obs.logging import bind_request_context, clear_request_context, configure_logging
+from app.obs.metrics import http_request_duration_seconds, http_requests_total
 
 
 @asynccontextmanager
@@ -35,11 +37,21 @@ def create_app() -> FastAPI:
         request_id = request.headers.get("X-Request-Id") or f"req_{uuid7()}"
         request.state.request_id = request_id
         bind_request_context(request_id=request_id)
+        start = time.monotonic()
         try:
             response = await call_next(request)
         finally:
             clear_request_context()
         response.headers["X-Request-Id"] = request_id
+
+        route = request.scope.get("route")
+        route_path = getattr(route, "path", request.url.path)
+        http_requests_total.labels(
+            method=request.method, route=route_path, status=response.status_code
+        ).inc()
+        http_request_duration_seconds.labels(method=request.method, route=route_path).observe(
+            time.monotonic() - start
+        )
         return response
 
     app.add_exception_handler(APIError, api_error_handler)  # type: ignore[arg-type]

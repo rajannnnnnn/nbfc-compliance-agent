@@ -40,6 +40,11 @@ from app.extract.normalise import (
 from app.extract.redact import redact
 from app.extract.spans import admit_span, build_span
 from app.llm.client import LLMClient
+from app.obs.metrics import (
+    facts_extracted_total,
+    span_budget_exhausted_total,
+    span_grounding_failures_total,
+)
 from app.schema.registry import FieldRegistry
 
 
@@ -140,8 +145,10 @@ async def extract_document(
                         redacted_quote, _ = redact(quoted_span_raw, exempt=spec.redaction_exempt)
                     else:
                         span_verified = False  # budget exhausted; store the fact without evidence
+                        span_budget_exhausted_total.labels(doc_type=doc_type).inc()
                 else:
                     quoted_span_raw = None  # dropped — span-grounding check failed
+                    span_grounding_failures_total.labels(doc_type=doc_type).inc()
 
         # Validates the shape before persistence — a value must be present iff not absent.
         ExtractedFactIn(
@@ -187,6 +194,8 @@ async def extract_document(
                 "extraction_run_id": str(extraction_run_id),
             },
         )
+        if not is_absent:
+            facts_extracted_total.labels(doc_type=doc_type, field_key=field_key).inc()
         fact_ids.append(fact_id)
 
     return fact_ids

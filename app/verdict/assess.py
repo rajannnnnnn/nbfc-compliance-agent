@@ -24,6 +24,7 @@ from app.domain.enums import BorrowerClass
 from app.domain.facts import DaysValue, ExtractedFactOut, MoneyValue, RateValue
 from app.domain.verdicts import AssessmentResult, StageTelemetry, VerdictDraft
 from app.llm.client import LLMClient
+from app.obs.metrics import citation_rejected_total, verdicts_total
 from app.retrieve.service import retrieve_candidates
 from app.rules.base import FactIndex, FactRecord, MissingFact, NotApplicable, Rule, RuleOutcome
 from app.rules.registry import is_shadow, rules_for_field
@@ -266,6 +267,12 @@ async def _persist(
             "request_id": request_id,
         },
     )
+    verdicts_total.labels(
+        verdict=result.verdict,
+        severity=result.severity,
+        decided_by=result.decided_by,
+        is_shadow=str(result.is_shadow).lower(),
+    ).inc()
 
     for citation in result.citations:
         clause_id = clause_id_by_path.get(citation.clause_path)
@@ -302,6 +309,7 @@ async def _persist(
         )
 
     for rej in rejected or []:
+        citation_rejected_total.labels(reason=str(rej.reason)).inc()
         await session.execute(
             text("""
                 INSERT INTO audit_event (id, tenant_id, actor, action, entity_type, entity_id,
