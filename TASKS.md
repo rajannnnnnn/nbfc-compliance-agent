@@ -1036,12 +1036,16 @@ is `docs/CORPUS.md`, not working code.
   fixture exactly and that each technique (inject/fakeclause/ocrnoise) is constructed as
   documented. `tests/integration/eval/test_harness.py::test_conflicts_suite_deterministic`
   locks in 100% on both conflict metrics against real Postgres.
-- **Remaining** the `end_to_end` suite is now wired and has its first case (`EV-E2E-0001`,
-  see ADR-052) — `eval/harness.py` dispatches `suite == "end_to_end"`, `eval.loader.
-  load_suite("end_to_end")` loads cleanly, but it has **not been run live**: no Postgres/
-  Docker is reachable in this execution environment, so `run_end_to_end_case()` against real
-  `assess_fact()`/`detect_for_fact()`/`loan_compliance_state` is still unconfirmed live, and
-  the suite has only one case (an existence proof, not coverage). Also still open: growing
+- **Remaining** the `end_to_end` suite is wired, has its first case (`EV-E2E-0001`), and has
+  now been **run live** against real Postgres + real Gemini calls: `state_match_accuracy =
+  1.0` (1/1) — see ADR-052/ADR-053. Postgres+Redis were installed directly via `apt` in this
+  execution environment (Docker Hub image pulls are policy-blocked here) rather than via
+  `docker compose`. The live run found and fixed a real teardown bug (`audit_event` rows not
+  deleted before `tenant`, FK violation on every case) and forced a real case redesign:
+  ADR-053 corrects ADR-052's "zero LLM cost" claim — every corpus instrument is still
+  `verification_status: unverified`, so every rule runs in shadow mode and `assess_fact()`
+  always falls through to a real model call regardless of whether a rule also fires; the
+  suite has only one case (an existence proof, not coverage). Also still open: growing
   `verdict` past 16, `adversarial` past 8, and `conflicts` past 8, the first live run of
   `adversarial`, and — newly identified, ADR-050 — a real model verdict-calibration
   under-confidence pattern (reaching for `ambiguous`/`no_clause_found` over a committed

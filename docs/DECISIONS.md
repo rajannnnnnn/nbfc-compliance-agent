@@ -1502,3 +1502,48 @@ not guessed. **Follow-up, not closed here**: run `make eval suite=end_to_end` ag
 Postgres the first time this repo runs somewhere with Postgres/Docker available, and grow
 the suite past its one case (LLD §17.3 doesn't set an explicit minimum for `end_to_end`
 distinct from `conflicts`, but one case is a bare existence proof, not coverage).
+
+## ADR-053 — ADR-052 correction: `end_to_end` is not zero-LLM-cost while the corpus is unverified
+
+First live Postgres run of `end_to_end` (this session, real Gemini calls, real `assess_fact`)
+surfaced that ADR-052's design was wrong on two counts, both found by reproducing the exact
+DB state by hand rather than guessing from the diff alone.
+
+**Finding 1 (case-design bug).** `R02_docs_release_compensation` consumes the exact same two
+fields (`full_repayment_date`, `original_docs_released_date`) as `R01_docs_release_30d` —
+the original `EV-E2E-0001` only accounted for R01, so even a fully-decided outcome should
+have counted 2 violations, not 1.
+
+**Finding 2 (real architecture fact, not a bug).** Every instrument in `corpus_sources.yaml`
+is currently `verification_status: unverified` (placeholder text). `is_shadow(rule.id, ...)`
+is therefore true for every rule right now, and `assess_fact()`'s `any_rule_decided` flag
+only becomes true for a *non-shadow* firing (`app/verdict/assess.py`) — by design, so an
+unverified law's rule outcome never counts as a citable verdict (CLAUDE.md §2.1). Two
+consequences: (a) `open_violations`/`open_ambiguous`/`open_no_clause` correctly exclude
+R01/R02's shadow rows entirely, so `open_violations` is always 0 today regardless of the
+underlying facts; (b) because no rule is ever "decided" while every instrument is unverified,
+`assess_fact()` *also* always falls through to a real LLM call for the field, on every
+single field, every time — there is currently no way to exercise `assess_fact()` with zero
+LLM cost. ADR-052's "zero LLM cost" claim for `end_to_end` was wrong; retracted here.
+
+**Fix.** Rewrote `EV-E2E-0001` to use `closure_statement_date` — the same no-rule-consumes
+field/value as the already-live-verified `EV-ABST-001` (`abstention` suite) — instead of
+R01/R02's fields. This sidesteps the shadow-mode interaction entirely: exactly one
+`assess_fact()` call, one model verdict, `expected_state = {open_violations: 0,
+open_ambiguous: 0, open_no_clause: 1, unresolved_conflicts: 0, highest_severity:
+"informational"}`. Confirmed live: `state_match_accuracy = 1.0` (1/1). This still makes a
+real LLM call (so still not zero-cost — no case can be, right now), but it inherits the
+same, already-measured reliability envelope as `abstention` (`abstention_correctness=0.825`
+live) rather than compounding two independent nondeterministic model calls the way the
+original two-fact design did (confirmed empirically: two live runs of the original case
+gave different `highest_severity` — "critical" once, "informational" once — because the
+model's per-field verdict genuinely varies between `ambiguous` and `no_clause_found`, and
+`app/verdict/severity.py`'s `FIELD_SEVERITY_DEFAULT[CLOSURE] = "critical"` only applies to
+`ambiguous`, not `no_clause_found`, which is hardcoded to `"informational"`).
+
+**Follow-up, not closed here.** A genuinely zero-LLM-cost `end_to_end` case is only possible
+once at least one instrument's `verification_status` moves off `unverified`/
+`secondary_sourced` for real (M1-T02/T09/T10, still blocked on SQ-01 in every environment
+tried so far). Until then, every `end_to_end` case necessarily costs at least one real model
+call per document fact, which should be accounted for when growing this suite past its
+current one case.
