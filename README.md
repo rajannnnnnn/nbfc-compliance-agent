@@ -33,14 +33,26 @@ make corpus-verify   # re-fetches sources, reports drift, mutates nothing
 ```bash
 pip install -e ".[dev]"
 cp .env.example .env                    # fill in CC_LLM_API_KEY / CC_EMBEDDING_API_KEY when ready
+
+# Postgres 16 + pgvector + Redis, if not already running (apt path — works even where
+# Docker image pulls are blocked, e.g. a locked-down sandbox; `make dev` below is the
+# normal path when Docker is available):
+sudo apt-get install -y postgresql-16 postgresql-16-pgvector redis-server
+sudo service postgresql start && redis-server --daemonize yes
+
+sudo -u postgres createdb <your-db>
+sudo -u postgres psql -d <your-db> -c "CREATE EXTENSION IF NOT EXISTS vector;"
+sudo cp scripts/tsearch/numbers.syn "$(pg_config --sharedir)/tsearch_data/numbers.syn"  # required before the next step — db_bootstrap.sql creates a text-search dictionary that reads this file
 sudo -u postgres psql -f scripts/db_bootstrap.sql -d <your-db>
+
 alembic upgrade head
 make test-unit                          # no external services needed
 CC_ENV=ci make test-integration         # needs Postgres + Redis reachable at CC_DATABASE_URL / CC_REDIS_URL
 uvicorn app.main:app --reload           # http://localhost:8000/healthz, /readyz, /v1/corpus
 ```
 
-Or via Docker Compose: `make dev`.
+Or via Docker Compose: `make dev` (preferred when Docker image pulls aren't blocked by your
+network policy).
 
 ---
 
