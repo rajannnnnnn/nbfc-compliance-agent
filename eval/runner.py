@@ -328,6 +328,9 @@ async def run_case(
         return outcome
     finally:
         await session.execute(
+            text("DELETE FROM audit_event WHERE tenant_id = :tid"), {"tid": str(tenant_id)}
+        )
+        await session.execute(
             text(
                 "DELETE FROM assessment_citation WHERE assessment_id IN "
                 "(SELECT id FROM assessment WHERE loan_account_id = :lid)"
@@ -831,6 +834,9 @@ async def run_end_to_end_case(
             case_ref=case.case_ref, state=actual_state, passed=not diff, diff=diff
         )
     finally:
+        await session.execute(
+            text("DELETE FROM audit_event WHERE tenant_id = :tid"), {"tid": str(tenant_id)}
+        )
         await session.execute(
             text(
                 "DELETE FROM assessment_citation WHERE assessment_id IN "

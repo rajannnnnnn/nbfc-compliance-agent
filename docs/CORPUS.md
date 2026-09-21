@@ -1,6 +1,6 @@
 # Corpus Ingest Report
 
-Snapshot: `01a0c002-facf-74b7-b9ef-7c79fe736def`
+Snapshot: `01a0c22f-56be-7db7-9895-37cf7750038a`
 Parser: `continuous_para/1.0+annex_table/1.0`
 
 ## DL2025 — Reserve Bank of India (Digital Lending) Directions, 2025 [PLACEHOLDER]
@@ -21,10 +21,10 @@ Parser: `continuous_para/1.0+annex_table/1.0`
 - Detected paragraph range: `` .. ``
 - Parser warnings: none
 
-## RBC2025 — RBI (NBFC – Responsible Business Conduct) Directions, 2025 [PLACEHOLDER]
+## RBC2025 — Reserve Bank of India (Non-Banking Financial Companies – Responsible Business Conduct) Directions, 2025
 
 - Clause count: **11**
-- Verification status: **unverified** — Placeholder text — see data/raw/instruments/README.md.
+- Verification status: **unverified** — Real RBI-hosted source is https://rbi.org.in/Scripts/BS_ViewMasDirections.aspx?id=12942 -- title confirmed (2026-09-21) against a PDF the user supplied, sha256 445795a68ca5fab8fe782400a67f0688068ddeea38cce327825c2deb912a2045. source_url here is reverted to the local placeholder (ADR-002) because rbi.org.in 403s at this environment's proxy CONNECT (SQ-01, same block M1-T02/T09/T10/T11 already hit) -- pointing source_url at the live URL breaks `make ingest` here entirely rather than degrading gracefully. Swap source_url to the real URL once run somewhere that can reach rbi.org.in. circular_number, issued_on, effective_from, and para numbering (p35/p39/p30/p40/p45) are still the pre-existing placeholder guesses and have NOT been checked against the real text.
 - Detected paragraph range: `29` .. `45`
 - Parser warnings (2):
   - paragraph 35 does not increment by one (previous sort key 30)
