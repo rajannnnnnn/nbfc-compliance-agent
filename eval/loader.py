@@ -46,6 +46,20 @@ class ConflictExpected(BaseModel):
     raises_check: str | None = None
 
 
+class ExpectedComplianceState(BaseModel):
+    """The final `loan_compliance_state` row a `stage: "end_to_end"` case's full account
+    (multiple documents' worth of facts, real rule assessments, real conflict detection) must
+    roll up to. Scoped to deterministic, rule-decided fields only (LLD §17.3's `end_to_end`
+    suite tests state *aggregation* across documents/rules/conflicts, not model judgement --
+    that is `verdict`'s own job) so this suite carries zero LLM cost, same as `conflicts`."""
+
+    open_violations: int
+    open_ambiguous: int
+    open_no_clause: int
+    unresolved_conflicts: int
+    highest_severity: str | None = None
+
+
 class EvalCase(BaseModel):
     case_ref: str
     suite: str
@@ -57,6 +71,7 @@ class EvalCase(BaseModel):
     expected: ExpectedResult = ExpectedResult(check_key="n/a", verdict="n/a")
     documents: list[ConflictDocumentSpec] = []
     conflict_expected: ConflictExpected | None = None
+    expected_state: ExpectedComplianceState | None = None
     tolerance: dict[str, Any] = {}
     is_adversarial: bool = False
     notes: str | None = None

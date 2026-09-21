@@ -651,3 +651,208 @@ async def run_conflict_case(
         await session.execute(text("DELETE FROM loan_account WHERE id = :id"), {"id": str(loan_id)})
         await session.execute(text("DELETE FROM tenant WHERE id = :id"), {"id": str(tenant_id)})
         await session.commit()
+
+
+@dataclass
+class EndToEndOutcome:
+    case_ref: str
+    state: dict[str, Any] = field(default_factory=dict)
+    passed: bool = False
+    diff: dict[str, Any] = field(default_factory=dict)
+
+
+_COMPLIANCE_STATE_SQL = """
+SELECT open_violations, open_ambiguous, open_no_clause, unresolved_conflicts, highest_severity
+FROM loan_compliance_state
+WHERE loan_account_id = :lid
+"""
+
+
+async def run_end_to_end_case(
+    session: AsyncSession,
+    case: EvalCase,
+    *,
+    snapshot_id: UUID,
+    settings: Settings,
+    registry: FieldRegistry,
+    client: LLMClient,
+    conflicts_path: str = "app/rules/conflicts.yaml",
+) -> EndToEndOutcome:
+    """Runs a `stage: "end_to_end"` case: a full account, one or more documents' worth of
+    facts, each run through both the real rule-assessment path (`assess_fact`) and the real
+    conflict detector (`detect_for_fact`), then compares the account's final, really-persisted
+    `loan_compliance_state` row against `case.expected_state`.
+
+    Scoped to fields a registered rule decides deterministically (LLD §17.3's `end_to_end`
+    suite tests state *aggregation*, not model judgement -- see ExpectedComplianceState's own
+    docstring), so this never reaches `assess_fact`'s model-fallthrough path and costs no
+    LLM/embedding call, same as `conflicts`."""
+    if not case.documents:
+        raise ValueError(f"{case.case_ref}: end_to_end-stage case requires documents")
+    if case.expected_state is None:
+        raise ValueError(f"{case.case_ref}: end_to_end-stage case requires expected_state")
+
+    tenant_id, loan_id = uuid7(), uuid7()
+    event_date = date.fromisoformat(case.event_date)
+    conflict_registry = load_conflicts(conflicts_path)
+
+    doc_ids: list[UUID] = []
+
+    try:
+        await session.execute(
+            text("INSERT INTO tenant (id, name) VALUES (:id, :name)"),
+            {"id": str(tenant_id), "name": f"eval-{case.case_ref}"},
+        )
+        await session.execute(
+            text(
+                "INSERT INTO loan_account (id, tenant_id, external_ref, product_type, "
+                "is_microfinance, is_digital_lending, device_financed) VALUES "
+                "(:id, :tid, :ref, :pt, :mfi, :dl, :dev)"
+            ),
+            {
+                "id": str(loan_id),
+                "tid": str(tenant_id),
+                "ref": case.case_ref,
+                "pt": case.account_profile.product_type,
+                "mfi": case.account_profile.is_microfinance,
+                "dl": case.account_profile.is_digital_lending,
+                "dev": case.account_profile.device_financed,
+            },
+        )
+        account = LoanAccountRef(
+            id=loan_id,
+            tenant_id=tenant_id,
+            external_ref=case.case_ref,
+            product_type=case.account_profile.product_type,
+            is_microfinance=case.account_profile.is_microfinance,
+            is_digital_lending=case.account_profile.is_digital_lending,
+            device_financed=case.account_profile.device_financed,
+        )
+
+        for doc_spec in case.documents:
+            doc_id = uuid7()
+            doc_ids.append(doc_id)
+            await session.execute(
+                text(
+                    "INSERT INTO document (id, tenant_id, loan_account_id, doc_type, "
+                    "lifecycle_stage, event_date, content_sha256, source_uri, char_count, "
+                    "span_budget_chars) VALUES (:id, :tid, :lid, :dt, :stage, :ed, :sha, "
+                    "'eval://synthetic', 0, 0)"
+                ),
+                {
+                    "id": str(doc_id),
+                    "tid": str(tenant_id),
+                    "lid": str(loan_id),
+                    "dt": doc_spec.doc_type,
+                    "stage": _DOC_TYPE_LIFECYCLE_STAGE_FALLBACK,
+                    "ed": event_date,
+                    "sha": uuid7().hex + uuid7().hex,
+                },
+            )
+
+            for field_key, raw_value in doc_spec.facts.items():
+                spec = registry.get(field_key)
+                typed_value = _parse_expected_value(spec.type, raw_value)
+                fact_id = uuid7()
+                await session.execute(
+                    text("""
+                        INSERT INTO extracted_fact
+                            (id, tenant_id, document_id, loan_account_id, field_key, value_type,
+                             value_raw, value_normalized, is_absent, confidence, extraction_run_id)
+                        VALUES
+                            (:id, :tid, :did, :lid, :fk, :vt, :vraw, CAST(:vn AS jsonb), false,
+                             1.0, :run)
+                        """),
+                    {
+                        "id": str(fact_id),
+                        "tid": str(tenant_id),
+                        "did": str(doc_id),
+                        "lid": str(loan_id),
+                        "fk": field_key,
+                        "vt": spec.type,
+                        "vraw": raw_value,
+                        "vn": json.dumps(value_to_jsonable(typed_value)),
+                        "run": str(uuid7()),
+                    },
+                )
+
+                fact = ExtractedFactOut(
+                    id=fact_id,
+                    document_id=doc_id,
+                    loan_account_id=loan_id,
+                    field_key=field_key,
+                    value=typed_value,
+                    value_raw=raw_value,
+                    is_absent=False,
+                    confidence=1.0,
+                )
+                await detect_for_fact(
+                    session=session, fact=fact, doc_type=doc_spec.doc_type, registry=conflict_registry
+                )
+                await assess_fact(
+                    session=session,
+                    fact=fact,
+                    account=account,
+                    document_event_date=event_date,
+                    snapshot_id=snapshot_id,
+                    settings=settings,
+                    registry=registry,
+                    client=client,
+                    request_id=f"eval-{case.case_ref}",
+                )
+
+        row = (
+            await session.execute(text(_COMPLIANCE_STATE_SQL), {"lid": str(loan_id)})
+        ).first()
+        actual_state = (
+            {
+                "open_violations": row.open_violations,
+                "open_ambiguous": row.open_ambiguous,
+                "open_no_clause": row.open_no_clause,
+                "unresolved_conflicts": row.unresolved_conflicts,
+                "highest_severity": row.highest_severity,
+            }
+            if row is not None
+            else {
+                "open_violations": 0,
+                "open_ambiguous": 0,
+                "open_no_clause": 0,
+                "unresolved_conflicts": 0,
+                "highest_severity": None,
+            }
+        )
+        expected_state = case.expected_state.model_dump()
+        diff: dict[str, Any] = {}
+        for key, expected_val in expected_state.items():
+            if actual_state.get(key) != expected_val:
+                diff[key] = {"expected": expected_val, "actual": actual_state.get(key)}
+
+        return EndToEndOutcome(
+            case_ref=case.case_ref, state=actual_state, passed=not diff, diff=diff
+        )
+    finally:
+        await session.execute(
+            text(
+                "DELETE FROM assessment_citation WHERE assessment_id IN "
+                "(SELECT id FROM assessment WHERE loan_account_id = :lid)"
+            ),
+            {"lid": str(loan_id)},
+        )
+        await session.execute(
+            text("DELETE FROM assessment WHERE loan_account_id = :lid"), {"lid": str(loan_id)}
+        )
+        await session.execute(
+            text("DELETE FROM loan_compliance_state WHERE loan_account_id = :lid"),
+            {"lid": str(loan_id)},
+        )
+        await session.execute(
+            text("DELETE FROM fact_conflict WHERE loan_account_id = :lid"), {"lid": str(loan_id)}
+        )
+        await session.execute(
+            text("DELETE FROM extracted_fact WHERE loan_account_id = :lid"), {"lid": str(loan_id)}
+        )
+        for doc_id in doc_ids:
+            await session.execute(text("DELETE FROM document WHERE id = :id"), {"id": str(doc_id)})
+        await session.execute(text("DELETE FROM loan_account WHERE id = :id"), {"id": str(loan_id)})
+        await session.execute(text("DELETE FROM tenant WHERE id = :id"), {"id": str(tenant_id)})
+        await session.commit()

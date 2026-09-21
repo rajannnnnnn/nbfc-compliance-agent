@@ -23,10 +23,17 @@ from app.schema.registry import FieldRegistry
 from eval.loader import load_suite
 from eval.metrics import (
     compute_conflict_metrics,
+    compute_end_to_end_metrics,
     compute_extraction_metrics,
     compute_verdict_metrics,
 )
-from eval.runner import ExtractionOutcome, run_case, run_conflict_case, run_extraction_case
+from eval.runner import (
+    ExtractionOutcome,
+    run_case,
+    run_conflict_case,
+    run_end_to_end_case,
+    run_extraction_case,
+)
 
 REPORTS_DIR = Path("reports")
 
@@ -100,6 +107,18 @@ async def run_suite(
             outcome = await run_conflict_case(session, case, settings=settings, registry=registry)
             outcomes.append(outcome)
         metrics = compute_conflict_metrics(cases, outcomes)
+    elif suite == "end_to_end":
+        for case in cases:
+            outcome = await run_end_to_end_case(
+                session,
+                case,
+                snapshot_id=snapshot_id,
+                settings=settings,
+                registry=registry,
+                client=client,
+            )
+            outcomes.append(outcome)
+        metrics = compute_end_to_end_metrics(outcomes)
     else:
         for case in cases:
             outcome = await run_case(
@@ -189,6 +208,8 @@ async def run_suite(
                 "conflict_detected": outcome.conflict_detected,
                 "raises_checks": outcome.raises_checks,
             }
+        elif suite == "end_to_end":
+            actual_payload = {"state": outcome.state}
         else:
             actual_payload = {
                 "verdict": outcome.verdict,

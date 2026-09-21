@@ -1,0 +1,33 @@
+{
+  "case_ref": "EV-E2E-0001",
+  "suite": "end_to_end",
+  "stage": "end_to_end",
+  "doc_type": null,
+  "input_ref": null,
+  "event_date": "2026-04-02",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "documents": [
+    {
+      "doc_type": "docs_release_ack",
+      "facts": {
+        "full_repayment_date": "2026-03-02",
+        "original_docs_released_date": "2026-04-02"
+      }
+    }
+  ],
+  "expected_state": {
+    "open_violations": 1,
+    "open_ambiguous": 0,
+    "open_no_clause": 0,
+    "unresolved_conflicts": 0,
+    "highest_severity": "critical"
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Single-document account carrying the same R01_docs_release_30d violation facts as EV-NUM-002 (31 days, one day past the 30-day window). Tests that assess_fact's real rule outcome rolls up correctly into loan_compliance_state via app/verdict/state.py, not model judgement -- no LLM call."
+}

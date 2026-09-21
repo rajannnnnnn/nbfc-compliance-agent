@@ -5,7 +5,7 @@ eval/loader.py's own note)."""
 from dataclasses import dataclass, field
 
 from eval.loader import EvalCase
-from eval.runner import CaseOutcome, ConflictOutcome, ExtractionOutcome
+from eval.runner import CaseOutcome, ConflictOutcome, EndToEndOutcome, ExtractionOutcome
 
 
 @dataclass
@@ -189,3 +189,19 @@ def compute_conflict_metrics(
         raises_check_accuracy=raises_check_accuracy,
         case_count=n,
     )
+
+
+@dataclass
+class EndToEndMetrics:
+    state_match_accuracy: float
+    case_count: int
+
+
+def compute_end_to_end_metrics(
+    outcomes: list[EndToEndOutcome],
+) -> EndToEndMetrics:
+    n = len(outcomes)
+    if n == 0:
+        raise ValueError("cannot compute metrics over zero cases")
+    correct = sum(1 for o in outcomes if o.passed)
+    return EndToEndMetrics(state_match_accuracy=correct / n, case_count=n)
