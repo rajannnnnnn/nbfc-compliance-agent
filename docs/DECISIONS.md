@@ -1547,3 +1547,41 @@ once at least one instrument's `verification_status` moves off `unverified`/
 tried so far). Until then, every `end_to_end` case necessarily costs at least one real model
 call per document fact, which should be accounted for when growing this suite past its
 current one case.
+
+## ADR-054 — First live runs of `verdict` (re-run) and `adversarial` (ever) against real Postgres
+
+**`verdict` (16 cases, re-run).** `verdict_accuracy=0.3125` (5/16), `citation_validity=1.0`,
+`hallucinated_citation_rate=0.0`. This reconfirms ADR-050's already-documented finding: the
+model is not hallucinating and not citing incorrectly (both stay perfect), it is systematically
+under-confident — reaching for `ambiguous`/`no_clause_found` where ground truth is a committed
+`violation`/`compliant`/`ambiguous` verdict, sometimes even when the correct citation exists
+in the corpus (e.g. `EV-VERDICT-R09-003`/`-006` expect `ambiguous` with decisive citation
+`DL2025/p9/ii` but got `no_clause_found` with zero citations — the model didn't even retrieve/
+use the clause it should have). `EV-VERDICT-R20-*` (6 of 8 cases) expected `violation` but
+got `ambiguous` uniformly. This is worse than ADR-050's `0.25`, though both runs are small-N
+(16 cases) and not directly comparable across model/prompt-version changes since ADR-050 --
+not investigated further here; still an open, real, unresolved calibration problem, not a
+regression introduced this session (the deterministic suites -- `numeric_rules`, `conflicts`,
+`end_to_end` -- all confirm the rule/retrieval/persistence layers are correct; this is
+specifically the model's judgment step).
+
+**`adversarial` (8 cases, first live run ever — see ADR-049 for why it was never run before).**
+Overall suite passed 5/8. `field_accuracy=0.929`, `absence_accuracy=0.968` (both close to
+clean), but **`span_grounding=0.433`** — under half of correctly-extracted fields have a
+quoted span that verifies against the source text, a real and previously-unmeasured
+weakness worth investigating (span extraction, not value extraction, is failing more than
+the value accuracy numbers alone would suggest). The two most informative individual
+failures:
+- `EV-ADV-0000`/`EV-ADV-0003` (OCR-noise-technique cases): `sanctioned_amount` extracted as
+  exactly 100x the expected paise value (5000000000 vs 50000000, and 2500000000 vs 25000000)
+  — a real, reproducible rupee/paise scaling defect surfaced specifically by the injected
+  OCR noise, not present in the clean extraction_core suite. Worth root-causing before
+  growing this suite further: it suggests the OCR-noise technique is corrupting a decimal
+  separator or currency-scale cue the extractor otherwise relies on.
+- `EV-ADV-0004`: `grievance_mechanism_clause_ref` mismatch is `"8.5"` vs `"clause 8.5"` —
+  looks like eval ground-truth strictness (a formatting variant, not a factual error), not
+  a defect in the pipeline; worth a ground-truth fix rather than a code fix, not done here.
+
+Neither suite's numbers are acted on further in this pass (out of scope for a "run it live"
+task) — recorded here as the first real signal M6-T05 has ever had for `adversarial`, and a
+reconfirmation for `verdict`, both against real Postgres for the first time this session.
