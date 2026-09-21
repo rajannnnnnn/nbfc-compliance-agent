@@ -1,0 +1,33 @@
+app = "clausecheck-demo"
+primary_region = "bom"
+
+[build]
+
+[env]
+CC_ENV = "production"
+
+[processes]
+api = "uvicorn app.main:app --host 0.0.0.0 --port 8000"
+worker = "celery -A app.tasks.celery_app worker -Q extract,assess,maintenance -c 2 --loglevel=info"
+
+[http_service]
+internal_port = 8000
+force_https = true
+auto_stop_machines = false
+auto_start_machines = true
+min_machines_running = 1
+processes = ["api"]
+
+[[vm]]
+size = "shared-cpu-1x"
+memory = "512mb"
+processes = ["api", "worker"]
+
+[checks]
+[checks.health]
+type = "http"
+path = "/healthz"
+interval = "15s"
+timeout = "5s"
+grace_period = "10s"
+processes = ["api"]
