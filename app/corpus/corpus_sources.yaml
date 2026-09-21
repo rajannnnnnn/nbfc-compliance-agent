@@ -46,16 +46,16 @@ instruments:
     para_overrides: {}
 
   - code: RBC2025
-    official_title: "RBI (NBFC – Responsible Business Conduct) Directions, 2025 [PLACEHOLDER]"
-    circular_number: "RBI/DOR/2025-26/362 · DOR.MCS.REC.No.281/01-01-039/2025-26"
+    official_title: "Reserve Bank of India (Non-Banking Financial Companies – Responsible Business Conduct) Directions, 2025"
+    circular_number: "RBI/DOR/2025-26/362 · DOR.MCS.REC.No.281/01-01-039/2025-26 [UNVERIFIED — not yet checked against the real PDF]"
     issued_on: 2025-11-28
-    source_url: data/raw/instruments/rbc2025.txt
+    source_url: https://rbi.org.in/Scripts/BS_ViewMasDirections.aspx?id=12942
     status: in_force
     effective_from: 2025-11-28
     effective_to: null
     citable: true
     verification_status: unverified
-    verification_note: "Placeholder text — see data/raw/instruments/README.md."
+    verification_note: "Real RBI-hosted source URL and official title confirmed (2026-09-21) against a PDF the user supplied, sha256 445795a68ca5fab8fe782400a67f0688068ddeea38cce327825c2deb912a2045. circular_number, issued_on, effective_from, and para numbering (p35/p39/p30/p40/p45) are still the pre-existing placeholder guesses and have NOT been checked against the real text. verification_status stays unverified until `make ingest`/`make corpus-verify` runs the real fetch+parse against this URL and someone confirms those fields."
     applies_to_entity_types: [nbfc]
     dialect: paren_numeral
     para_overrides: {}
