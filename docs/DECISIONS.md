@@ -1585,3 +1585,59 @@ failures:
 Neither suite's numbers are acted on further in this pass (out of scope for a "run it live"
 task) — recorded here as the first real signal M6-T05 has ever had for `adversarial`, and a
 reconfirmation for `verdict`, both against real Postgres for the first time this session.
+
+## ADR-055 — Real RBC2025 text ingested; corrects a wrong PDF-to-instrument mapping; R17 flagged
+
+The user supplied 4 real RBI PDFs and their real `rbi.org.in` URLs this session. An earlier
+pass in this conversation attributed the wrong PDF to `RBC2025` (assumed positional
+correspondence between an `ls`/`sha256sum` listing order and a separately-given URL list,
+rather than reading each PDF's own title page) -- corrected here by actually extracting and
+reading each PDF's first page. The filename prefix each PDF carries (e.g. `362MD...`,
+`373MD...`) is literally the RBI circular number printed on page 1, not an arbitrary upload
+id -- a fact that would have avoided the mistake if checked immediately.
+
+**Real mapping (confirmed by reading each PDF's title page):**
+- `837daa67...` (373) = NBFC **Miscellaneous** Directions, 2025
+- `ca617ab8...` (371) = NBFC **Microfinance Institution** Directions, 2025
+- `2486deba...` (363) = NBFC **Managing Risks in Outsourcing** Directions, 2025
+- `329f97d5...` (362) = NBFC **Responsible Business Conduct** Directions, 2025 — **this is RBC2025**
+
+`329f97d5`'s printed circular number, `RBI/DOR/2025-26/362 · DOR.MCS.REC.No.281/01-01-039/
+2025-26`, matches exactly what `corpus_sources.yaml` already had recorded as a placeholder
+guess -- strong independent confirmation this is the right instrument, not a coincidence.
+
+**What changed.** `data/raw/instruments/rbc2025.txt` now holds the real extracted PDF text
+(pypdf, 66,881 chars, 37 pages) in place of the fabricated placeholder. Re-ingested clean:
+**211 real clauses, zero parser warnings** (`continuous_para`, `dialect: paren_numeral`
+handled the real numbering without changes). `corpus_sources.yaml`'s `RBC2025` entry
+corrected: right PDF hash, right real URL (`id=12931`, not `id=12942` as previously and
+wrongly noted).
+
+**Real-text audit against existing rule citations, paragraph by paragraph:**
+- `R01_docs_release_30d` (`RBC2025/p35`), `R02_docs_release_compensation` (`RBC2025/p39`),
+  `R02b_lost_documents` (`RBC2025/p40`): **all three match the real text exactly** --
+  paragraph 35 is the 30-day release-timeline rule, 39 is the ₹5,000/day compensation rule,
+  40 is the lost-documents extension, word for word matching what the placeholder had
+  already guessed. No change needed to these three rules' citations.
+- `R17_microfinance_contact_hours` (`RBC2025/p45`): **not grounded in the real text.** Real
+  paragraph 45 concerns gold/silver collateral valuation-methodology disclosure, unrelated
+  to contact hours. The real general contact-hour restriction (calling before 8am/after 7pm)
+  is paragraph 100 -- which explicitly states "This direction shall not be applicable to
+  microfinance loans," the opposite of what R17 assumes, and defers microfinance-specific
+  hours to a separate, not-yet-ingested instrument (NBFC -- Credit Facilities Directions,
+  2025). This matches an ambiguity `docs/CORPUS.md` had already flagged independently before
+  this audit ("General non-microfinance contact-hour provision before 2027: UNRESOLVED
+  against real text"). **Not fixed here** -- guessing a replacement paragraph number would be
+  exactly the "invent a clause identifier" failure CLAUDE.md §2.6 forbids. R17 needs either
+  (a) the real Credit Facilities Directions, 2025 text ingested as its own instrument, or
+  (b) an explicit decision to keep R17 shadow-gated indefinitely pending that text.
+- `R16_contact_window` cites `RBC-AMD2026/p100W`, a different (still-placeholder) instrument
+  modeling a future amendment that splits real RBC2025 paragraph 100 into lettered
+  sub-paragraphs -- unaffected by this change, not audited further here.
+- No other RBC2025-citing rule (R05, R06, R11, R12, R25 -- clause_paths `p29`/`p30`) was
+  checked against the real text in this pass; flagged as follow-up, not silently assumed
+  correct.
+
+**Not done.** `DL2025` and `KFS2024` remain fully placeholder text; the other 3 PDFs the user
+supplied (Miscellaneous, Microfinance Institution, Outsourcing) don't correspond to any
+current rule citation and were not ingested as new instruments this pass.

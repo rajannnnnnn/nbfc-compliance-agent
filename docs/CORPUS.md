@@ -1,6 +1,6 @@
 # Corpus Ingest Report
 
-Snapshot: `01a0c22f-56be-7db7-9895-37cf7750038a`
+Snapshot: `01a0c2a9-e900-7852-b00b-ae99219ec69a`
 Parser: `continuous_para/1.0+annex_table/1.0`
 
 ## DL2025 — Reserve Bank of India (Digital Lending) Directions, 2025 [PLACEHOLDER]
@@ -23,12 +23,10 @@ Parser: `continuous_para/1.0+annex_table/1.0`
 
 ## RBC2025 — Reserve Bank of India (Non-Banking Financial Companies – Responsible Business Conduct) Directions, 2025
 
-- Clause count: **11**
-- Verification status: **unverified** — Real RBI-hosted source is https://rbi.org.in/Scripts/BS_ViewMasDirections.aspx?id=12942 -- title confirmed (2026-09-21) against a PDF the user supplied, sha256 445795a68ca5fab8fe782400a67f0688068ddeea38cce327825c2deb912a2045. source_url here is reverted to the local placeholder (ADR-002) because rbi.org.in 403s at this environment's proxy CONNECT (SQ-01, same block M1-T02/T09/T10/T11 already hit) -- pointing source_url at the live URL breaks `make ingest` here entirely rather than degrading gracefully. Swap source_url to the real URL once run somewhere that can reach rbi.org.in. circular_number, issued_on, effective_from, and para numbering (p35/p39/p30/p40/p45) are still the pre-existing placeholder guesses and have NOT been checked against the real text.
-- Detected paragraph range: `29` .. `45`
-- Parser warnings (2):
-  - paragraph 35 does not increment by one (previous sort key 30)
-  - paragraph 45 does not increment by one (previous sort key 40)
+- Clause count: **211**
+- Verification status: **unverified** — CORRECTED (2026-09-21): the PDF actually matching this instrument is the one named 329f97d5-362MD26CA... (sha256 baed420340e983d696cc1b6546bdd4513bd4e658977715c5f00a096714a3a559 of the ORIGINAL PDF) -- an earlier note here wrongly attributed a different PDF (837daa67..., which is actually the NBFC Miscellaneous Directions, circular 373, not this one) based on upload-order guessing rather than reading the PDF's own title page. The real circular number printed on page 1 of the correct PDF, 'RBI/DOR/2025-26/362 / DOR.MCS.REC.No.281/01-01-039/2025-26', matches exactly what was already recorded here as a placeholder guess -- strong independent confirmation. Real RBI-hosted source: https://rbi.org.in/Scripts/BS_ViewMasDirections.aspx?id=12931 (not id=12942 as previously and wrongly noted) -- unreachable from this environment (rbi.org.in 403s at the proxy, SQ-01), so source_url stays local. data/raw/instruments/rbc2025.txt now holds the REAL extracted PDF text (66881 chars, 37 pages, pypdf extraction) in place of the fabricated placeholder -- paragraphs 35 (release timeline), 39 (compensation), 40 (lost documents) match the real text exactly, confirming R01/R02/R02b's citations. paragraph 45 does NOT match R17's premise (microfinance contact hours) -- real para 45 concerns gold/silver collateral valuation methodology disclosure; the real general contact-hour restriction is paragraph 100, which explicitly EXCLUDES microfinance loans and defers to a separate, not-yet-ingested instrument (NBFC Credit Facilities Directions, 2025) -- see ADR-055. citable stays true only for R01/R02/R02b's paragraphs; R17's citation is flagged, not fixed, pending a decision -- do not treat verification_status=unverified as blanket-safe for every paragraph this instrument's rules cite.
+- Detected paragraph range: `1` .. `109`
+- Parser warnings: none
 
 ## RBC-AMD2026 — RBC Amendment Directions, 2026 — recovery of loans and engagement of recovery agents [PLACEHOLDER]
 
