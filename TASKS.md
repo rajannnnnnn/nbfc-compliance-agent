@@ -1036,10 +1036,14 @@ is `docs/CORPUS.md`, not working code.
   fixture exactly and that each technique (inject/fakeclause/ocrnoise) is constructed as
   documented. `tests/integration/eval/test_harness.py::test_conflicts_suite_deterministic`
   locks in 100% on both conflict metrics against real Postgres.
-- **Remaining** the full `end_to_end` suite (zero cases; needs the harness's first combined
-  extraction+verdict runner, which `adversarial`'s full LLD shape needs too — see ADR-049),
-  growing `verdict` past 16, `adversarial` past 8, and `conflicts` past 8, the first live run
-  of `adversarial`, and — newly identified, ADR-050 — a real model verdict-calibration
+- **Remaining** the `end_to_end` suite is now wired and has its first case (`EV-E2E-0001`,
+  see ADR-052) — `eval/harness.py` dispatches `suite == "end_to_end"`, `eval.loader.
+  load_suite("end_to_end")` loads cleanly, but it has **not been run live**: no Postgres/
+  Docker is reachable in this execution environment, so `run_end_to_end_case()` against real
+  `assess_fact()`/`detect_for_fact()`/`loan_compliance_state` is still unconfirmed live, and
+  the suite has only one case (an existence proof, not coverage). Also still open: growing
+  `verdict` past 16, `adversarial` past 8, and `conflicts` past 8, the first live run of
+  `adversarial`, and — newly identified, ADR-050 — a real model verdict-calibration
   under-confidence pattern (reaching for `ambiguous`/`no_clause_found` over a committed
   `violation`/`compliant` even with the correct citation retrieved) worth a future prompt
   revision once broader suite coverage exists to measure a change against — tracked as

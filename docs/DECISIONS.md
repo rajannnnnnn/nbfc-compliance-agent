@@ -1468,3 +1468,37 @@ integration tests) and `make lint` pass. `eval/runner.py`'s pre-existing mypy ga
 `Row[Any] | None` narrows imperfectly, a `uuid6.UUID`/`uuid.UUID` class distinction) are
 untouched by this change and were never in scope — `make lint`'s mypy step only checks
 `app/`, not `eval/`, per the Makefile.
+
+## ADR-052 — First `end_to_end` suite case: closes M6-T05's last named gap, not run live
+
+M6-T05's "Remaining" list named exactly one item as the harness's own gap (as opposed to
+case-count growth on already-shipped suites): "the full `end_to_end` suite (zero cases)".
+`run_end_to_end_case()`, `EndToEndOutcome`, `EndToEndMetrics`, and `ExpectedComplianceState`
+were already written in `eval/runner.py`/`eval/metrics.py`/`eval/loader.py` from an earlier
+pass but never wired into `eval/harness.py`'s dispatch, and `eval/cases/end_to_end/` was
+empty — `load_suite("end_to_end")` raised on zero cases, so the suite could not run at all.
+
+**What changed.** `eval/harness.py` gained an `elif suite == "end_to_end"` branch (dispatched
+on suite, same pattern ADR-051 established for `conflicts`, to avoid colliding with
+`conflicts`'s own use of `stage == "end_to_end"`), calling `run_end_to_end_case()` and
+`compute_end_to_end_metrics()`, plus an `actual_payload` shape (`{"state": outcome.state}`)
+for the `eval_result` row. One case, `EV-E2E-0001`: a single-document account carrying the
+same `R01_docs_release_30d` violation facts as the existing `numeric_rules` case `EV-NUM-002`
+(31-day release delay, one day past the 30-day window), run through the real `assess_fact()`
+and `detect_for_fact()` and compared against the real `loan_compliance_state` rollup
+(`app/verdict/state.py`) via `expected_state: {open_violations: 1, open_ambiguous: 0,
+open_no_clause: 0, unresolved_conflicts: 0, highest_severity: "critical"}` — zero LLM cost,
+since R01 is a deterministic rule that never falls through to the model.
+
+**Verification.** No Postgres or Docker is reachable in this execution environment (same
+constraint noted throughout M1's corpus tasks), so this could not be run live end to end
+against real Postgres the way `conflicts` was in ADR-051. What was verified without a DB:
+`eval.loader.load_suite("end_to_end")` loads the one case cleanly (case shape, `documents`,
+`expected_state` all parse); `eval/harness.py`, `eval/runner.py`, `eval/metrics.py`,
+`eval/loader.py` all compile and pass `ruff check`. The expected state itself was hand-derived
+from `EV-NUM-002`'s already-live-verified verdict (`R01_docs_release_30d` → `violation`,
+severity `critical` per `app/verdict/severity.py`) and `app/verdict/state.py`'s rollup SQL,
+not guessed. **Follow-up, not closed here**: run `make eval suite=end_to_end` against real
+Postgres the first time this repo runs somewhere with Postgres/Docker available, and grow
+the suite past its one case (LLD §17.3 doesn't set an explicit minimum for `end_to_end`
+distinct from `conflicts`, but one case is a bare existence proof, not coverage).
