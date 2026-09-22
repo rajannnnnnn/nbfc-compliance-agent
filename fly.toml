@@ -1,14 +1,16 @@
 app = "clausecheck-demo"
-primary_region = "bom"
+primary_region = "sin"
 
 [build]
 
 [env]
 CC_ENV = "production"
+CC_REDIS_URL = "redis://localhost:6379/0"
 
 [processes]
 api = "uvicorn app.main:app --host 0.0.0.0 --port 8000"
 worker = "celery -A app.tasks.celery_app worker -Q extract,assess,maintenance -c 2 --loglevel=info"
+redis = "redis-server --bind 127.0.0.1 --port 6379 --save '' --appendonly no"
 
 [http_service]
 internal_port = 8000
@@ -21,7 +23,7 @@ processes = ["api"]
 [[vm]]
 size = "shared-cpu-1x"
 memory = "512mb"
-processes = ["api", "worker"]
+processes = ["api", "worker", "redis"]
 
 [checks]
 [checks.health]
