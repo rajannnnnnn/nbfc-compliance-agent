@@ -4,7 +4,7 @@ primary_region = "sin"
 [build]
 
 [env]
-CC_ENV = "production"
+CC_ENV = "prod"
 CC_REDIS_URL = "redis://localhost:6379/0"
 
 [http_service]
