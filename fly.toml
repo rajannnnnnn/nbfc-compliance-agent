@@ -11,9 +11,9 @@ CC_REDIS_URL = "redis://localhost:6379/0"
 # key and fails (confirmed: "AuthenticationError ... Incorrect API key provided" from
 # OpenAI's embeddings endpoint during corpus ingest).
 CC_EMBEDDING_MODEL = "gemini/gemini-embedding-001"
-CC_EXTRACT_MODEL = "gemini/gemini-2.0-flash"
-CC_VERDICT_MODEL = "gemini/gemini-2.0-flash"
-CC_CLASSIFY_MODEL = "gemini/gemini-2.0-flash"
+CC_EXTRACT_MODEL = "gemini/gemini-2.5-flash"
+CC_VERDICT_MODEL = "gemini/gemini-2.5-flash"
+CC_CLASSIFY_MODEL = "gemini/gemini-2.5-flash"
 
 [deploy]
 release_command = "sh -c 'alembic upgrade head && python -m app.corpus.service ingest --activate'"
