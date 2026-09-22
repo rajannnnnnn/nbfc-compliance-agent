@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from app.config import get_settings
 from app.db.base import Base
 from app.db import models  # noqa: F401  — populates Base.metadata
+from app.db.url import split_async_url
 
 config = context.config
 
@@ -40,9 +41,12 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_migrations_online() -> None:
+    url, connect_args = split_async_url(_url())
     configuration = config.get_section(config.config_ini_section) or {}
-    configuration["sqlalchemy.url"] = _url()
-    connectable = async_engine_from_config(configuration, prefix="sqlalchemy.", poolclass=pool.NullPool)
+    configuration["sqlalchemy.url"] = url
+    connectable = async_engine_from_config(
+        configuration, prefix="sqlalchemy.", poolclass=pool.NullPool, connect_args=connect_args
+    )
 
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)

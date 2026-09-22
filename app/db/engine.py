@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.config import Settings
+from app.db.url import split_async_url
 
 _engine: AsyncEngine | None = None
 _sessionmaker: async_sessionmaker[AsyncSession] | None = None
@@ -19,8 +20,10 @@ _sessionmaker: async_sessionmaker[AsyncSession] | None = None
 def get_engine(settings: Settings) -> AsyncEngine:
     global _engine
     if _engine is None:
+        url, connect_args = split_async_url(settings.database_url)
         _engine = create_async_engine(
-            settings.database_url,
+            url,
+            connect_args=connect_args,
             pool_size=settings.database_pool_size,
             max_overflow=settings.database_max_overflow,
             pool_pre_ping=True,
