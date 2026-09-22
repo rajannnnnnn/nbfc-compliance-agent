@@ -1,0 +1,85 @@
+# field_key -> clause_path[]. LLD §7. M5-T05 tightened pins to leaf granularity wherever the
+# ingested corpus actually parses a sub-paragraph leaf under the field's topic (DL2025/p9's
+# i/ii/iii, DL2025/p10's note/1) — checked directly against the real ingested clause table,
+# not assumed from the LLD text. Where a paragraph has no further sub-paragraph structure
+# (e.g. RBC2025/p35, RBC-AMD2026/p100W), the bare paragraph path already *is* the leaf, so it
+# stays as-is; there is nothing left to tighten there without inventing structure the corpus
+# doesn't have (CLAUDE.md §2.6). Against the placeholder corpus in data/raw/instruments/ — see
+# docs/DECISIONS.md ADR-001, ADR-015, and the M5-T05 ADR added alongside this change.
+version: 1
+pins:
+  apr_bps:
+    - KFS2024/annexA/part1/9
+    - RBC2025/p29
+    - DL2025/p8/i
+    - DL2025/p8/ii
+  cooling_off_period_days:
+    - DL2025/p10
+    - DL2025/p10/note/1
+  cooling_off_prepayment_penalty_flag:
+    - DL2025/p10
+  disbursal_credited_account_type:
+    - DL2025/p9/i
+  repayment_debited_account_type:
+    - DL2025/p9/ii
+  pass_through_account_used_flag:
+    - DL2025/p9/i
+    - DL2025/p9/ii
+  lsp_fee_borne_by:
+    - DL2025/p9/iii
+  original_docs_released_date:
+    - RBC2025/p35
+    - RBC2025/p36
+    - RBC2025/p37
+    - RBC2025/p38
+    - RBC2025/p39
+    - RBC2025/p40
+  release_delay_compensation_paid:
+    - RBC2025/p39
+  docs_lost_flag:
+    - RBC2025/p40
+  contact_datetime:
+    - RBC-AMD2026/p100W
+    - RBC2025/p45
+  grievance_officer_phone:
+    - DL2025/p11
+    - KFS2024/annexA/part2/3
+  grievance_officer_email:
+    - DL2025/p11
+    - RBC-AMD2026/p100Y
+  recording_retention_days:
+    - RBC-AMD2026/p100N
+  call_recorded_flag:
+    - RBC-AMD2026/p100N
+  device_restriction_applied_flag:
+    - RBC-AMD2026/p100Q
+    - RBC-AMD2026/p100R
+    - RBC-AMD2026/p100S
+  device_restoration_delay_hours:
+    - RBC-AMD2026/p100S
+  cure_notice_21day_sent_date:
+    - RBC-AMD2026/p100Q
+    - RBC-AMD2026/p100R
+  cure_notice_7day_sent_date:
+    - RBC-AMD2026/p100Q
+    - RBC-AMD2026/p100R
+  agent_iibf_certified_flag:
+    - RBC-AMD2026/p100F
+  visit_prior_intimation_date:
+    - RBC-AMD2026/p100I
+  third_party_contacted_flag:
+    - RBC-AMD2026/p100X
+  social_media_disclosure_flag:
+    - RBC-AMD2026/p100X
+  recovery_agent_identity_notified_before_contact_flag:
+    - DL2025/p8
+  data_stored_offshore_flag:
+    - DL2025/p13
+  offshore_deletion_within_hours:
+    - DL2025/p13
+  biometric_data_collected_flag:
+    - DL2025/p13
+  kfs_validity_days:
+    - KFS2024/p1
+  kfs_summary_in_agreement_flag:
+    - KFS2024/p2

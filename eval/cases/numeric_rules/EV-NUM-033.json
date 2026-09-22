@@ -1,0 +1,29 @@
+{
+  "case_ref": "EV-NUM-033",
+  "suite": "numeric_rules",
+  "stage": "verdict",
+  "doc_type": "call_transcript",
+  "input_ref": null,
+  "event_date": "2027-03-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "contact_datetime": "2027-03-01T19:00:00+05:30"
+    },
+    "check_key": "R16_contact_window",
+    "verdict": "compliant",
+    "decisive_citations": [
+      "RBC-AMD2026/p100W"
+    ],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Boundary: 19:00:00 IST is the last permitted second (the window is inclusive on both ends per the rule's own docstring) \u2014 compliant."
+}

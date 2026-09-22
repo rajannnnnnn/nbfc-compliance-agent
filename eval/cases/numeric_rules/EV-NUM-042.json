@@ -1,0 +1,35 @@
+{
+  "case_ref": "EV-NUM-042",
+  "suite": "numeric_rules",
+  "stage": "verdict",
+  "doc_type": "field_visit_report",
+  "input_ref": null,
+  "event_date": "2027-03-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "device_restriction_applied_flag": "true",
+      "device_financed_by_loan_flag": "false",
+      "days_past_due_at_contact": "60",
+      "cure_notice_21day_sent_date": "2027-02-01",
+      "cure_notice_7day_sent_date": "2027-02-25"
+    },
+    "check_key": "R23_device_restriction_preconditions",
+    "verdict": "violation",
+    "decisive_citations": [
+      "RBC-AMD2026/p100Q",
+      "RBC-AMD2026/p100R",
+      "RBC-AMD2026/p100S"
+    ],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Different code path again: the restricted device was not financed by this loan \u2014 a precondition failure independent of the day-count and notice-sequencing checks, which are both otherwise satisfied."
+}

@@ -1,0 +1,13 @@
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+
+-- KFS (Key Facts Statement) --
+Ref no.: LN-SYN-2025-96511
+Product: gold loan
+Amount sanctioned: Rs. 500,000
+Tenure: 1095 days
+Rate of interest: 14.50% per annum, floating basis
+Fees payable: Rs. 2,500
+APR (all-inclusive): 15.71%
+Look-up / cooling-off period: 1 days; no prepayment charge within this window.
+Grievance officer: Farha Sheikh | Tel: 1800-459-9346 | Email: grievance@sunrise.example
+Validity of this statement: 7 working days from 12 August 2026.

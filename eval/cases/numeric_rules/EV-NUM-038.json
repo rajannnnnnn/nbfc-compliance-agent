@@ -1,0 +1,29 @@
+{
+  "case_ref": "EV-NUM-038",
+  "suite": "numeric_rules",
+  "stage": "verdict",
+  "doc_type": "call_transcript",
+  "input_ref": null,
+  "event_date": "2026-04-01",
+  "account_profile": {
+    "product_type": "microfinance",
+    "is_microfinance": true,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "contact_datetime": "2026-04-01T19:01:00+05:30"
+    },
+    "check_key": "R17_microfinance_contact_hours",
+    "verdict": "violation",
+    "decisive_citations": [
+      "RBC2025/p45"
+    ],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Boundary: for a microfinance borrower, 19:01 IST is one minute past R17's permitted window \u2014 violation."
+}

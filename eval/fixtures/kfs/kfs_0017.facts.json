@@ -1,0 +1,20 @@
+{
+  "doc_type": "kfs",
+  "facts": {
+    "loan_proposal_number": "LN-SYN-2025-33053",
+    "loan_type": "business",
+    "sanctioned_amount": "10000000",
+    "loan_term_days": "1095",
+    "interest_rate_bps": "1200",
+    "interest_rate_type": "fixed",
+    "fees_total": "750000",
+    "apr_bps": "1392",
+    "grievance_officer_name": "Deepak Rao",
+    "grievance_officer_phone": "1800-567-3184",
+    "grievance_officer_email": "grievance@sunrise.example",
+    "cooling_off_period_days": "1",
+    "cooling_off_prepayment_penalty_flag": "false",
+    "kfs_validity_days": "7",
+    "kfs_issued_date": "2026-04-05"
+  }
+}

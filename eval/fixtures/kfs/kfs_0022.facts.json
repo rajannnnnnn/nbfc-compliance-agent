@@ -1,0 +1,20 @@
+{
+  "doc_type": "kfs",
+  "facts": {
+    "loan_proposal_number": "LN-SYN-2026-11854",
+    "loan_type": "business",
+    "sanctioned_amount": "25000000",
+    "loan_term_days": "365",
+    "interest_rate_bps": "1650",
+    "interest_rate_type": "floating",
+    "fees_total": "250000",
+    "apr_bps": "1711",
+    "grievance_officer_name": "Vikram Chauhan",
+    "grievance_officer_phone": "1800-399-3068",
+    "grievance_officer_email": "grievance@meridian.example",
+    "cooling_off_period_days": "1",
+    "cooling_off_prepayment_penalty_flag": "false",
+    "kfs_validity_days": "5",
+    "kfs_issued_date": "2026-04-10"
+  }
+}

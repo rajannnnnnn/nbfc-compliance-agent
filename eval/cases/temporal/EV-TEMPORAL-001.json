@@ -1,0 +1,25 @@
+{
+  "case_ref": "EV-TEMPORAL-001",
+  "suite": "temporal",
+  "stage": "verdict",
+  "doc_type": "call_transcript",
+  "input_ref": "eval/fixtures/transcripts/late_evening_call_nonmfi.txt",
+  "event_date": "2026-09-03",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": true,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": { "contact_datetime": "2026-09-03T20:10:00+05:30" },
+    "check_key": "F:contact_datetime",
+    "verdict": "no_clause_found",
+    "decisive_citations": [],
+    "context_citations": ["RBC-AMD2026/p100W"],
+    "forbidden_citations": ["RBC-AMD2026-DRAFT/p100W"]
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "PRD §11 temporal pair, first half: before the 2027-01-01 commencement date, no contact-hour restriction is in force for a non-microfinance borrower."
+}

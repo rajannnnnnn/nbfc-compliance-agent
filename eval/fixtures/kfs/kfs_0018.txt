@@ -1,0 +1,13 @@
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+
+-- KFS (Key Facts Statement) --
+Ref no.: LN-SYN-2026-42406
+Product: vehicle loan
+Amount sanctioned: INR 250,000.00
+Tenure: 1095 days
+Rate of intcrest: 18.50% per annum, fixed basis
+Fees payable: ₹7,500/-
+APR (all-inclusive): 19.70%
+Look-up / cooling-off period: 3 days; no prepayment charge within this window.
+Grievance officer: Deepak Rao | Tel: 1800-830-5681 | Email: grievance@northbridge.example
+Validity of this statement: 5 working days from 15/09/2026.

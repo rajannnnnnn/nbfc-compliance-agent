@@ -1,0 +1,33 @@
+{
+  "case_ref": "EV-NUM-048",
+  "suite": "numeric_rules",
+  "stage": "verdict",
+  "doc_type": "kfs",
+  "input_ref": null,
+  "event_date": "2026-05-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "apr_bps": "1701",
+      "interest_rate_bps": "1500",
+      "fees_total": "0",
+      "sanctioned_amount": "1000000",
+      "loan_term_days": "365"
+    },
+    "check_key": "R04_apr_computation",
+    "verdict": "ambiguous",
+    "decisive_citations": [
+      "KFS2024/annexA/part1/9"
+    ],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Boundary: 201 bps is one bps beyond the 200 bps tolerance \u2014 ambiguous (this check's own verdict for a diff beyond tolerance, not violation)."
+}

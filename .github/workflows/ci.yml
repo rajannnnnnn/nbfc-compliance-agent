@@ -1,0 +1,87 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -e ".[dev]"
+      - run: make lint
+
+  test-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -e ".[dev]"
+      - run: make test-unit
+
+  test-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env: { POSTGRES_PASSWORD: dev, POSTGRES_DB: clausecheck }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+    env:
+      CC_ENV: ci
+      CC_DATABASE_URL: postgresql+asyncpg://postgres:dev@localhost:5432/clausecheck
+      CC_REDIS_URL: redis://localhost:6379/0
+      CC_FAIL_BOOT_ON_PINNING_MISMATCH: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -e ".[dev]"
+      - run: psql "$CC_DATABASE_URL" -f scripts/db_bootstrap.sql
+        env: { PGPASSWORD: dev }
+      - run: alembic upgrade head
+      - run: make test-integration
+
+  # ADR-018: only rule-decided cases run on every PR (no provider key needed, genuinely
+  # fast). Model-dependent suites (abstention, the full temporal set) run nightly instead —
+  # see the corpus-drift/eval-nightly workflow.
+  eval-fast:
+    runs-on: ubuntu-latest
+    needs: [test-integration]
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env: { POSTGRES_PASSWORD: dev, POSTGRES_DB: clausecheck }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+    env:
+      CC_ENV: ci
+      CC_DATABASE_URL: postgresql+asyncpg://postgres:dev@localhost:5432/clausecheck
+      CC_REDIS_URL: redis://localhost:6379/0
+      CC_FAIL_BOOT_ON_PINNING_MISMATCH: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -e ".[dev]"
+      - run: psql "$CC_DATABASE_URL" -f scripts/db_bootstrap.sql
+        env: { PGPASSWORD: dev }
+      - run: alembic upgrade head
+      - run: make eval suite=numeric_rules

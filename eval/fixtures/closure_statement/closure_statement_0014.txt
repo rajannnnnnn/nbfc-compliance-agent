@@ -1,0 +1,6 @@
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+
+CLOSURE STATEMENT
+Full repayment received on: 2026-06-06
+Closure statement issued on: 07 June 2026
+Original title documents released on: 11-06-2026

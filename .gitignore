@@ -1,0 +1,32 @@
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+.env
+.env.*
+!.env.example
+
+data/raw/*
+!data/raw/instruments/
+data/raw/instruments/*
+!data/raw/instruments/README.md
+# The five placeholder fixtures (ADR-001) are committed deliberately with `git add -f` so a
+# fresh clone can run `make ingest` immediately. Real RBI text a user drops in here later
+# should NOT be committed — this default keeps that safe without special-casing filenames.
+reports/
+*.pdf
+
+# adapter / model artefacts
+*.safetensors
+*.bin
+adapters/
+
+.DS_Store

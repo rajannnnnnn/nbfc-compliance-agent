@@ -1,0 +1,29 @@
+{
+  "case_ref": "EV-NUM-036",
+  "suite": "numeric_rules",
+  "stage": "verdict",
+  "doc_type": "call_transcript",
+  "input_ref": null,
+  "event_date": "2027-03-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "contact_datetime": "2027-03-01T07:59:00+05:30"
+    },
+    "check_key": "R16_contact_window",
+    "verdict": "violation",
+    "decisive_citations": [
+      "RBC-AMD2026/p100W"
+    ],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Boundary: 07:59 IST is one minute before the permitted window opens \u2014 violation."
+}

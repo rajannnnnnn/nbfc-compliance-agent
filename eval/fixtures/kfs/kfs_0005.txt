@@ -1,0 +1,13 @@
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+
+KEY FACTS STATEMENT
+Loan proposal number: LN-SYN-2025-39451
+Type of loan: personal
+Sanctioned loan amount: Rs. 1,200,000
+Loan term: 730 days
+Interest rate: 18.50% p.a. (fixed)
+Total fees and charges: Rs. 1,000
+Annual Percentage Rate (APR): 20.50% p.a.
+Cooling-off / look-up period: 7 days. No prepayment penalty applies if the borrower exits within this period.
+Grievance redressal officer: Deepak Rao, phone 1800-702-4608, email grievance@northbridge.example
+This Key Facts Statement is valid for 3 working days from the date of issue, 15/06/2026.

@@ -1,0 +1,16 @@
+{
+  "doc_type": "loan_agreement",
+  "facts": {
+    "loan_type": "consumer_durable",
+    "sanctioned_amount": "50000000",
+    "interest_rate_bps": "1650",
+    "disbursal_credited_account_type": "borrower_own",
+    "repayment_debited_account_type": "lender_own",
+    "pass_through_account_used_flag": "false",
+    "cooling_off_period_days": "7",
+    "cooling_off_prepayment_penalty_flag": "false",
+    "kfs_summary_in_agreement_flag": "true",
+    "grievance_mechanism_clause_ref": "8.6",
+    "loan_transferable_flag": "false"
+  }
+}

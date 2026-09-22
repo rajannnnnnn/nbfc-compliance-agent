@@ -1,0 +1,9 @@
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+
+SANCTION LETTER
+Reference: SL-SYN-2026-47721
+Date: 2026-08-11
+We are pleased to sanction a personal loan of INR 750,000.00 at 16.50% p.a.
+Processing fee: INR 5,000.00
+Loan term: 730 days.
+Annual Percentage Rate: 18.39% p.a.

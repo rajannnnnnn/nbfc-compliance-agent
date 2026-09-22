@@ -1,0 +1,20 @@
+{
+  "doc_type": "kfs",
+  "facts": {
+    "loan_proposal_number": "LN-SYN-2025-55870",
+    "loan_type": "gold",
+    "sanctioned_amount": "10000000",
+    "loan_term_days": "180",
+    "interest_rate_bps": "1850",
+    "interest_rate_type": "fixed",
+    "fees_total": "100000",
+    "apr_bps": "2093",
+    "grievance_officer_name": "Deepak Rao",
+    "grievance_officer_phone": "1800-304-1333",
+    "grievance_officer_email": "grievance@meridian.example",
+    "cooling_off_period_days": "1",
+    "cooling_off_prepayment_penalty_flag": "false",
+    "kfs_validity_days": "3",
+    "kfs_issued_date": "2026-07-09"
+  }
+}

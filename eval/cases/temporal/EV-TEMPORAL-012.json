@@ -1,0 +1,29 @@
+{
+  "case_ref": "EV-TEMPORAL-012",
+  "suite": "temporal",
+  "stage": "verdict",
+  "doc_type": "kfs",
+  "input_ref": null,
+  "event_date": "2025-06-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": true,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "grievance_mechanism_clause_ref": "Clause 9.2 of the Key Facts Statement"
+    },
+    "check_key": "R12_grievance_escalation_disclosed",
+    "verdict": "compliant",
+    "decisive_citations": [
+      "DL2025/p11"
+    ],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Temporal pair (2/2): same disclosed grievance mechanism as EV-TEMPORAL-011, but 2025-06-01 is after DL2025/p11's 2025-05-08 commencement, so the clause now governs and the disclosure is compliant. Pairs with EV-TEMPORAL-011."
+}

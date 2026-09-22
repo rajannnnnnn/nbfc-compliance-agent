@@ -1,0 +1,30 @@
+{
+  "case_ref": "EV-TEMPORAL-010",
+  "suite": "temporal",
+  "stage": "verdict",
+  "doc_type": "loan_agreement",
+  "input_ref": null,
+  "event_date": "2025-06-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": true,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "data_stored_offshore_flag": "true",
+      "offshore_deletion_within_hours": "48"
+    },
+    "check_key": "R13_offshore_deletion",
+    "verdict": "violation",
+    "decisive_citations": [
+      "DL2025/p13"
+    ],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Temporal pair (2/2): same 48-hour deletion window as EV-TEMPORAL-009, but 2025-06-01 is after DL2025/p13's 2025-05-08 commencement, so the 24-hour maximum now governs and 48 hours violates it. Pairs with EV-TEMPORAL-009."
+}

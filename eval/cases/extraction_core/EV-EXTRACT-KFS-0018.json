@@ -1,0 +1,41 @@
+{
+  "case_ref": "EV-EXTRACT-KFS-0018",
+  "suite": "extraction_core",
+  "stage": "extraction",
+  "doc_type": "kfs",
+  "input_ref": "kfs/kfs_0018.txt",
+  "event_date": "2026-09-15",
+  "account_profile": {
+    "product_type": "vehicle",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "loan_proposal_number": "LN-SYN-2026-42406",
+      "loan_type": "vehicle",
+      "sanctioned_amount": "25000000",
+      "loan_term_days": "1095",
+      "interest_rate_bps": "1850",
+      "interest_rate_type": "fixed",
+      "fees_total": "750000",
+      "apr_bps": "1970",
+      "grievance_officer_name": "Deepak Rao",
+      "grievance_officer_phone": "1800-830-5681",
+      "grievance_officer_email": "grievance@northbridge.example",
+      "cooling_off_period_days": "3",
+      "cooling_off_prepayment_penalty_flag": "false",
+      "kfs_validity_days": "5",
+      "kfs_issued_date": "2026-09-15"
+    },
+    "check_key": "extraction",
+    "verdict": "n/a",
+    "decisive_citations": [],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Ground truth is the exact value scripts/gen_synthetic_docs.py used to render kfs_0018.txt, not a separately authored expectation."
+}

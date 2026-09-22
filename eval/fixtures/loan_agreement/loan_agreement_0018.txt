@@ -1,0 +1,14 @@
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+
+LOAN AGREEMENT
+This agreement is made between Northbridge Finance Ltd. ("the Lender") and Sunita Yadav ("the Borrower").
+Agreement reference: LA-SYN-2026-71474
+Type of loan: gold
+Sanctioned amount: INR 750,000.00
+Rate of interest: 14.50% p.a.
+Disbursal shall be credited to the Borrower's own bank account.
+Repayment shall be debited directly from the Borrower's own bank account; no pass-through or pooling account is used.
+Cooling-off period: 3 days; no prepayment penalty within this period.
+The particulars of the Key Facts Statement are reproduced as a summary box forming part of this Agreement.
+Grievance escalation mechanism is described in clause 8.8 of this Agreement.
+This loan is not transferable without the Lender's prior written consent.

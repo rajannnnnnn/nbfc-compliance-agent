@@ -1,0 +1,9 @@
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+
+SANCTION LETTER
+Reference: SL-SYN-2025-99224
+Date: 21/09/2026
+We are pleased to sanction a gold loan of Rs. 1,200,000 at 18.50% p.a.
+Processing fee: Rs. 1,000
+Loan term: 730 days.
+Annual Percentage Rate: 20.79% p.a.

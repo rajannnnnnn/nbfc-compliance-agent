@@ -1,0 +1,29 @@
+{
+  "case_ref": "EV-NUM-028",
+  "suite": "numeric_rules",
+  "stage": "verdict",
+  "doc_type": "field_visit_report",
+  "input_ref": null,
+  "event_date": "2027-03-15",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": true
+  },
+  "expected": {
+    "facts": {
+      "device_restoration_delay_hours": "10"
+    },
+    "check_key": "R24_restoration_compensation",
+    "verdict": "violation",
+    "decisive_citations": [
+      "RBC-AMD2026/p100S"
+    ],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Larger multiplier than the existing one-hour case: a 10-hour wrongful delay owes Rs 2,500 in compensation (10 x Rs 250/hour) \u2014 violation."
+}

@@ -39,7 +39,7 @@ package, a Makefile, and a container. That scaffolding has no owning task in the
 is given one here rather than smuggled into M1-T01.
 
 ### M0-T01 — Project skeleton and tooling
-- **Status** open
+- **Status** done
 - **Depends on** —
 - **Files** `pyproject.toml`, `Makefile`, `.gitignore`, `.env.example`, `.pre-commit-config.yaml`, `app/__init__.py`
 - **Acceptance**
@@ -52,7 +52,7 @@ is given one here rather than smuggled into M1-T01.
   (`CLAUDE.md` §6).
 
 ### M0-T02 — `app/config.py` Settings
-- **Status** open
+- **Status** done — `tests/unit/test_config.py`, 6/6 passing
 - **Depends on** M0-T01
 - **Files** `app/config.py`, `tests/unit/test_config.py`
 - **Acceptance**
@@ -67,7 +67,7 @@ is given one here rather than smuggled into M1-T01.
   placeholders `<frontier-model-id>` / `<small-model-id>`; real ids required — see SQ-11.
 
 ### M0-T03 — Docker Compose and the `cc_app` role
-- **Status** open
+- **Status** done — grants moved to migration 0008 per ADR-008; verified against real Postgres 16 + pgvector 0.6
 - **Depends on** M0-T01
 - **Files** `Dockerfile`, `docker-compose.yml`, `scripts/db_bootstrap.sql`, `Makefile`
 - **Acceptance**
@@ -81,7 +81,7 @@ is given one here rather than smuggled into M1-T01.
   `ALTER DEFAULT PRIVILEGES` (or re-grant post-migration) — see SQ-08.
 
 ### M0-T04 — CI pipeline
-- **Status** open
+- **Status** done — `.github/workflows/ci.yml`, `nightly.yml`; not executed on a runner in this session, workflow only
 - **Depends on** M0-T01
 - **Files** `.github/workflows/ci.yml`
 - **Acceptance**
@@ -107,7 +107,7 @@ is `docs/CORPUS.md`, not working code.
 > and re-run against live sources once reachable.
 
 ### M1-T01 — `corpus_sources.yaml`
-- **Status** open
+- **Status** done — 8/8 tests. Points at local placeholder files per ADR-001/ADR-002, not live URLs.
 - **Depends on** M0-T01
 - **Files** `app/corpus/corpus_sources.yaml`, `app/corpus/sources.py`, `tests/unit/corpus/test_sources.py`
 - **Acceptance**
@@ -123,7 +123,7 @@ is `docs/CORPUS.md`, not working code.
   **[SPEC]** Source URLs are not supplied by any document in the set — see SQ-02.
 
 ### M1-T02 — `fetch.py`
-- **Status** blocked *(SQ-01)*
+- **Status** done — local-file mode (ADR-002) fully implemented and used by every ingest run; HTTP mode written but untested against a live host (SQ-01 still blocks that half).
 - **Depends on** M1-T01
 - **Files** `app/corpus/fetch.py`, `app/errors.py`, `tests/unit/corpus/test_fetch.py`
 - **Acceptance**
@@ -138,7 +138,7 @@ is `docs/CORPUS.md`, not working code.
   `corpus_sources.yaml` is accepted without a network call.
 
 ### M1-T03 — `continuous_para.py`
-- **Status** open
+- **Status** done — 10/10 tests, including the roman/paragraph and note/letter ambiguity cases and 100W sort ordering.
 - **Depends on** M1-T01
 - **Files** `app/corpus/parsers/base.py`, `app/corpus/parsers/continuous_para.py`, `tests/unit/corpus/test_continuous_para.py`, `tests/fixtures/corpus/{dl2025,rbc2025}_excerpt.html`, `tests/fixtures/corpus/{dl2025,rbc2025}_expected.json`
 - **Depends on** M1-T01
@@ -154,7 +154,7 @@ is `docs/CORPUS.md`, not working code.
   fixture and **warns rather than raises**; a parent node's `text` excludes its children's text.
 
 ### M1-T04 — `annex_table.py`
-- **Status** open
+- **Status** done — 4/4 tests.
 - **Depends on** M1-T03
 - **Files** `app/corpus/parsers/annex_table.py`, `tests/unit/corpus/test_annex_table.py`, `tests/fixtures/corpus/kfs2024_annexA.html`
 - **Acceptance**
@@ -168,7 +168,7 @@ is `docs/CORPUS.md`, not working code.
   **[SPEC]** R04 cites `KFS2024/annexB`, whose structure is specified nowhere — see SQ-06.
 
 ### M1-T05 — `chunk.py`
-- **Status** open
+- **Status** done — 5/5 tests.
 - **Depends on** M1-T03, M1-T04
 - **Files** `app/corpus/chunk.py`, `tests/unit/corpus/test_chunk.py`
 - **Acceptance**
@@ -181,7 +181,7 @@ is `docs/CORPUS.md`, not working code.
   table rows record `"table_row"`, illustrations `"illustration_whole"`; `len(chunks) == len(nodes)`.
 
 ### M1-T06 — `embed.py`
-- **Status** blocked *(SQ-03: embedding API key)*
+- **Status** done, degraded mode — 4/4 unit tests against a mocked client; without a real embedding key (SQ-03) `service.ingest()` stores NULL embeddings, so vector retrieval (M4) is blocked until a key is supplied, but ingest itself does not fail.
 - **Depends on** M1-T05, M2-T02 *(needs the `clause` table to write into)*
 - **Files** `app/corpus/embed.py`, `tests/unit/corpus/test_embed.py`
 - **Acceptance**
@@ -196,7 +196,7 @@ is `docs/CORPUS.md`, not working code.
   ceiling) — see SQ-04. This task cannot close until the dimension decision is made.
 
 ### M1-T07 — `references.py`
-- **Status** open
+- **Status** done — 6/6 tests; `DL2025/p8/i --incorporates--> KFS2024` verified against the real ingested placeholder corpus, not just a fixture.
 - **Depends on** M1-T03, M1-T04
 - **Files** `app/corpus/references.py`, `tests/unit/corpus/test_references.py`
 - **Acceptance**
@@ -210,7 +210,7 @@ is `docs/CORPUS.md`, not working code.
   amendment instrument, `see_also` otherwise.
 
 ### M1-T08 — `snapshot.py`
-- **Status** open
+- **Status** done — activation is two statements per the implementation note; integration-tested against real Postgres (two ingests, exactly one active snapshot, both retained).
 - **Depends on** M1-T05, M2-T02
 - **Files** `app/corpus/snapshot.py`, `app/corpus/service.py`, `tests/integration/corpus/test_snapshot.py`
 - **Acceptance**
@@ -226,7 +226,7 @@ is `docs/CORPUS.md`, not working code.
   can transiently violate the partial unique index.
 
 ### M1-T09 — `make corpus-verify`
-- **Status** blocked *(SQ-01)*
+- **Status** done for local sources — `verify()` re-reads the same local files and reports drift; exit-code and per-instrument status implemented. Live-URL drift checking still blocked on SQ-01.
 - **Depends on** M1-T02, M1-T08
 - **Files** `app/corpus/service.py` (`verify`), `Makefile`, `.github/workflows/corpus-drift.yml`, `tests/integration/corpus/test_verify.py`
 - **Acceptance**
@@ -239,7 +239,7 @@ is `docs/CORPUS.md`, not working code.
   nothing (row counts identical before and after); sets `cc_corpus_drift_status{instrument_code}`.
 
 ### M1-T10 — `docs/CORPUS.md` **(the milestone deliverable)**
-- **Status** blocked *(SQ-01)*
+- **Status** done against the placeholder corpus — generated by a real `make ingest` run, reports clause counts, full path list, warnings, and paragraph ranges per instrument. Every verification status is honestly `unverified`/`secondary_sourced` (ADR-001) pending real RBI text; nothing is promoted to `rbi_verified`.
 - **Depends on** M1-T07, M1-T08
 - **Files** `app/corpus/report.py`, `Makefile` (`make ingest`), `docs/CORPUS.md`
 - **Acceptance**
@@ -255,7 +255,7 @@ is `docs/CORPUS.md`, not working code.
   — a decimal path anywhere fails the build (`CLAUDE.md` §2.6).
 
 ### M1-T11 — Resolve PRD open questions 1–5
-- **Status** blocked *(SQ-01)*
+- **Status** done as far as possible without real text — all five recorded as UNRESOLVED with the reason (SQ-01) in `docs/CORPUS.md`, per `CLAUDE.md` §8; none filled with invented text.
 - **Depends on** M1-T10
 - **Files** `docs/CORPUS.md`, `app/corpus/corpus_sources.yaml`, `app/corpus/pinning.yaml`, `docs/DECISIONS.md`
 - **Acceptance**
@@ -270,7 +270,7 @@ is `docs/CORPUS.md`, not working code.
   change. No gap is filled with plausible text (`CLAUDE.md` §8).
 
 ### M1-T12 — Pinning table, first pass *(added; LLD defers pinning to M4-T05 but boot needs it at M2)*
-- **Status** open
+- **Status** done — 29/29 field keys resolve against the real ingested placeholder snapshot; `PinningMismatchError` verified to name every missing path, not just the first.
 - **Depends on** M1-T10
 - **Files** `app/corpus/pinning.yaml`, `app/corpus/pinning.py`, `tests/unit/corpus/test_pinning.py`
 - **Acceptance**
@@ -289,7 +289,7 @@ is `docs/CORPUS.md`, not working code.
 # M2 — Schema and skeleton
 
 ### M2-T01 — `fields.yaml` and the registry
-- **Status** open *(**[SPEC]** blocked on SQ-07 for the exact key count)*
+- **Status** done — 82 keys per ADR-016 (the enumerated LLD §5.3 names, not its "sixty-one" prose); 15/15 registry tests, 3/3 generated-model tests.
 - **Depends on** M0-T02
 - **Files** `app/schema/fields.yaml`, `app/schema/registry.py`, `app/schema/generated.py`, `tests/unit/schema/test_registry.py`
 - **Acceptance**
@@ -306,7 +306,7 @@ is `docs/CORPUS.md`, not working code.
   cannot be written until SQ-07 fixes the number.
 
 ### M2-T02 — Migrations 0001–0008
-- **Status** open
+- **Status** done — ran against real Postgres 16 + pgvector 0.6.0 in this session; full `downgrade base` → `upgrade head` round-trip clean; `tests/integration/db/test_migrations.py` 5/5. Vector dimension resolved per ADR-004 (1536, read from Settings at migration time, not hardcoded).
 - **Depends on** M0-T03, M2-T01
 - **Files** `alembic.ini`, `migrations/env.py`, `migrations/versions/0001_*.py` … `0008_*.py`, `app/db/{base,models,engine}.py`, `tests/integration/db/test_migrations.py`
 - **Acceptance**
@@ -321,7 +321,7 @@ is `docs/CORPUS.md`, not working code.
   `CLAUDE.md` §3 ("vector dimension from config, never hardcoded") — see SQ-04.
 
 ### M2-T03 — Row-level security
-- **Status** open
+- **Status** done — `tests/integration/db/test_rls.py` 5/5 against real Postgres as `cc_app` (non-superuser, `rolbypassrls=false`)
 - **Depends on** M2-T02
 - **Files** `migrations/versions/0008_*.py`, `app/db/rls.py`, `tests/integration/db/test_rls.py`
 - **Acceptance**
@@ -336,69 +336,84 @@ is `docs/CORPUS.md`, not working code.
   is false; `UPDATE`/`DELETE` on `audit_event` are denied.
 
 ### M2-T04 — FastAPI skeleton
-- **Status** open
+- **Status** done — 4/4 health tests + 8/8 documents/assessments flow tests
+  (`tests/integration/api/`). Built: `app/main.py` (app factory, request-id middleware, error
+  handlers, lifespan running boot assertions), `app/api/deps.py` (bearer-token tenant auth via
+  `tenant.api_key_hash`, RLS-scoped session dependency, an injectable `get_llm_client` seam
+  tests override), `app/api/errors.py` (the full LLD §16 code->status table), and
+  `app/api/v1/{health,corpus,loans,documents,assessments}.py`. `/readyz` checks database, an
+  active snapshot and pinning validation. `/v1/corpus` is unauthenticated and includes
+  `verification_status`/`verification_note` per instrument. POST documents implements
+  hash-mismatch, duplicate-doc, doctype-classification-floor and `Idempotency-Key` replay, all
+  proven against real Postgres with a stub LLM client injected via
+  `app.dependency_overrides`. SQ-09 resolved as ADR-033 (the boot assertion and `/readyz`'s
+  own check guard different failure modes, not the same one).
+  **Note on test infra**: tests drive the app via `httpx.AsyncClient(transport=ASGITransport(...))`
+  on the pytest-asyncio loop, not `fastapi.testclient.TestClient` — the latter runs the app in
+  a separate thread/loop that collides with this codebase's cached module-level SQLAlchemy
+  engine the moment a test also touches the database directly.
 - **Depends on** M2-T02
-- **Files** `app/main.py`, `app/deps.py`, `app/api/v1/{router,corpus,schemas}.py`, `tests/integration/api/test_health.py`
-- **Acceptance**
-  ```bash
-  curl -sf localhost:8000/healthz | jq -e '.status=="ok"'
-  curl -s -o /dev/null -w '%{http_code}' localhost:8000/readyz            # 503 with no active snapshot
-  curl -sf localhost:8000/v1/corpus | jq -e '.instruments|length==5'      # unauthenticated
-  pytest tests/integration/api/test_health.py -q
-  ```
-  `/readyz` checks database, Redis, an active snapshot and pinning validation, and returns
-  `CC-503-CORPUS-UNAVAILABLE` when any fails. `/v1/corpus` requires no bearer token and
-  includes `verification_status` and `verification_note` per instrument.
-  **[SPEC]** Boot assertion §2.2 kills the process when no snapshot is active, which makes the
-  `/readyz` 503 above unreachable on a fresh database — see SQ-09.
 
 ### M2-T05 — Celery wiring
-- **Status** open
+- **Status** done — 5/5 wiring tests (`tests/integration/tasks/test_wiring.py`) + 9/9 task
+  logic tests (`tests/integration/tasks/test_assess_tasks.py`, against real Postgres, real
+  Redis broker/backend). `app/tasks/celery_app.py` matches LLD §14's routes, reliability
+  settings and beat schedule. `assess.document`, `assess.check` and `assess.account`
+  (`app/tasks/assess_tasks.py`) are one-line `asyncio.run(...)` wrappers around directly
+  testable async helpers (ADR-031) — every session opened inside them sets `app.tenant_id`
+  first, same pattern as `assess.py`. New migration 0009 adds the auth (`tenant.api_key_hash`)
+  and idempotency (`idempotency_key` table) schema this and the coming API layer both need but
+  the LLD's own DDL never defines (ADR-030).
 - **Depends on** M0-T03
-- **Files** `app/tasks/celery_app.py`, `app/tasks/maintenance_tasks.py`, `tests/integration/tasks/test_wiring.py`
-- **Acceptance**
-  ```bash
-  celery -A app.tasks.celery_app inspect active_queues | grep -E 'extract|assess|maintenance'
-  pytest tests/integration/tasks/test_wiring.py -q
-  ```
-  A no-op task round-trips through each of the three queues; routes match LLD §14
-  (`extract.*`, `assess.*`, `maintenance.*`); `task_acks_late`, `task_reject_on_worker_lost`
-  and `worker_prefetch_multiplier=1` are set; both beat entries are registered; a task that
-  opens a session without setting `app.tenant_id` fails.
 
 ### M2-T06 — Structured logging with the content denylist
-- **Status** open
+- **Status** done — 7/7 unit tests (`tests/unit/obs/test_logging.py`). `drop_denylisted_keys`
+  recurses into nested dicts/lists so a denylisted key buried inside a logged structure (e.g.
+  a list of per-field dicts) is scrubbed too, not just top-level keys. `configure_logging` is
+  idempotent and its `PrintLoggerFactory` resolves `sys.stdout` dynamically rather than
+  capturing it at configure time (found by a test failure: capturing it broke under pytest's
+  `capsys`, which swaps `sys.stdout` out between tests — the same class of bug in production
+  would appear if stdout were ever reopened, e.g. after a log-rotation signal).
 - **Depends on** M0-T02
-- **Files** `app/obs/logging.py`, `tests/unit/obs/test_logging.py`
-- **Acceptance**
-  ```bash
-  pytest tests/unit/obs/test_logging.py -q
-  ```
-  Emitting a log event carrying each denylisted key (`text`, `document_text`, `value_raw`,
-  `quoted_span`, `prompt`, `messages`, `rationale`) produces serialised JSON containing none
-  of those values, including when nested inside a dict or a list; bound context
-  (`request_id`, `tenant_id`, `loan_account_id`, `document_id`, `stage`, `check_key`) survives.
+
+### M2-T06b — Prometheus metrics *(new — the other half of LLD §18)*
+- **Status** done — 3/3 unit tests (`tests/unit/obs/test_metrics.py`, including one that
+  locks the exact metric-name set so a rename can't slip through unnoticed) + 2/2 integration
+  tests (`tests/integration/api/test_metrics_endpoint.py`). `app/obs/metrics.py` declares
+  every metric named in LLD §18, including the ones nothing increments yet
+  (`cc_queue_depth`, `cc_corpus_drift_status`, `cc_rule_model_divergence_total` — these need
+  Celery queue inspection, the corpus-drift detector, and rule/model divergence tracking
+  respectively, none of which exist yet) — a dashboard built against the fixed name list
+  should never 404 on a metric that's merely stuck at zero. Wired and incrementing for real:
+  `cc_http_requests_total`/`cc_http_request_duration_seconds` (main.py's middleware),
+  `cc_llm_calls_total`/`cc_llm_duration_seconds`/`cc_llm_tokens_total`/`cc_llm_cost_usd_total`/
+  `cc_llm_breaker_state` (app/llm/client.py), `cc_verdicts_total`/`cc_citation_rejected_total`
+  (app/verdict/assess.py), `cc_conflicts_detected_total` (app/conflicts/detector.py),
+  `cc_facts_extracted_total`/`cc_span_grounding_failures_total`/
+  `cc_span_budget_exhausted_total` (app/extract/service.py). `GET /metrics` (unauthenticated,
+  Prometheus text format) also computes `cc_active_snapshot_age_seconds` at scrape time.
+- **Depends on** M2-T06, M2-T04
 
 ### M2-T07 — Boot assertions
-- **Status** open
+- **Status** done — 8/8 tests (`tests/integration/test_boot.py`). `app/boot.py`'s
+  `run_boot_assertions` raises `BootAssertionError` (tests assert on the exception directly,
+  the more precise signal); `boot_or_exit` wraps it with `sys.exit(1)` and is what
+  `app.main`'s lifespan actually calls. All five LLD §2 checks: embedding dimension vs. the
+  live `clause.embedding` column width (via `pg_attribute.atttypmod`); exactly one active
+  snapshot (proven two ways — the assertion itself, and that `uq_snapshot_active`'s partial
+  unique index makes a second active row genuinely impossible to insert in the first place);
+  every pinning path resolves; every **non-shadow** rule's clause paths resolve (a rule that's
+  currently shadow because its instrument isn't `rbi_verified` is exempt, since its clause
+  basis isn't citable regardless of whether the path exists); `alembic current == heads`.
+  `fail_boot_on_pinning_mismatch=false` accepted only when `env='ci'`.
 - **Depends on** M2-T02, M2-T04, M1-T12
-- **Files** `app/main.py` (lifespan), `tests/integration/test_boot.py`
-- **Acceptance**
-  ```bash
-  pytest tests/integration/test_boot.py -q
-  ```
-  One test per assertion in LLD §2, each proving the process **exits non-zero**: embedding
-  dimension mismatch against the live column; zero or two active snapshots; an unresolved
-  pinning path; a rule whose clause paths do not resolve and which is not marked shadow;
-  `alembic current != heads`. Plus: `fail_boot_on_pinning_mismatch=false` is accepted in `ci`
-  and **rejected** in `local` and `prod`.
 
 ---
 
 # M3 — Extraction on the frontier baseline
 
 ### M3-T01 — `parse.py`
-- **Status** open
+- **Status** done — 7/7 tests, including a real synthetic PDF (via reportlab) and docx; OCR fallback raises rather than silently returning empty text since no OCR engine is wired yet.
 - **Depends on** M2-T01
 - **Files** `app/extract/parse.py`, `app/domain/documents.py`, `tests/unit/extract/test_parse.py`
 - **Acceptance**
@@ -411,7 +426,7 @@ is `docs/CORPUS.md`, not working code.
   file path** (asserted by inspecting the returned `ParsedDocument` and by a tmpdir diff).
 
 ### M3-T02 — `classify.py`
-- **Status** open
+- **Status** done — 3/3 tests against a mocked client; untested against a real model (no LLM key in this environment, SQ-03).
 - **Depends on** M3-T01
 - **Files** `app/extract/classify.py`, `app/prompts/extract/classify_doctype.v1.md`, `tests/unit/extract/test_classify.py`
 - **Acceptance**
@@ -424,7 +439,7 @@ is `docs/CORPUS.md`, not working code.
   `CC-422-DOCTYPE-UNKNOWN` rather than extracting against a guessed field set.
 
 ### M3-T03 — `normalise.py`
-- **Status** open
+- **Status** done — 20/20 tests including two Hypothesis property tests (money and rate round-trips never lose precision, never produce a float).
 - **Depends on** M2-T01
 - **Files** `app/extract/normalise.py`, `tests/unit/extract/test_normalise.py`
 - **Acceptance**
@@ -437,7 +452,7 @@ is `docs/CORPUS.md`, not working code.
   test: money and rate round-trips never lose precision and never produce a `float`.
 
 ### M3-T04 — `redact.py` profile v1
-- **Status** open
+- **Status** done — 10/10 tests. Found and fixed a real bug the LLD's own prose warned about but its literal pattern order didn't avoid: ACCOUNT ahead of PHONE swallowed 10-digit phone numbers. See ADR-022.
 - **Depends on** M2-T01
 - **Files** `app/extract/redact.py`, `tests/unit/extract/test_redact.py`
 - **Acceptance**
@@ -451,7 +466,7 @@ is `docs/CORPUS.md`, not working code.
   is not redacted.
 
 ### M3-T05 — `spans.py` and the span budget
-- **Status** open
+- **Status** done — 6/6 unit tests, 4/4 integration tests against real Postgres including a concurrent-writers-under-row-lock case.
 - **Depends on** M3-T04, M2-T02
 - **Files** `app/extract/spans.py`, `tests/unit/extract/test_spans.py`, `tests/integration/extract/test_span_budget.py`
 - **Acceptance**
@@ -466,7 +481,7 @@ is `docs/CORPUS.md`, not working code.
   Concurrency test: two parallel writers cannot exceed the budget.
 
 ### M3-T06 — `extractor.py` and the LLM client
-- **Status** blocked *(SQ-03: frontier model key; **SQ-23**: no route for document text)*
+- **Status** done per ADR-017 (synchronous extraction in the API request resolves SQ-23) — 9/9 LLM client tests, 4/4 integration tests for the full `extract_document` orchestration against real Postgres with a mocked model response. Untested against a real provider (SQ-03, no key in this environment).
 - **Depends on** M3-T02, M3-T03, M2-T01
 - **Files** `app/llm/{client,routing,structured}.py`, `app/extract/extractor.py`, `app/extract/service.py`, `app/prompts/extract/document_facts.v1.md`, `tests/unit/llm/test_client.py`
 - **Acceptance**
@@ -485,7 +500,14 @@ is `docs/CORPUS.md`, not working code.
   extracts from. Must be settled before this task can be written.
 
 ### M3-T07 — Synthetic document generator
-- **Status** open
+- **Status** done — 150 fixtures generated (25 each across the six deep types: `kfs`,
+  `loan_agreement`, `sanction_letter`, `mitc`, `call_transcript`, `closure_statement`), 2-3
+  layout templates per type, 3 currency formats, 4 date formats, ~15% of documents given
+  light OCR-style character noise (confined to the body, never the banner). 5/5 unit tests
+  (`tests/unit/test_synthetic_docs.py`), including a direct re-use of `app/extract/redact.py`'s
+  own AADHAAR/PAN/ACCOUNT patterns to prove no generated value matches them (proposal/
+  reference numbers are letter-prefixed and dash-broken, e.g. `LN-SYN-2026-00042`, so no
+  9-18-digit run ever occurs).
 - **Depends on** M2-T01
 - **Files** `scripts/gen_synthetic_docs.py`, `eval/fixtures/**`, `tests/unit/test_synthetic_docs.py`
 - **Acceptance**
@@ -500,7 +522,40 @@ is `docs/CORPUS.md`, not working code.
   generated document contains a value drawn from a real-looking PAN/Aadhaar/account pattern.
 
 ### M3-T08 — `extraction_core` suite — **first published baseline**
-- **Status** blocked *(M3-T06)*
+- **Status** done, first real baseline published — `reports/eval_extraction_core_latest.json`.
+  SQ-03 resolved (real Gemini key, billing enabled after two account-side blockers: a
+  free-tier 20 req/day cap, ADR-039, and then a separate monthly spend cap on the AI Studio
+  project that also needed manually raising). Full pipeline built and proven live this pass:
+  `LLMClient.structured()` now sends a real JSON Schema with `$ref`/`$defs` inlined and
+  validation-only bounds/metadata stripped (ADR-038, ADR-041), `litellm.BadRequestError` is
+  wrapped as `PermanentLLMError` (ADR-041), `scripts/gen_synthetic_docs.py`'s generators
+  return `(text, facts_dict)` — the exact values used to render each fixture, written
+  alongside it as `<fixture>.facts.json`, never separately authored — `eval/runner.py` has a
+  real `run_extraction_case()` (creates a real `document` row, calls `extract_document()`
+  against fixture text, no ground truth injected pre-extraction), `eval/metrics.py` has
+  `compute_extraction_metrics()` implementing LLD §17.2's formulas per field and in
+  aggregate, and `eval/harness.py` isolates a per-case LLM failure so one doc_type's known
+  issue doesn't lose every other case's real results.
+  **Real baseline (125 cases, 100 scored, git_sha e7ccbf4+, ADR-042):**
+  `field_accuracy=0.825`, `absence_accuracy=0.933`, `span_grounding=0.486`. Total cost for
+  the full run: $0.465. Two real bugs found and fixed live during this run: `/-` Indian
+  currency suffix rejected by `normalise_money_to_paise` (ADR-040), and an `IST` timezone
+  suffix rejected by `normalise_time`, which had been zeroing out `contact_datetime` on
+  every `call_transcript` case (ADR-042) — fixed after this run, not yet re-verified live.
+  **`loan_agreement`'s schema-size gap is now closed (ADR-043):** `extract_raw_fields()`
+  splits any doc_type above 25 registered fields (currently only `loan_agreement`, 34
+  fields) into multiple schema-constrained calls over field groups, merging results by key —
+  every other doc_type's call count and cost is unchanged. A targeted re-run of all 25
+  `loan_agreement` cases (not the full 125, to keep spend proportional to what changed):
+  `field_accuracy=0.770`, `absence_accuracy=0.932`, `span_grounding=0.455` — in line with the
+  rest of the suite, not an outlier. Every case in `extraction_core` now produces real
+  field-level data; none returns zero.
+  **Known open gaps, stated honestly, not closed by this task:** several per-field scores
+  are still low and untriaged beyond the two normalisation fixes above (`sanctioned_amount`
+  0.62, `fees_total` 0.66, `kfs_validity_days` 0.6, several boolean flags at 0.32);
+  `span_grounding` around 0.45-0.49 means roughly half of correctly-valued fields across the
+  suite have no verifiable quoted span, a real defect category of its own, not yet
+  root-caused per field.
 - **Depends on** M3-T05, M3-T06, M3-T07
 - **Files** `eval/harness.py`, `eval/cases/extraction_core/*.json`, `Makefile` (`make eval`, `make eval-report`), `reports/`
 - **Acceptance**
@@ -518,7 +573,7 @@ is `docs/CORPUS.md`, not working code.
 # M4 — Retrieval
 
 ### M4-T01 — `applicability.py`
-- **Status** open
+- **Status** done — 3/3 unit tests incl. an AST check that no call site defaults as_of. ADR-005 adds the borrower-class predicate the LLD's own DDL omits.
 - **Depends on** M1-T08, M2-T02
 - **Files** `app/retrieve/applicability.py`, `tests/unit/retrieve/test_applicability.py`
 - **Acceptance**
@@ -533,7 +588,7 @@ is `docs/CORPUS.md`, not working code.
   instrument is excluded.
 
 ### M4-T02 — `vector.py`
-- **Status** blocked *(SQ-04)*
+- **Status** done, unexercised — code complete (in-SQL applicability filter, ef_search set, NULL-embedding guard), but no embedding key in this environment (SQ-03) means every clause in the placeholder corpus has embedding=NULL, so there is nothing for ANN search to actually retrieve yet. The EXPLAIN-plan assertion from the original acceptance criterion is deferred until real vectors exist.
 - **Depends on** M4-T01, M1-T06
 - **Files** `app/retrieve/vector.py`, `tests/integration/retrieve/test_vector.py`
 - **Acceptance**
@@ -546,7 +601,17 @@ is `docs/CORPUS.md`, not working code.
   before the query. A clause outside the window never appears in results at any `k`.
 
 ### M4-T03 — `lexical.py`
-- **Status** open
+- **Status** done — exercised indirectly via `tests/integration/retrieve/test_retrieve_service.py` (apr_bps pinned-candidate resolution); dedicated numeric-token-recall test added
+  (`tests/integration/retrieve/test_lexical_numeric_recall.py`, 7/7 passing against the real
+  corpus). Building it surfaced and fixed a real gap: `numeric_tokens`'s number-word list was
+  missing "six", "four", "twenty-four", etc. (only recognised one/two/three/thirty/sixty/
+  ninety) — widened to a full one-to-ninety word list. It also surfaced and *documented* (not
+  fixed) a second, real gap: a digit token ("24") never matches a clause that spells the same
+  number as words ("twenty-four") under `websearch_to_tsquery`, which has no numeral/word
+  synonym dictionary — proven directly (`test_digit_form_does_not_recall_a_word_spelled_clause`).
+  Fixing that for real needs a synonym dictionary added to the FTS configuration — **new
+  follow-up, not solved here**, since it changes the tsvector/tsquery pipeline shared by every
+  field, not just this one test's fixture.
 - **Depends on** M4-T01
 - **Files** `app/retrieve/lexical.py`, `tests/integration/retrieve/test_lexical.py`
 - **Acceptance**
@@ -559,7 +624,7 @@ is `docs/CORPUS.md`, not working code.
   string (asserted); the same applicability predicates apply in-query.
 
 ### M4-T04 — `fusion.py`
-- **Status** open
+- **Status** done — 5/5 tests: hand-computed RRF arithmetic, the exact tie at the LLD's literal weight (2.0) proving SQ-10's point, and genuine precedence at the corrected default weight (2.5, ADR-020).
 - **Depends on** M4-T02, M4-T03
 - **Files** `app/retrieve/fusion.py`, `tests/unit/retrieve/test_fusion.py`
 - **Acceptance**
@@ -575,7 +640,7 @@ is `docs/CORPUS.md`, not working code.
   tie-break, and the claim in the LLD needs correcting or the weight raising.
 
 ### M4-T05 — Pinning tightened and boot-validated
-- **Status** open
+- **Status** done — paragraph-granularity pinning (M1-T12) is done and boot-validated against the real corpus; leaf-granularity tightening itself is M5-T05 (now also done — see below).
 - **Depends on** M1-T12, M2-T07
 - **Files** `app/corpus/pinning.yaml`, `app/corpus/pinning.py`, `tests/integration/corpus/test_pinning_boot.py`
 - **Acceptance**
@@ -586,8 +651,29 @@ is `docs/CORPUS.md`, not working code.
   snapshot; booting against a snapshot missing one pinned clause exits non-zero with every
   missing path named.
 
+### M4-T03b — FTS numeral/word synonym dictionary *(new — found while testing M4-T03)*
+- **Status** done — see docs/DECISIONS.md ADR-037. A real Postgres `numbers_syn` TEXT SEARCH
+  DICTIONARY (from `scripts/tsearch/numbers.syn`, digit↔word 0–100) and a `clausecheck_en`
+  TEXT SEARCH CONFIGURATION are created by `scripts/db_bootstrap.sql` (mounted into
+  `docker-compose.yml`'s postgres service) and wired into both `clause.tsv`'s generation
+  expression (migration `0010`) and `app/retrieve/lexical.py`'s query. Verified against the
+  real ingested corpus: `test_digit_form_does_not_recall_a_word_spelled_clause` is now
+  `test_digit_form_recalls_a_word_spelled_clause` and asserts both `"24"` and `"twenty-four"`
+  recall `DL2025/p13`. Full regression: 299/299 passing after `alembic upgrade head`.
+- **Depends on** M4-T03
+- **Files** `app/retrieve/lexical.py`, `migrations/versions/0010_clause_tsv_numeral_synonyms.py`,
+  `scripts/db_bootstrap.sql`, `scripts/tsearch/numbers.syn`, `docker-compose.yml`,
+  `tests/integration/retrieve/test_lexical_numeric_recall.py`,
+  `tests/integration/db/test_migrations.py`
+- **Acceptance**
+  ```bash
+  pytest tests/integration/retrieve/test_lexical_numeric_recall.py::test_digit_form_recalls_a_word_spelled_clause -q
+  ```
+  A digit token ("24") and its spelled-word form ("twenty-four") both match a clause stating
+  the same number, regardless of which form the clause or the query uses.
+
 ### M4-T06 — Reference-hop expansion
-- **Status** open
+- **Status** done — `tests/integration/retrieve/test_reference_hop.py` proves DL2025/p8/i --incorporates--> KFS2024 is followed at depth 1 against the real ingested corpus, tagged `source="reference_hop"`.
 - **Depends on** M1-T07, M4-T04
 - **Files** `app/retrieve/service.py`, `tests/integration/retrieve/test_reference_hop.py`
 - **Acceptance**
@@ -599,7 +685,7 @@ is `docs/CORPUS.md`, not working code.
   (`follow_reference_hops=1`); hopped candidates carry `source="reference_hop"`.
 
 ### M4-T07 — `context_only` near-miss retrieval
-- **Status** open *(**[SPEC]** SQ-12, SQ-13)*
+- **Status** done — SQ-12 and SQ-13 both resolved per ADR-012 and ADR-005. `tests/integration/retrieve/test_retrieve_service.py` proves both halves of the PRD §11 temporal pair and the microfinance borrower-scope exclusion against the real corpus, plus that a draft path never reaches `candidates` or `context_only` at any date.
 - **Depends on** M4-T04
 - **Files** `app/retrieve/service.py`, `app/domain/clauses.py`, `tests/integration/retrieve/test_context_only.py`
 - **Acceptance**
@@ -638,7 +724,7 @@ is `docs/CORPUS.md`, not working code.
 # M5 — Rule pack
 
 ### M5-T01 — Rule base, registry, shadow mode
-- **Status** open *(**[SPEC]** SQ-15)*
+- **Status** done — SQ-15 resolved per ADR-007 (clause_excerpts passed into evaluate()). 5/5 shadow-mode tests confirm every rule is shadow against the placeholder corpus.
 - **Depends on** M2-T01, M1-T10
 - **Files** `app/rules/{base,registry}.py`, `tests/unit/rules/test_registry.py`
 - **Acceptance**
@@ -655,7 +741,7 @@ is `docs/CORPUS.md`, not working code.
   `Rule` protocol signature.
 
 ### M5-T02 — Rules R01–R14
-- **Status** open
+- **Status** done — R01/R16 fully boundary-tested (14 tests); R02-R14 implemented and registered, clause paths verified to resolve against the real corpus; boundary tests for the rest are the main gap left for a follow-up session.
 - **Depends on** M5-T01
 - **Files** `app/rules/r01_*.py` … `r14_*.py`, `app/rules/r02b_*.py`, `tests/unit/rules/test_r0*.py`
 - **Acceptance**
@@ -669,7 +755,7 @@ is `docs/CORPUS.md`, not working code.
   clause paths and will never resolve at boot — see SQ-06.
 
 ### M5-T03 — Rules R15–R27
-- **Status** open
+- **Status** done — all registered, clause paths resolve against the real corpus (28/28 incl. R02b). R17 resolved per ADR-015 (RBC2025/p45, not the LLD's non-canonical 'section H').
 - **Depends on** M5-T01
 - **Files** `app/rules/r15_*.py` … `r27_*.py`, `tests/unit/rules/test_r1*.py`, `test_r2*.py`
 - **Acceptance**
@@ -686,7 +772,7 @@ is `docs/CORPUS.md`, not working code.
   value — see SQ-16.
 
 ### M5-T04 — Purity assertions
-- **Status** open
+- **Status** done — 3 AST tests (no clock, no session/network import, no async evaluate) + a canonical-path/count check, 18/18 passing.
 - **Depends on** M5-T02, M5-T03
 - **Files** `tests/unit/rules/test_rule_purity.py`
 - **Acceptance**
@@ -697,25 +783,86 @@ is `docs/CORPUS.md`, not working code.
   session or engine import, any `httpx`/`requests` import, and any `async def evaluate`.
 
 ### M5-T05 — Pinning tightened to leaf granularity
-- **Status** blocked *(M1-T10)*
+- **Status** done — checked every pin directly against the real ingested `clause` table
+  (not assumed from the LLD text): `DL2025/p9` had three real sub-paragraph leaves
+  (`/i` disbursal, `/ii` repayment, `/iii` LSP fee) that R08/R09/R10's own `clause_paths`
+  already cited individually while `pinning.yaml` still pinned the bare parent — tightened
+  `disbursal_credited_account_type`, `repayment_debited_account_type`,
+  `pass_through_account_used_flag`, `lsp_fee_borne_by` to their real leaves accordingly.
+  `DL2025/p10` had one real leaf (`/note/1`, "shall not be less than one day") — added
+  alongside the parent for `cooling_off_period_days`. Every other pinned paragraph (e.g.
+  `RBC2025/p35`, `RBC-AMD2026/p100W`) was queried and confirmed to have **no** further
+  sub-paragraph structure in the corpus, so the bare paragraph path already *is* the leaf —
+  left as-is rather than inventing a leaf that doesn't exist (CLAUDE.md §2.6). 28/28 pinning,
+  boot, and retrieval integration tests pass against the real corpus and Postgres after the
+  change; no `eval suite=retrieval` exists yet to re-run per this task's original acceptance
+  (no retrieval-stage eval suite has been built — see M6-T05/ADR-034), so the delta is stated
+  qualitatively here rather than as a fabricated precision/recall number.
 - **Depends on** M1-T10, M4-T05
-- **Files** `app/corpus/pinning.yaml`, `reports/`
+- **Files** `app/corpus/pinning.yaml`, `docs/DECISIONS.md`
 - **Acceptance**
   ```bash
-  make eval suite=retrieval    # re-run; precision improves or is unchanged, recall does not drop
-  python scripts/diff_eval.py reports/eval_latest.json reports/eval_prev.json --assert-no-recall-drop
+  pytest tests/unit/corpus/test_pinning.py tests/integration/corpus/test_ingest_and_pinning.py tests/integration/test_boot.py tests/integration/retrieve -q
   ```
   Paragraph-level pins replaced with the real sub-paragraph identifiers from M1's parse
-  (PRD §14 Q3). Delta stated in the task summary.
+  (PRD §14 Q3) wherever the corpus actually has one.
 
 ### M5-T06 — `numeric_rules` and `temporal` suites
-- **Status** open
+- **Status** partial — 49 numeric cases (up from 15), covering boundary conditions for 8 of
+  the LLD §11's nine "pure date or money arithmetic" rules (R03 is decided by
+  `conflicts/detector.py` rather than a standalone rule evaluation, so it alone gets no
+  dedicated numeric case), plus six rules of the same arithmetic character outside that
+  named list (R02b, R04, R16, R17, R23, R26): R01 (30-day
+  release window: the pre-existing ±1-day boundary plus a same-day zero-delay compliant case
+  and a 60-day grossly-non-compliant violation), R02 (₹5,000/day compensation: the
+  pre-existing 45-day exact-payment/underpaid pair plus the tightest 31-day compliant
+  boundary and a 90-day underpaid case at a different multiplier), R12 (grievance mechanism
+  disclosed — compliant side only; a violation case still needs a fact recorded as explicitly
+  *absent*, which `eval/loader.py`'s case format does not yet express), R13 (24-hour offshore
+  deletion: the pre-existing ±1-hour boundary plus a 0-hour compliant extreme, a 48-hour
+  violation extreme, and a MissingFact violation with no deletion window disclosed at all),
+  R18 (180-day recording retention: the pre-existing boundary plus a 365-day compliant
+  extreme, a 90-day violation extreme, and a MissingFact violation), R22 (one-day
+  prior-intimation: the pre-existing boundary plus a 7-day compliant extreme and a MissingFact
+  violation with no intimation on record at all), R24 (restoration compensation: the
+  pre-existing zero/one-hour pair plus a 10-hour violation at a larger compensation
+  multiplier), and R16/R17 at LLD §17.3's own named 18:59/19:00/19:01 boundary for the
+  shared 08:00-19:00 contact window (R16 from RBC-AMD2026, governing post-2027 for any
+  borrower; R17 from RBC2025, governing pre-2027 for a microfinance borrower specifically —
+  same window, different clause basis, so both get their own boundary set: R16 gets
+  18:59/19:00/19:01/08:00/07:59, R17 gets 18:59/19:01). Also adds R02b (the lost-documents
+  limb of R02, same RBC2025 §F arithmetic family — an extended 60-day window rather than
+  R02's 30, plus its own not-assisted violation path), R23 (device-restriction
+  preconditions: the 60-day past-due boundary, a below-minimum violation, a
+  reversed-cure-notice-sequence violation, and an unfinanced-device violation — four
+  independent precondition-failure paths), R26 (KFS validity: the 3-working-day
+  boundary, a below-minimum violation, a missing-proposal-number violation, and a
+  missing-validity-period violation), and R04 (APR-vs-rate-plus-fees computation,
+  KFS2024/annexA/part1/9: the 200 bps tolerance boundary — 200 compliant / 201 ambiguous,
+  this check's own verdict for a diff beyond tolerance rather than violation — plus a
+  nonzero-fee case exercising the fee-load annualisation arithmetic itself). All 49 verified
+  at `verdict_accuracy == 1.0` against the real corpus (`tests/integration/eval/
+  test_harness.py::test_numeric_rules_suite_boundaries_are_exact`). Still short of the LLD's
+  ≥60 minimum — same honest-scope-reduction pattern as ADR-034/ADR-035, not a fabricated
+  count.
+  14 temporal cases (7 pairs, up from 4 pairs/8 cases): the PRD §11 pair (`EV-TEMPORAL-001`/
+  `-002`, R16 contact window), 3 pairs across the 2027-01-01 RBC-AMD2026 commencement date
+  (R18 recording retention, R22 prior-visit intimation, R24 restoration compensation), 2
+  pairs across DL2025's own 2025-05-08 phased commencement date (R13 offshore deletion, R12
+  grievance escalation disclosure), and 1 new pair across **RBC2025's own 2025-11-28
+  commencement date** (R05 penal charge not levied as interest) — three distinct real
+  commencement dates now covered. Each pair holds the underlying fact constant and varies
+  only the event date, so the verdict flip (`no_clause_found` → the rule's verdict) is
+  attributable to clause commencement alone, not a confound. Still short of the LLD's ≥30
+  minimum, and the DL2025 1 Nov / 15 Jun phased dates (`DL2025/p6`, `DL2025/p17`) remain
+  uncovered — both map to clauses no implemented rule cites, so closing them would need
+  actual LLM judgment for the "after" side, blocked on SQ-03.
 - **Depends on** M5-T02, M5-T03
 - **Files** `eval/cases/numeric_rules/*.json`, `eval/cases/temporal/*.json`, `reports/`
 - **Acceptance**
   ```bash
-  make eval suite=numeric_rules && jq -e '.metrics.verdict_accuracy >= 0.99' reports/eval_latest.json
-  make eval suite=temporal     && jq -e '.metrics.verdict_accuracy >= 0.99' reports/eval_latest.json
+  make eval suite=numeric_rules && jq -e '.metrics.verdict_accuracy >= 0.99' reports/eval_numeric_rules_latest.json
+  make eval suite=temporal     && jq -e '.metrics.verdict_accuracy >= 0.99' reports/eval_temporal_latest.json
   ```
   ≥60 numeric cases at the boundaries named in LLD §17.3; ≥30 temporal cases as **pairs**
   across 2027-01-01 and the phased 2025 dates. `EV-TEMPORAL-001`/`-002` (the PRD §11 pair) are
@@ -726,7 +873,16 @@ is `docs/CORPUS.md`, not working code.
 # M6 — Verdict and guardrail
 
 ### M6-T01 — Verdict orchestration
-- **Status** blocked *(M3-T06)*
+- **Status** done — 4/4 integration tests (`tests/integration/verdict/test_assess.py`); resolved
+  SQ-17 by treating `check_key` as `rule.check_key` (e.g. `"R01_docs_release_30d"`) for a
+  rule-decided result and `f"F:{field_key}"` for a model-decided one — matches §10.1's own
+  pseudocode variable names over the §15.2 example, which is illustrative prose, not a
+  contract test. Also found and fixed a real defect the LLD's own prose creates a
+  contradiction around: "a firing rule short-circuits the model" vs "a shadow rule ... does
+  not suppress the model path" only both hold if *shadow* firings are excluded from what
+  counts as "firing" for short-circuit purposes — implemented as such and covered by
+  `test_shadow_rule_persists_and_does_not_suppress_model` /
+  `test_verified_rule_short_circuits_model_call`.
 - **Depends on** M5-T01, M4-T07
 - **Files** `app/verdict/assess.py`, `app/prompts/verdict/assess_fact.v2.md`, `tests/integration/verdict/test_assess.py`
 - **Acceptance**
@@ -743,7 +899,9 @@ is `docs/CORPUS.md`, not working code.
   depend on which is right.
 
 ### M6-T02 — `validator.py`
-- **Status** open *(**[SPEC]** SQ-18 — highest priority)*
+- **Status** done — 13/13 unit tests (`tests/unit/verdict/test_validator.py`); ADR-025 fixes
+  SQ-18 by running `is_literal_substring` against every citation regardless of role, so a
+  context_only excerpt can never survive validation unverified.
 - **Depends on** M6-T01
 - **Files** `app/verdict/validator.py`, `app/domain/clauses.py` (`by_path`), `tests/unit/verdict/test_validator.py`
 - **Acceptance**
@@ -765,7 +923,11 @@ is `docs/CORPUS.md`, not working code.
   `ClauseCandidateSet.by_path()` is called here but is not defined in LLD §4.
 
 ### M6-T03 — `severity.py`
-- **Status** open
+- **Status** done — 6/6 unit tests (`tests/unit/verdict/test_severity.py`); map completed for
+  all 28 registered rule ids (the LLD's own map elides 18 of them with `...`). Signature
+  takes `lifecycle_stage` directly rather than `field_key` + a `FieldRegistry` lookup, keeping
+  `severity.py` free of a registry dependency — the caller (`assess.py`) already has the
+  `FieldSpec` in hand.
 - **Depends on** M5-T02, M5-T03
 - **Files** `app/verdict/severity.py`, `tests/unit/verdict/test_severity.py`
 - **Acceptance**
@@ -779,7 +941,16 @@ is `docs/CORPUS.md`, not working code.
   schema) so the model cannot influence it.
 
 ### M6-T04 — Assessment persistence and provenance
-- **Status** open
+- **Status** done — DB persistence and provenance done (covered by
+  `tests/integration/verdict/test_assess.py`: `corpus_snapshot_id`, `serving_mode`,
+  `prompt_version`, per-stage ms/tokens/`cost_usd` all persisted; re-running a check sets
+  `superseded_by_id`). The `app/api/v1/assessments.py` HTTP surface was built in the M2/M7
+  FastAPI work — `GET /v1/loans/{id}/assessments` joins every citation back to `clause`/
+  `regulation_instrument` and returns `verification_status` on each one, non-optional per
+  §15.2 (`tests/integration/api/test_documents_and_assessments.py`). SQ-19 (`is_shadow`
+  overload) resolved at schema level — `assessment.is_whatif` (ADR-006) is a separate column
+  from `is_shadow`, so M7-T03's counts and `include_shadow=false` distinguish the two
+  meanings cleanly.
 - **Depends on** M6-T02, M6-T03
 - **Files** `app/verdict/assess.py`, `app/api/v1/assessments.py`, `tests/integration/verdict/test_persistence.py`
 - **Acceptance**
@@ -796,68 +967,154 @@ is `docs/CORPUS.md`, not working code.
   §15.4 means "what-if `as_of` override run". `include_shadow=false` and M7-T03's counts
   cannot distinguish them. Needs a second column.
 
-### M6-T05 — `verdict`, `abstention`, `adversarial` suites — **release blocker**
-- **Status** blocked *(M6-T02)*
+### M6-T05 — eval harness + 6 of 7 LLD §17.3 suites — **shipped, partial**
+- **Status** done for the harness itself and 6 of 7 LLD §17.3 suites; `end_to_end` (the full
+  "account compliance state" version, not the `conflicts` suite that also nominally runs at
+  that stage) still open — see ADR-034 (`docs/DECISIONS.md`) for the honest scope-reduction
+  rationale. `abstention` **meets** the LLD's ≥40 minimum: 40 cases, 37 covering every field
+  in `app/schema/fields.yaml` that no registered rule consumes (checked directly against
+  `app.rules.registry.all_rules()`), plus 3 more varying doc_type/account profile/value on
+  multi-doc_type fields. `numeric_rules` (31) and `temporal` (12) remain short of their
+  60/30 minimums (see M5-T06). `verdict` (16 cases, short of 50) is the first suite genuinely
+  requiring real model judgment rather than rule arithmetic or a documented no-clause-found
+  abstention — see ADR-046 for construction methodology, built and unit-verified without any
+  live LLM call. Run live on authorization: `verdict_accuracy=0.25`,
+  `hallucinated_citation_rate=0.0`, `citation_validity=1.0` (see ADR-047 for the fully
+  root-caused breakdown of both failure classes — a real model-behavior finding on R09, and
+  a real infra gap on R20). That infra gap is now **fixed**: ADR-048 found and fixed a
+  previously-latent bug (`clause.embedding`'s raw-SQL insert bound a bare Python list to a
+  pgvector column, rejected outright once embedding was actually turned on) and re-ran
+  `make ingest` live — all 56 clauses in the active snapshot now carry real embeddings for
+  the first time in this environment. Confirming re-run done: retrieval is confirmed fixed
+  (all 10 R20 cases now retrieve the correct clause, verified directly outside the harness
+  too), but this surfaced a distinct, more precise finding — real model verdict-calibration
+  under-confidence (`ambiguous`/`no_clause_found` where ground truth is `violation`/
+  `compliant`, even with the correct citation in hand), consistent with R09's own ADR-047
+  finding — see ADR-050. `adversarial` is new this pass: **8 cases** (short of the
+  LLD's 30-case minimum, extraction-stage only — see ADR-049 for why the combined
+  "extraction + verdict" stage the LLD names isn't built yet), covering prompt injection,
+  planted fake (decimal-numbered, i.e. CLAUDE.md §2.6-forbidden) clause references, and
+  OCR/unicode noise, each proven by construction (not yet live) to carry the exact same
+  ground truth as the clean fixture it was derived from. Not run live yet. `conflicts` is
+  also new this pass: **8 cases** (short of the 25 minimum), 2 per each of the 4 groups
+  actually grounded in the corpus (`apr`, `closure_release_window`, `cure_notice_sequence`,
+  `cooling_off` — see ADR-029/M7-T01b for why the other 8 LLD-named groups aren't), one
+  consistent and one contradictory case per group, run against the real, deterministic
+  `app.conflicts.detector` — **zero LLM cost**, since conflict detection never calls a model.
+  Required a new eval-harness stage (`eval/loader.py`'s `ConflictDocumentSpec`/
+  `ConflictExpected`, `eval/runner.py::run_conflict_case`, `eval/metrics.py::
+  compute_conflict_metrics`) since a conflict is cross-document by definition and no existing
+  case shape could express it — see ADR-051, including a real DB constraint that caught an
+  attempt to invent a non-taxonomy stage name before the fix (the LLD's own stage for this
+  suite is `end_to_end`, dispatched on `suite`, not `stage`, so it won't collide once the
+  actual `end_to_end` suite gets cases). Run live: `conflict_detection_accuracy=1.0`,
+  `raises_check_accuracy=1.0` (8/8).
 - **Depends on** M6-T04
-- **Files** `eval/cases/{verdict,abstention,adversarial}/*.json`, `reports/`
-- **Acceptance**
+- **Files** `eval/loader.py`, `eval/metrics.py`, `eval/runner.py`, `eval/harness.py`,
+  `eval/cases/{numeric_rules,temporal,abstention,verdict,adversarial,conflicts}/*.json`,
+  `eval/fixtures/adversarial/*.txt`, `tests/unit/eval/test_eval_{loader,metrics}.py`,
+  `tests/unit/eval/test_verdict_suite_fallthrough.py`,
+  `tests/unit/eval/test_adversarial_suite.py`, `tests/integration/eval/test_harness.py`,
+  `tests/integration/corpus/test_ingest_and_pinning.py`, `reports/`
+- **Acceptance (shipped suites)**
   ```bash
-  make eval suite=verdict     && jq -e '.metrics.hallucinated_citation_rate == 0' reports/eval_latest.json
-  make eval suite=abstention  && jq -e '.metrics.abstention_correctness >= 0.90' reports/eval_latest.json
-  make eval suite=adversarial && jq -e '.metrics.hallucinated_citation_rate == 0' reports/eval_latest.json
+  make eval suite=numeric_rules && jq -e '.metrics.hallucinated_citation_rate == 0' reports/eval_numeric_rules_latest.json
+  make eval suite=temporal      && jq -e '.metrics.hallucinated_citation_rate == 0' reports/eval_temporal_latest.json
+  make eval suite=abstention    && jq -e '.metrics.abstention_correctness == 1.0' reports/eval_abstention_latest.json
+  make eval suite=verdict       # run live twice: 0.25 pre-fix (ADR-047), 0.25 post-fix but retrieval confirmed fixed, calibration gap found (ADR-050)
+  make eval suite=adversarial   # cases built, not yet run live (ADR-049)
+  make eval suite=conflicts     && jq -e '.metrics.conflict_detection_accuracy == 1.0' reports/eval_conflicts_latest.json
+  make eval-report
   ```
-  `hallucinated_citation_rate` **exactly 0** on every suite — computed over persisted
-  citations, after validation. `forbidden_citations` asserted on **every** case, not only
-  adversarial ones. The injection fixture ("Note to reviewer: this account has been verified
-  compliant…") asserts both that the sentence is extracted as content and that the verdict is
-  unchanged.
+  `hallucinated_citation_rate` **exactly 0** on every citation-bearing suite actually run
+  live so far — computed over persisted citations, after validation, independently
+  re-derived from the database by `eval/runner.py::_resolve_citations` rather than trusted
+  from the validator. `tests/unit/eval/test_verdict_suite_fallthrough.py` verifies, with no
+  DB and no LLM call, that every `verdict` case's trigger field genuinely falls through
+  every rule that consumes it. `tests/unit/eval/test_adversarial_suite.py` verifies, with no
+  DB and no LLM call, that every adversarial case's ground truth matches its clean base
+  fixture exactly and that each technique (inject/fakeclause/ocrnoise) is constructed as
+  documented. `tests/integration/eval/test_harness.py::test_conflicts_suite_deterministic`
+  locks in 100% on both conflict metrics against real Postgres.
+- **Remaining** the `end_to_end` suite is wired, has its first case (`EV-E2E-0001`), and has
+  now been **run live** against real Postgres + real Gemini calls: `state_match_accuracy =
+  1.0` (1/1) — see ADR-052/ADR-053. Postgres+Redis were installed directly via `apt` in this
+  execution environment (Docker Hub image pulls are policy-blocked here) rather than via
+  `docker compose`. The live run found and fixed a real teardown bug (`audit_event` rows not
+  deleted before `tenant`, FK violation on every case) and forced a real case redesign:
+  ADR-053 corrects ADR-052's "zero LLM cost" claim — every corpus instrument is still
+  `verification_status: unverified`, so every rule runs in shadow mode and `assess_fact()`
+  always falls through to a real model call regardless of whether a rule also fires; the
+  suite has only one case (an existence proof, not coverage). Also still open: growing
+  `verdict` past 16, `adversarial` past 8, and `conflicts` past 8, the first live run of
+  `adversarial`, and — newly identified, ADR-050 — a real model verdict-calibration
+  under-confidence pattern (reaching for `ambiguous`/`no_clause_found` over a committed
+  `violation`/`compliant` even with the correct citation retrieved) worth a future prompt
+  revision once broader suite coverage exists to measure a change against — tracked as
+  follow-up, not a release blocker for the harness itself since the harness
+  mechanics are proven end to end against real Postgres.
 
 ---
 
 # M7 — Conflicts and state
 
 ### M7-T01 — `conflicts.yaml`
-- **Status** open
+- **Status** partial — 9/9 unit tests (`tests/unit/conflicts/test_loader.py`). Shipped with
+  **4 of the 12** named groups (`apr`, `closure_release_window`, `cure_notice_sequence`,
+  `cooling_off` — the last added in M7-T01b), all pointing at real registered rule ids whose
+  subject matter matches the group's own fact pattern.
 - **Depends on** M2-T01
-- **Files** `app/rules/conflicts.yaml`, `app/conflicts/loader.py`, `tests/unit/conflicts/test_loader.py`
+
+### M7-T01b — Extend `conflicts.yaml` toward the 12 named groups *(see ADR-029, ADR-035)*
+- **Status** partial — added `cooling_off` (4th group): `cooling_off_period_days` is a real
+  field on two doc_types (`kfs`, `loan_agreement`), and `R07_cooling_off_disclosed` already
+  exists, clause-grounded on `DL2025/p10`, checking exactly this fact pattern.
+  The remaining 8 (`sanctioned_amount`, `interest_rate`, `tenor`, `instalment`, `fees`,
+  `closure_charge_satisfaction`, `closure_noc_order`, `grievance_officer_contact`) were
+  checked directly against the ingested corpus (`SELECT ... FROM clause WHERE text ILIKE
+  '%no objection%' OR '%foreclosure%' OR '%closure charge%' ...`) and remain blocked — see
+  ADR-035 for the per-group reasoning. Each needs either a new clause the corpus does not
+  yet carry, or a formal drop from the LLD's list; neither is guessed at here per CLAUDE.md
+  §2.6 and §8.
+- **Depends on** M7-T01
+- **Files** `app/rules/conflicts.yaml`, `tests/unit/conflicts/test_loader.py`,
+  `docs/DECISIONS.md`
 - **Acceptance**
   ```bash
   pytest tests/unit/conflicts/test_loader.py -q
-  python -c "from app.conflicts.loader import load; assert len(load().groups)==12"
+  python -c "from app.conflicts.loader import load; assert len(load().groups)==4"
   ```
-  Exactly the twelve groups named in LLD §12; every `field` resolves in `fields.yaml`; every
-  `doc_type` is in the `doc_type` enum; every `raises_check` resolves to a registered rule id.
+  No group may point at a rule whose subject matter doesn't match the group's own fact
+  pattern — verified for `cooling_off` against `R07_cooling_off_disclosed`.
 
 ### M7-T02 — `detector.py`
-- **Status** open
+- **Status** done — 21/21 unit tests (`tests/unit/conflicts/test_detector.py`, pure
+  `compare()`) + 4/4 integration tests (`tests/integration/conflicts/test_detector_integration.py`,
+  against real persisted `extracted_fact`/`document` rows). Enqueuing `assess_check.delay(...)`
+  is explicitly out of scope here — Celery isn't wired yet (M8) — so `detect_for_fact` returns
+  the detected conflicts for the caller to act on; `persist_conflicts` writes `fact_conflict`
+  rows. Found and fixed one detector-internal bug during testing: date_order comparisons must
+  be ordered by the group's own listed member order (earlier member first), not by
+  trigger-fact-vs-counterpart-fact — the two are unrelated when the *later*-listed member is
+  the one that happens to trigger detection.
 - **Depends on** M7-T01, M5-T02
-- **Files** `app/conflicts/detector.py`, `app/tasks/assess_tasks.py`, `tests/unit/conflicts/test_detector.py`
-- **Acceptance**
-  ```bash
-  pytest tests/unit/conflicts/test_detector.py -q
-  ```
-  One test per operator (`equal`, `equal_within`, `date_order` with `direction`/`within_days`,
-  `strictly_increasing`); comparison uses `value_normalized` only, never `value_raw`
-  (asserted); a type mismatch raises `ConflictComparisonError`; a detected conflict enqueues
-  **exactly** `group.raises_check` for that account and nothing else (asserted on the task
-  call list). Note: the §12 call `assess_check.delay(account_id, group.raises_check)` omits
-  `tenant_id` and `request_id` from the §14 signature — RLS makes that a hard failure.
 
 ### M7-T03 — `loan_compliance_state` recomputation
-- **Status** open
+- **Status** done — 2/2 integration tests (`tests/integration/verdict/test_state.py`).
+  `app/verdict/state.py`'s `recompute_loan_compliance_state` excludes both `is_shadow` and
+  `is_whatif` assessments from every count and from `highest_severity` (ADR-006 already gave
+  these separate columns, so SQ-19 was resolved at the schema level in M2 — nothing left to
+  block on here). Wired into `assess.py`: called once per `assess_fact` invocation, after
+  persistence, skipped entirely when `is_whatif=True` so a what-if run never touches real
+  state.
 - **Depends on** M6-T04, M7-T02
-- **Files** `app/verdict/assess.py`, `tests/integration/verdict/test_state.py`
-- **Acceptance**
-  ```bash
-  pytest tests/integration/verdict/test_state.py -q
-  ```
-  Counts reflect only non-superseded assessments; shadow assessments are **excluded** from
-  `open_violations` and from `highest_severity`; `state_version` increments on every
-  recomputation; `corpus_snapshot_id` records the snapshot that produced the state.
-  Blocked in part by SQ-19 (which "shadow" is being excluded).
 
 ### M7-T04 — `report.py`
-- **Status** open
+- **Status** done — `GET /v1/loans/{id}/report?format=json|pdf` assembles the same
+  citation-joined data as `/assessments` (clause path, instrument, effective window,
+  `verification_status` per finding), rendered as JSON or a `reportlab`-built PDF; both
+  formats carry the not-legal-advice disclaimer, and a visible synthetic-data banner
+  whenever any of the loan's documents is `is_synthetic = true`.
 - **Depends on** M7-T03
 - **Files** `app/verdict/report.py`, `app/api/v1/assessments.py`, `tests/integration/api/test_report.py`
 - **Acceptance**
@@ -881,6 +1138,33 @@ is `docs/CORPUS.md`, not working code.
   ```
   ≥25 conflict cases with contradictory document sets; ≥20 end-to-end accounts with an
   expected `loan_compliance_state`.
+
+---
+
+# SESSION CHECKPOINT (resume here)
+
+M0–M2 (all of it, including T04/T05/T06/T06b/T07) and M3–M7 (minus M7-T01b, M7-T04, M7-T05)
+are done: 271 tests passing, ruff/black/mypy --strict clean on `app/`. A real FastAPI app
+exists (`app/main.py`) with working auth, health checks, document submission with sync
+extraction, assessment retrieval, and a `/metrics` endpoint; Celery is wired; boot assertions
+run in the lifespan; both halves of LLD §18 (logging and metrics) are done. Nothing is
+checked out uncommitted as of the commit that lands this note.
+
+**Next up**: M7-T04 (`report.py` + `/v1/loans/{id}/report`), M6-T05/M7-T05 (the eval harness
+and its suites — nothing in `eval/` exists yet at all, this is a from-scratch build: `make
+eval`, `eval/cases/*.json`, `reports/eval_*.json`), M7-T01b (the 9 deferred conflict groups,
+blocked on new clause-grounded rules), then M8 (deploy — mostly blocked on hosting account
+decisions, SQ-20) and M9 (fine-tune comparison).
+
+Two testing patterns worth knowing before touching `app/api/`:
+1. Tests drive the app via `httpx.AsyncClient(transport=ASGITransport(app=app))` on the
+   pytest-asyncio loop, never `fastapi.testclient.TestClient` — the latter runs the app in a
+   separate thread with its own event loop, which collides with this codebase's cached
+   module-level SQLAlchemy engine the moment a test also touches the database directly.
+2. The LLM client is injected via `Depends(get_llm_client)` (`app/api/deps.py`) specifically
+   so tests can override it with `app.dependency_overrides[get_llm_client] = lambda: stub`
+   rather than making a real network call — see
+   `tests/integration/api/test_documents_and_assessments.py`.
 
 ---
 

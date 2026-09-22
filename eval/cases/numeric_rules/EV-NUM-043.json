@@ -1,0 +1,30 @@
+{
+  "case_ref": "EV-NUM-043",
+  "suite": "numeric_rules",
+  "stage": "verdict",
+  "doc_type": "kfs",
+  "input_ref": null,
+  "event_date": "2026-05-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "loan_proposal_number": "KFS-2027-000123",
+      "kfs_validity_days": "3"
+    },
+    "check_key": "R26_kfs_validity",
+    "verdict": "compliant",
+    "decisive_citations": [
+      "KFS2024/p1"
+    ],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Boundary: exactly 3 working days' validity (the minimum) with a proposal number present \u2014 compliant."
+}

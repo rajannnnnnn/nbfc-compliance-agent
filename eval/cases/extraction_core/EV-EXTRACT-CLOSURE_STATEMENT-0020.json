@@ -1,0 +1,29 @@
+{
+  "case_ref": "EV-EXTRACT-CLOSURE_STATEMENT-0020",
+  "suite": "extraction_core",
+  "stage": "extraction",
+  "doc_type": "closure_statement",
+  "input_ref": "closure_statement/closure_statement_0020.txt",
+  "event_date": "2026-04-17",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "full_repayment_date": "2026-04-16",
+      "closure_statement_date": "2026-04-17",
+      "original_docs_released_date": "2026-05-16"
+    },
+    "check_key": "extraction",
+    "verdict": "n/a",
+    "decisive_citations": [],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Ground truth is the exact value scripts/gen_synthetic_docs.py used to render closure_statement_0020.txt, not a separately authored expectation."
+}

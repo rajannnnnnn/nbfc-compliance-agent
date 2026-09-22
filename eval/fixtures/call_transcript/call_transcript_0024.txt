@@ -1,0 +1,10 @@
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+
+COLLECTIONS CALL TRANSCRIPT
+Date/time of call: 27-09-2026 14:00 IST
+Agent: Vikram Chauhan (Apex Recovery Services)
+Agent identified themself and the agency before proceeding with the call.
+Days past due at time of contact: 95
+Call was recorded; recording will be retained for 365 days.
+No third party was contacted regarding this account.
+No abusive language or threats were used during this call.

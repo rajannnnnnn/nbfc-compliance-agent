@@ -1,0 +1,28 @@
+{
+  "case_ref": "EV-NUM-001",
+  "suite": "numeric_rules",
+  "stage": "verdict",
+  "doc_type": "docs_release_ack",
+  "input_ref": null,
+  "event_date": "2026-04-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "full_repayment_date": "2026-03-02",
+      "original_docs_released_date": "2026-04-01"
+    },
+    "check_key": "R01_docs_release_30d",
+    "verdict": "compliant",
+    "decisive_citations": ["RBC2025/p35"],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Boundary: exactly 30 days (2026-03-02 to 2026-04-01) is within the window — compliant, not violation."
+}

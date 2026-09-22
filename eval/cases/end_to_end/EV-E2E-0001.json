@@ -1,0 +1,32 @@
+{
+  "case_ref": "EV-E2E-0001",
+  "suite": "end_to_end",
+  "stage": "end_to_end",
+  "doc_type": null,
+  "input_ref": null,
+  "event_date": "2026-05-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "documents": [
+    {
+      "doc_type": "closure_statement",
+      "facts": {
+        "closure_statement_date": "2026-05-01"
+      }
+    }
+  ],
+  "expected_state": {
+    "open_violations": 0,
+    "open_ambiguous": 0,
+    "open_no_clause": 1,
+    "unresolved_conflicts": 0,
+    "highest_severity": "informational"
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Uses closure_statement_date, the same no-rule-consumes field/value as EV-ABST-001 (abstention suite), deliberately NOT R01/R02's fields. Two live runs against real Postgres showed those originally-chosen fields (full_repayment_date/original_docs_released_date) don't give a deterministic rollup: R01 AND R02 both consume them (so 2 rules fire, not 1 -- a case-design mistake), and both currently run in shadow mode since every corpus instrument is still verification_status=unverified (CLAUDE.md-mandated: no citable verdict without a resolvable citation against verified law), so their violations are correctly excluded from loan_compliance_state's counts by app/verdict/state.py -- and because no rule is ever 'decided' while shadow, assess_fact ALSO calls the model per field, and its real-LLM verdict (ambiguous vs no_clause_found) varied between the two live runs, changing highest_severity via app/verdict/severity.py's FIELD_SEVERITY_DEFAULT[CLOSURE]. See ADR-052's follow-up correction. This case sidesteps all of that: no rule consumes closure_statement_date at all, so there is exactly one assess_fact call and one model verdict, inheriting the same abstention_correctness reliability already measured by the abstention suite (0.825 live) rather than a new, compounded source of flakiness."
+}

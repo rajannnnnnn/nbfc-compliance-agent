@@ -1,0 +1,27 @@
+{
+  "case_ref": "EV-ABST-017",
+  "suite": "abstention",
+  "stage": "verdict",
+  "doc_type": "sanction_letter",
+  "input_ref": null,
+  "event_date": "2026-05-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "colending_partner_name": "ABC Bank Ltd"
+    },
+    "check_key": "F:colending_partner_name",
+    "verdict": "no_clause_found",
+    "decisive_citations": [],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "No rule in this build consumes colending_partner_name and no ingested clause governs it directly \u2014 a correct abstention, not a stretch to fit an unrelated provision."
+}

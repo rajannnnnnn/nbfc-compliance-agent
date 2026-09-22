@@ -1,0 +1,22 @@
+{
+  "case_ref": "EV-CONF-COOLINGOFF-0001",
+  "suite": "conflicts",
+  "stage": "end_to_end",
+  "doc_type": null,
+  "input_ref": null,
+  "event_date": "2026-01-15",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": true,
+    "device_financed": false
+  },
+  "documents": [
+    { "doc_type": "kfs", "facts": { "cooling_off_period_days": "7" } },
+    { "doc_type": "loan_agreement", "facts": { "cooling_off_period_days": "3" } }
+  ],
+  "conflict_expected": { "conflict_expected": true, "raises_check": "R07_cooling_off_disclosed" },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "cooling_off group. KFS discloses 7 days, the loan agreement discloses 3 days for the same loan -- the two governing documents disagree outright (operator equal, no tolerance). Conflict, raises R07_cooling_off_disclosed."
+}

@@ -1,0 +1,112 @@
+# Corpus source manifest. LLD §6.4 / M1-T01.
+#
+# source_url is a local path by default (ADR-002) — fetch.py reads and hashes it directly,
+# no network call. Replace with a real https:// URL once you have one; the same field name
+# and the same `make ingest` / `make corpus-verify` commands work either way.
+#
+# Every instrument here is placeholder text (docs/DECISIONS.md ADR-001) until you replace the
+# files under data/raw/instruments/. verification_status is `unverified` for all of them
+# right now — set it honestly once you have real text (`rbi_verified` only if hashed against
+# a source you can name, `secondary_sourced` otherwise).
+
+version: 1
+
+instruments:
+  - code: DL2025
+    official_title: "Reserve Bank of India (Digital Lending) Directions, 2025 [PLACEHOLDER]"
+    circular_number: "RBI/2025-26/36 · DOR.STR.REC.19/21.07.001/2025-26"
+    issued_on: 2025-05-08
+    source_url: data/raw/instruments/dl2025.txt
+    status: in_force
+    effective_from: 2025-05-08
+    effective_to: null
+    citable: true
+    verification_status: unverified
+    verification_note: "Placeholder text — see data/raw/instruments/README.md. Real text is regulator-hosted per PRD §10 once supplied."
+    applies_to_entity_types: [nbfc]
+    dialect: roman
+    para_overrides:
+      "6":  { effective_from: 2025-11-01 }
+      "17": { effective_from: 2025-06-15 }
+
+  - code: KFS2024
+    official_title: "Key Facts Statement (KFS) for Loans & Advances [PLACEHOLDER]"
+    circular_number: "RBI/2024-25/18 · DOR.STR.REC.13/13.03.00/2024-25"
+    issued_on: 2024-04-15
+    source_url: data/raw/instruments/kfs2024.txt
+    status: in_force
+    effective_from: 2024-10-01
+    effective_to: null
+    citable: true
+    verification_status: unverified
+    verification_note: "Placeholder text — see data/raw/instruments/README.md."
+    applies_to_entity_types: [nbfc]
+    dialect: roman
+    has_annex: true
+    para_overrides: {}
+
+  - code: RBC2025
+    official_title: "Reserve Bank of India (Non-Banking Financial Companies – Responsible Business Conduct) Directions, 2025"
+    circular_number: "RBI/DOR/2025-26/362 · DOR.MCS.REC.No.281/01-01-039/2025-26 [UNVERIFIED — not yet checked against the real PDF]"
+    issued_on: 2025-11-28
+    source_url: data/raw/instruments/rbc2025.txt
+    status: in_force
+    effective_from: 2025-11-28
+    effective_to: null
+    citable: true
+    verification_status: unverified
+    verification_note: "CORRECTED (2026-09-21): the PDF actually matching this instrument is the one named 329f97d5-362MD26CA... (sha256 baed420340e983d696cc1b6546bdd4513bd4e658977715c5f00a096714a3a559 of the ORIGINAL PDF) -- an earlier note here wrongly attributed a different PDF (837daa67..., which is actually the NBFC Miscellaneous Directions, circular 373, not this one) based on upload-order guessing rather than reading the PDF's own title page. The real circular number printed on page 1 of the correct PDF, 'RBI/DOR/2025-26/362 / DOR.MCS.REC.No.281/01-01-039/2025-26', matches exactly what was already recorded here as a placeholder guess -- strong independent confirmation. Real RBI-hosted source: https://rbi.org.in/Scripts/BS_ViewMasDirections.aspx?id=12931 (not id=12942 as previously and wrongly noted) -- unreachable from this environment (rbi.org.in 403s at the proxy, SQ-01), so source_url stays local. data/raw/instruments/rbc2025.txt now holds the REAL extracted PDF text (66881 chars, 37 pages, pypdf extraction) in place of the fabricated placeholder -- paragraphs 35 (release timeline), 39 (compensation), 40 (lost documents) match the real text exactly, confirming R01/R02/R02b's citations. paragraph 45 does NOT match R17's premise (microfinance contact hours) -- real para 45 concerns gold/silver collateral valuation methodology disclosure; the real general contact-hour restriction is paragraph 100, which explicitly EXCLUDES microfinance loans and defers to a separate, not-yet-ingested instrument (NBFC Credit Facilities Directions, 2025) -- see ADR-055. citable stays true only for R01/R02/R02b's paragraphs; R17's citation is flagged, not fixed, pending a decision -- do not treat verification_status=unverified as blanket-safe for every paragraph this instrument's rules cite."
+    applies_to_entity_types: [nbfc]
+    dialect: paren_numeral
+    para_overrides: {}
+
+  - code: RBC-AMD2026
+    official_title: "RBC Amendment Directions, 2026 — recovery of loans and engagement of recovery agents [PLACEHOLDER]"
+    circular_number: "reported RBI/2026-2027/230 · DOR.MCS.REC.No.199/01-01-039/2026-27"
+    issued_on: 2026-08-06
+    source_url: data/raw/instruments/rbc_amd2026.txt
+    status: notified_not_yet_effective
+    effective_from: 2027-01-01
+    effective_to: null
+    citable: true
+    verification_status: secondary_sourced
+    verification_note: "Circular number and text not confirmed against an RBI-hosted page (PRD §10). Placeholder text besides — see data/raw/instruments/README.md. Rules gated on this instrument run in shadow mode until both are resolved."
+    applies_to_entity_types: [nbfc]
+    dialect: paren_numeral
+    para_overrides: {}
+
+  - code: RBC-AMD2026-DRAFT
+    official_title: "Revised draft of the RBC Amendment Directions, 2026 [PLACEHOLDER]"
+    circular_number: "DOR.MCS.REC.No./01-01-039/2026-27"
+    issued_on: 2026-05-20
+    source_url: data/raw/instruments/rbc_amd2026_draft.txt
+    status: draft
+    effective_from: null
+    effective_to: null
+    citable: false
+    verification_status: unverified
+    verification_note: "Draft — never citable regardless of verification status. Placeholder text — see data/raw/instruments/README.md."
+    applies_to_entity_types: [nbfc]
+    dialect: paren_numeral
+    para_overrides: {}
+
+supersessions:
+  - superseding_code: DL2025
+    superseded_circular_number: "DOR.CRE.REC.66/21.07.001/2022-23"
+    superseded_title: "Guidelines on Digital Lending"
+    superseded_on: 2025-05-08
+  - superseding_code: RBC2025
+    superseded_circular_number: "NBFC Fair Practices Code (various circulars)"
+    superseded_title: "NBFC Fair Practices Code"
+    superseded_on: 2025-11-28
+
+# Title patterns used by app/corpus/references.py to recognise a cross-instrument reference
+# when no circular number is quoted inline.
+reference_title_patterns:
+  KFS2024:
+    - "Key Facts Statement \\(KFS\\) for Loans\\s*&?\\s*Advances"
+    - "Key Facts Statement circular"
+  RBC2025:
+    - "Responsible Business Conduct"
+  DL2025:
+    - "Digital Lending\\) Directions"

@@ -1,0 +1,28 @@
+{
+  "case_ref": "EV-TEMPORAL-003",
+  "suite": "temporal",
+  "stage": "verdict",
+  "doc_type": "call_transcript",
+  "input_ref": null,
+  "event_date": "2026-12-15",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "call_recorded_flag": "true",
+      "recording_retention_days": "90"
+    },
+    "check_key": "F:recording_retention_days",
+    "verdict": "no_clause_found",
+    "decisive_citations": [],
+    "context_citations": ["RBC-AMD2026/p100N"],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Temporal pair (1/2): before the 2027-01-01 amendment commencement, R18's six-month retention minimum is not yet in force, so a 90-day retention period governs no clause. Pairs with EV-TEMPORAL-004."
+}

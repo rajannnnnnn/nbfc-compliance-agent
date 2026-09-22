@@ -1,0 +1,29 @@
+{
+  "case_ref": "EV-TEMPORAL-013",
+  "suite": "temporal",
+  "stage": "verdict",
+  "doc_type": "penal_charge_notice",
+  "input_ref": null,
+  "event_date": "2025-10-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "penal_charge_described_as_interest_flag": "true"
+    },
+    "check_key": "F:penal_charge_described_as_interest_flag",
+    "verdict": "no_clause_found",
+    "decisive_citations": [],
+    "context_citations": [],
+    "forbidden_citations": [
+      "RBC2025/p30/1"
+    ]
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Third phased-date commencement pair (see TASKS.md M5-T06): RBC2025/p30/1 (R05's basis) is effective_from 2025-11-28. Before that date the clause is not yet in force, so a penal charge described as interest governs no clause. Pairs with EV-TEMPORAL-014."
+}

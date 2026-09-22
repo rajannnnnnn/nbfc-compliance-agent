@@ -1,0 +1,30 @@
+{
+  "case_ref": "EV-NUM-044",
+  "suite": "numeric_rules",
+  "stage": "verdict",
+  "doc_type": "kfs",
+  "input_ref": null,
+  "event_date": "2026-05-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "loan_proposal_number": "KFS-2027-000124",
+      "kfs_validity_days": "2"
+    },
+    "check_key": "R26_kfs_validity",
+    "verdict": "violation",
+    "decisive_citations": [
+      "KFS2024/p1"
+    ],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Boundary: 2 days' validity is one day short of the 3-day minimum \u2014 violation."
+}

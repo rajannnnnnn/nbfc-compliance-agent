@@ -1,0 +1,31 @@
+{
+  "case_ref": "EV-VERDICT-R09-006",
+  "suite": "verdict",
+  "stage": "verdict",
+  "doc_type": "account_statement",
+  "input_ref": null,
+  "event_date": "2026-06-15",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": true,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "repayment_debited_account_type": "unknown"
+    },
+    "check_key": "F:repayment_debited_account_type",
+    "verdict": "ambiguous",
+    "decisive_citations": [
+      "DL2025/p9/ii"
+    ],
+    "context_citations": [],
+    "forbidden_citations": [
+      "DL2025/p9/iii"
+    ]
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "R09_no_pool_account reads only pass_through_account_used_flag; that field is deliberately absent here so facts.flag_of() raises MissingFact and the rule returns NotApplicable even though account.is_digital_lending is True, so DL2025/p9/ii stays retrieval-eligible and assess_fact() falls through to a real model call (check_key='F:repayment_debited_account_type'), never a rule decision. Ground truth reasons directly from the ingested clause text: 'All loan repayments shall be collected back only into the bank account of the regulated entity, without any pass-through account of the lending service provider.' decisive_citations assumes retrieve_candidates() ranks DL2025/p9/ii top for this field's label/description, which is unverified without a live embed() call (none made per current instruction) and should be reconciled against real output on the first live run."
+}

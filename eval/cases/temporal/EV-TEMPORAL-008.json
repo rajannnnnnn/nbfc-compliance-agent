@@ -1,0 +1,27 @@
+{
+  "case_ref": "EV-TEMPORAL-008",
+  "suite": "temporal",
+  "stage": "verdict",
+  "doc_type": "field_visit_report",
+  "input_ref": null,
+  "event_date": "2027-02-15",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": true
+  },
+  "expected": {
+    "facts": {
+      "device_restoration_delay_hours": "5"
+    },
+    "check_key": "R24_restoration_compensation",
+    "verdict": "violation",
+    "decisive_citations": ["RBC-AMD2026/p100S"],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Temporal pair (2/2): same 5-hour restoration delay as EV-TEMPORAL-007, but 2027-02-15 is after the 2027-01-01 commencement date, so the per-hour compensation rule now governs and any wrongful delay is a violation."
+}

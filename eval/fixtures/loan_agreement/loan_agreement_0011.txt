@@ -1,0 +1,15 @@
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+
+LOAN AGREEMENT
+This agreemcnt is made between Meridian Credit Ltd. ("the Lender") and Ravi Kumar Singh ("the Borrower").
+Agreement reference: LA-SYN-2025-46342
+Type of loan: gold
+Sanctioned amount: Rs. 250,000
+Rate of interest: 16.50% p.a.
+Disbursal shall be credited to the Borrower's own bank account.
+Repayment shall be debited directly from the Borrower's own bank account; no pass-through or pooling account is used.
+Cooling-off period: 1 days; no prepayment penalty within this period.
+The particulars of the Key Facts Statement are reproduced as a summary box forming part of this Agreement.
+Grievance escalation mechanism is described in clause 9.5 of this Agreement.
+This loan is not transferable without the Lender's prior written consent.
+A lending service provider, Apex Recovery Services, is engaged for sourcing and recovery under this Agreement; its fee is borne by the Lender, not the Borrower.

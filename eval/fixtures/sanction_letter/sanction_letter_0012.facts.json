@@ -1,0 +1,12 @@
+{
+  "doc_type": "sanction_letter",
+  "facts": {
+    "loan_type": "gold",
+    "sanctioned_amount": "75000000",
+    "interest_rate_bps": "2100",
+    "processing_fee": "250000",
+    "fees_total": "250000",
+    "loan_term_days": "730",
+    "apr_bps": "2237"
+  }
+}

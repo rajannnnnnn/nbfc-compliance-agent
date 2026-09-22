@@ -1,0 +1,9 @@
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+
+SANCTION LETTER
+Reference: SL-SYN-2025-33002
+Date: 24 January 2026
+We are pleased to sanction a business loan of Rs. 500,000 at 16.50% p.a.
+Processing fee: INR 5,000.00
+Loan term: 365 days.
+Annual Percentage Rate: 18.09% p.a.

@@ -1,0 +1,13 @@
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+
+KEY FACTS STATEMENT
+Loan proposal number: LN-SYN-2026-11854
+Type of loan: business
+Sanctioned loan amount: Rs. 250,000
+Loan term: 365 days
+Interest rate: 16.50% p.a. (floating)
+Total fees and charges: ₹2,500/-
+Annual Percentage Rate (APR): 17.11% p.a.
+Cooling-off / look-up period: 1 days. No prepayment penalty applies if the borrower exits within this period.
+Grievance redressal officer: Vikram Chauhan, phone 1800-399-3068, email grievance@meridian.example
+This Key Facts Statement is valid for 5 working days from the date of issue, 10 April 2026.

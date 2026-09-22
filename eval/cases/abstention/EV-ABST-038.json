@@ -1,0 +1,27 @@
+{
+  "case_ref": "EV-ABST-038",
+  "suite": "abstention",
+  "stage": "verdict",
+  "doc_type": "kfs",
+  "input_ref": null,
+  "event_date": "2026-05-01",
+  "account_profile": {
+    "product_type": "microfinance",
+    "is_microfinance": true,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "loan_type": "microfinance"
+    },
+    "check_key": "F:loan_type",
+    "verdict": "no_clause_found",
+    "decisive_citations": [],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "A microfinance-flagged account changes retrieval's borrower_class, but loan_type itself is still consumed by no rule and governed by no ingested clause \u2014 abstention holds regardless of borrower class."
+}

@@ -1,0 +1,627 @@
+# The field registry — single source of truth. LLD §5. 82 keys (ADR-016: the enumerated
+# names in LLD §5.3 are authoritative over the section's "sixty-one" opening sentence, which
+# matches neither its own group counts (80) nor its own enumerated names (82)).
+version: 1
+fields:
+  # --- Sanction disclosure (32) ---------------------------------------------------------
+  - key: loan_proposal_number
+    label: Loan proposal / account number
+    type: string
+    doc_types: [kfs]
+    lifecycle_stage: sanction
+    required_for: [kfs]
+    description: The unique identifier assigned by the lender to this loan proposal.
+
+  - key: loan_type
+    label: Type of loan
+    type: enum
+    enum_values: [personal, microfinance, gold, vehicle, business, consumer_durable, other]
+    doc_types: [kfs, loan_agreement, sanction_letter]
+    lifecycle_stage: sanction
+    description: The product category as stated in the document.
+
+  - key: sanctioned_amount
+    label: Sanctioned loan amount
+    type: money
+    doc_types: [kfs, loan_agreement, sanction_letter]
+    lifecycle_stage: sanction
+    required_for: [kfs]
+    description: The principal amount sanctioned under the loan agreement, in rupees.
+
+  - key: disbursal_schedule_text
+    label: Disbursal schedule
+    type: string
+    doc_types: [kfs, loan_agreement, sanction_letter]
+    lifecycle_stage: sanction
+    description: The manner and stages in which the sanctioned amount is disbursed.
+
+  - key: loan_term_days
+    label: Loan term
+    type: duration_days
+    doc_types: [kfs, loan_agreement, sanction_letter]
+    lifecycle_stage: sanction
+    description: The tenor of the loan, converted to days.
+
+  - key: instalment_amount
+    label: Instalment amount
+    type: money
+    doc_types: [kfs, loan_agreement]
+    lifecycle_stage: sanction
+    description: The amount payable per instalment.
+
+  - key: instalment_count
+    label: Number of instalments
+    type: integer
+    doc_types: [kfs, loan_agreement]
+    lifecycle_stage: sanction
+    description: The total number of instalments over the loan term.
+
+  - key: interest_rate_bps
+    label: Interest rate
+    type: rate_bps
+    doc_types: [kfs, loan_agreement, sanction_letter]
+    lifecycle_stage: sanction
+    normalisation: { unit: percent_to_bps }
+    description: The annualised interest rate as disclosed, before fees.
+
+  - key: interest_rate_type
+    label: Interest rate type
+    type: enum
+    enum_values: [fixed, floating]
+    doc_types: [kfs, loan_agreement]
+    lifecycle_stage: sanction
+    description: Whether the interest rate is fixed or resets against a benchmark.
+
+  - key: benchmark_name
+    label: Benchmark used for rate reset
+    type: string
+    doc_types: [kfs, loan_agreement]
+    lifecycle_stage: sanction
+    description: The external benchmark the floating rate is referenced to, if any.
+
+  - key: spread_bps
+    label: Spread over benchmark
+    type: rate_bps
+    doc_types: [kfs, loan_agreement]
+    lifecycle_stage: sanction
+    normalisation: { unit: percent_to_bps }
+    description: The spread added to the benchmark for a floating-rate loan.
+
+  - key: reset_periodicity_months
+    label: Rate reset periodicity
+    type: integer
+    doc_types: [kfs, loan_agreement]
+    lifecycle_stage: sanction
+    description: How often, in months, a floating rate resets.
+
+  - key: fees_total
+    label: Total fees and charges
+    type: money
+    doc_types: [kfs, loan_agreement, sanction_letter]
+    lifecycle_stage: sanction
+    description: The sum of all fees and charges disclosed, excluding interest.
+
+  - key: processing_fee
+    label: Processing fee
+    type: money
+    doc_types: [kfs, loan_agreement, sanction_letter]
+    lifecycle_stage: sanction
+    description: The one-time processing fee charged at sanction.
+
+  - key: insurance_premium_collected
+    label: Insurance premium collected
+    type: money
+    doc_types: [kfs, loan_agreement]
+    lifecycle_stage: sanction
+    description: Any insurance premium collected as part of the loan.
+
+  - key: apr_bps
+    label: Annual Percentage Rate
+    type: rate_bps
+    doc_types: [kfs, loan_agreement, sanction_letter]
+    lifecycle_stage: sanction
+    required_for: [kfs]
+    normalisation: { unit: percent_to_bps, max: 1000000 }
+    description: >
+      The all-in annualised cost of credit as disclosed. Extract the figure presented as APR
+      or Annual Percentage Rate; do not compute it from components.
+
+  - key: contingent_charges_text
+    label: Contingent charges
+    type: string
+    doc_types: [kfs]
+    lifecycle_stage: sanction
+    description: Charges that may become payable only in specified contingencies.
+
+  - key: recovery_agent_clause_ref
+    label: Recovery agent clause reference
+    type: string
+    doc_types: [loan_agreement]
+    lifecycle_stage: sanction
+    description: The clause in the loan agreement governing recovery agent engagement, if referenced.
+
+  - key: grievance_mechanism_clause_ref
+    label: Grievance mechanism clause reference
+    type: string
+    doc_types: [kfs, loan_agreement]
+    lifecycle_stage: sanction
+    description: The clause describing the grievance escalation mechanism, if referenced.
+
+  - key: grievance_officer_name
+    label: Grievance officer name
+    type: string
+    doc_types: [kfs]
+    lifecycle_stage: sanction
+    redaction_exempt: true
+    description: Name of the officer designated to handle borrower grievances.
+
+  - key: grievance_officer_phone
+    label: Grievance officer phone
+    type: string
+    doc_types: [kfs]
+    lifecycle_stage: sanction
+    required_for: [kfs]
+    redaction_exempt: true
+    description: Telephone number of the designated grievance officer.
+
+  - key: grievance_officer_email
+    label: Grievance officer email
+    type: string
+    doc_types: [kfs]
+    lifecycle_stage: sanction
+    redaction_exempt: true
+    description: Email address of the designated grievance officer.
+
+  - key: loan_transferable_flag
+    label: Loan transferable to third party
+    type: boolean
+    doc_types: [loan_agreement]
+    lifecycle_stage: sanction
+    description: Whether the agreement permits assignment of the loan to a third party.
+
+  - key: colending_partner_name
+    label: Co-lending partner name
+    type: string
+    doc_types: [sanction_letter, loan_agreement]
+    lifecycle_stage: sanction
+    description: The name of the co-lending partner, if the loan is co-originated.
+
+  - key: colending_proportion_pct
+    label: Co-lending proportion
+    type: integer
+    doc_types: [sanction_letter]
+    lifecycle_stage: sanction
+    description: The percentage of the loan held by the co-lending partner.
+
+  - key: blended_rate_bps
+    label: Blended interest rate
+    type: rate_bps
+    doc_types: [sanction_letter]
+    lifecycle_stage: sanction
+    normalisation: { unit: percent_to_bps }
+    description: The weighted average rate across co-lending partners.
+
+  - key: cooling_off_period_days
+    label: Cooling-off / look-up period
+    type: duration_days
+    doc_types: [kfs, loan_agreement]
+    lifecycle_stage: sanction
+    description: The period during which the borrower may exit without penalty.
+
+  - key: cooling_off_prepayment_penalty_flag
+    label: Prepayment penalty within cooling-off
+    type: boolean
+    doc_types: [kfs, loan_agreement]
+    lifecycle_stage: sanction
+    description: Whether a prepayment penalty is charged if the borrower exits during cooling-off.
+
+  - key: lsp_recovery_agent_named
+    label: Lending service provider named as recovery agent
+    type: boolean
+    doc_types: [loan_agreement]
+    lifecycle_stage: sanction
+    description: Whether the lending service provider is named as a recovery agent in the agreement.
+
+  - key: kfs_validity_days
+    label: Key Facts Statement validity
+    type: duration_days
+    doc_types: [kfs]
+    lifecycle_stage: sanction
+    description: The number of days the Key Facts Statement remains valid for acceptance.
+
+  - key: kfs_summary_in_agreement_flag
+    label: KFS summary reproduced in agreement
+    type: boolean
+    doc_types: [loan_agreement]
+    lifecycle_stage: sanction
+    description: Whether the Key Facts Statement particulars are reproduced as a summary box in the agreement.
+
+  - key: kfs_issued_date
+    label: KFS issued date
+    type: date
+    doc_types: [kfs]
+    lifecycle_stage: sanction
+    required_for: [kfs]
+    normalisation: { formats: ["%d/%m/%Y", "%d-%m-%Y", "%d %B %Y", "%Y-%m-%d"], prefer: day_first }
+    description: The date the Key Facts Statement was issued to the borrower.
+
+  # --- Digital lending (11) --------------------------------------------------------------
+  - key: disbursal_credited_account_type
+    label: Disbursal account type
+    type: enum
+    enum_values: [borrower_own, third_party, lsp_pool, unknown]
+    doc_types: [disbursement_memo, loan_agreement]
+    lifecycle_stage: disbursement
+    description: Whose bank account the disbursed amount was credited into.
+
+  - key: repayment_debited_account_type
+    label: Repayment account type
+    type: enum
+    enum_values: [lender_own, lsp_pool, unknown]
+    doc_types: [loan_agreement, account_statement]
+    lifecycle_stage: servicing
+    description: Which account repayments are collected into.
+
+  - key: pass_through_account_used_flag
+    label: Pass-through account used
+    type: boolean
+    doc_types: [loan_agreement, disbursement_memo]
+    lifecycle_stage: disbursement
+    description: Whether any lending-service-provider pass-through account is used in the flow of funds.
+
+  - key: lsp_name
+    label: Lending service provider name
+    type: string
+    doc_types: [loan_agreement]
+    lifecycle_stage: origination
+    description: The name of the lending service provider facilitating the digital loan, if any.
+
+  - key: dla_name
+    label: Digital lending app name
+    type: string
+    doc_types: [loan_agreement]
+    lifecycle_stage: origination
+    description: The name of the digital lending application through which the loan was sourced.
+
+  - key: lsp_fee_borne_by
+    label: LSP fee borne by
+    type: enum
+    enum_values: [lender, borrower, unknown]
+    doc_types: [loan_agreement]
+    lifecycle_stage: sanction
+    description: Who bears the fee payable to the lending service provider.
+
+  - key: data_stored_offshore_flag
+    label: Data stored offshore
+    type: boolean
+    doc_types: [loan_agreement]
+    lifecycle_stage: origination
+    description: Whether the agreement discloses that borrower data is processed or stored outside India.
+
+  - key: offshore_deletion_within_hours
+    label: Offshore deletion window
+    type: integer
+    doc_types: [loan_agreement]
+    lifecycle_stage: origination
+    description: The disclosed number of hours within which offshore-processed data is deleted.
+
+  - key: biometric_data_collected_flag
+    label: Biometric data collected
+    type: boolean
+    doc_types: [kyc_set, loan_agreement]
+    lifecycle_stage: origination
+    description: Whether biometric data is collected as part of onboarding.
+
+  - key: privacy_policy_url
+    label: Privacy policy URL
+    type: string
+    doc_types: [loan_agreement]
+    lifecycle_stage: origination
+    description: The URL of the privacy policy referenced in the agreement.
+
+  - key: recovery_agent_identity_notified_before_contact_flag
+    label: Recovery agent identity notified before contact
+    type: boolean
+    doc_types: [call_transcript, field_visit_report]
+    lifecycle_stage: collections
+    description: Whether the recovery agent disclosed their identity and the lender's identity before the first point of contact.
+
+  # --- Servicing (7) -----------------------------------------------------------------------
+  - key: penal_charge_amount
+    label: Penal charge amount
+    type: money
+    doc_types: [penal_charge_notice]
+    lifecycle_stage: servicing
+    description: The penal charge amount levied for non-compliance with loan terms.
+
+  - key: penal_charge_basis_text
+    label: Penal charge basis
+    type: string
+    doc_types: [penal_charge_notice]
+    lifecycle_stage: servicing
+    description: The stated basis on which the penal charge was computed.
+
+  - key: penal_charge_capitalised_flag
+    label: Penal charge capitalised
+    type: boolean
+    doc_types: [penal_charge_notice, account_statement]
+    lifecycle_stage: servicing
+    description: Whether the penal charge was added to principal and interest computed on it.
+
+  - key: penal_charge_described_as_interest_flag
+    label: Penal charge described as interest
+    type: boolean
+    doc_types: [penal_charge_notice]
+    lifecycle_stage: servicing
+    description: Whether the notice describes the penal charge as penal interest added to the rate.
+
+  - key: reset_notice_sent_date
+    label: Rate reset notice sent date
+    type: date
+    doc_types: [rate_reset_notice]
+    lifecycle_stage: servicing
+    normalisation: { formats: ["%d/%m/%Y", "%d-%m-%Y", "%d %B %Y", "%Y-%m-%d"], prefer: day_first }
+    description: The date the borrower was notified of a rate reset.
+
+  - key: reset_effective_date
+    label: Rate reset effective date
+    type: date
+    doc_types: [rate_reset_notice]
+    lifecycle_stage: servicing
+    normalisation: { formats: ["%d/%m/%Y", "%d-%m-%Y", "%d %B %Y", "%Y-%m-%d"], prefer: day_first }
+    description: The date the reset rate takes effect.
+
+  - key: borrower_option_offered_flag
+    label: Borrower option offered on reset
+    type: boolean
+    doc_types: [rate_reset_notice]
+    lifecycle_stage: servicing
+    description: Whether the borrower was offered a choice (e.g. extend tenor or revise instalment) on a rate reset.
+
+  # --- Collections (23) --------------------------------------------------------------------
+  - key: contact_datetime
+    label: Collections contact timestamp
+    type: datetime
+    doc_types: [call_transcript, field_visit_report, reminder_notice]
+    lifecycle_stage: collections
+    required_for: [call_transcript]
+    normalisation: { timezone: Asia/Kolkata, assume_local: true }
+    description: >
+      When the contact with the borrower occurred. Prefer an explicit timestamp in the
+      transcript header over any time mentioned in the conversation body.
+
+  - key: contact_channel
+    label: Contact channel
+    type: enum
+    enum_values: [call, visit, sms, email, whatsapp, other]
+    doc_types: [call_transcript, field_visit_report]
+    lifecycle_stage: collections
+    description: The channel through which contact was made.
+
+  - key: agent_name
+    label: Recovery agent name
+    type: string
+    doc_types: [call_transcript, field_visit_report]
+    lifecycle_stage: collections
+    description: The name of the recovery agent, if disclosed.
+
+  - key: agency_name
+    label: Recovery agency name
+    type: string
+    doc_types: [call_transcript, field_visit_report]
+    lifecycle_stage: collections
+    description: The name of the recovery agency the agent represents, if disclosed.
+
+  - key: agent_iibf_certified_flag
+    label: Agent certified
+    type: boolean
+    doc_types: [call_transcript, field_visit_report]
+    lifecycle_stage: collections
+    description: Whether the transcript or report states the agent holds a recognised certification.
+
+  - key: agent_id_disclosed_flag
+    label: Agent identity disclosed
+    type: boolean
+    doc_types: [call_transcript, field_visit_report]
+    lifecycle_stage: collections
+    description: Whether the agent disclosed their own identity during contact.
+
+  - key: call_recorded_flag
+    label: Call recorded
+    type: boolean
+    doc_types: [call_transcript]
+    lifecycle_stage: collections
+    description: Whether the call was recorded.
+
+  - key: recording_retention_days
+    label: Recording retention period
+    type: duration_days
+    doc_types: [call_transcript]
+    lifecycle_stage: collections
+    description: The disclosed retention period for the call recording.
+
+  - key: third_party_contacted_flag
+    label: Third party contacted
+    type: boolean
+    doc_types: [call_transcript, field_visit_report]
+    lifecycle_stage: collections
+    description: Whether anyone other than the borrower or a co-borrower was contacted.
+
+  - key: third_party_relationship
+    label: Relationship of third party contacted
+    type: enum
+    enum_values: [none, spouse, parent, sibling, other_relative, employer, colleague, neighbour, reference, guarantor, unknown]
+    doc_types: [call_transcript, field_visit_report]
+    lifecycle_stage: collections
+    description: >
+      If anyone other than the borrower or a co-borrower was contacted, their stated
+      relationship to the borrower. Use 'none' when only the borrower was contacted.
+
+  - key: abusive_language_flag
+    label: Abusive language used
+    type: boolean
+    doc_types: [call_transcript]
+    lifecycle_stage: collections
+    description: Whether abusive or threatening language is present in the transcript.
+
+  - key: threat_made_flag
+    label: Threat made
+    type: boolean
+    doc_types: [call_transcript]
+    lifecycle_stage: collections
+    description: Whether a threat of any kind was made during the contact.
+
+  - key: social_media_disclosure_flag
+    label: Social media disclosure made
+    type: boolean
+    doc_types: [call_transcript]
+    lifecycle_stage: collections
+    description: Whether the agent disclosed or threatened to disclose the borrower's account status on social media.
+
+  - key: grievance_officer_details_disclosed_flag
+    label: Grievance officer details disclosed
+    type: boolean
+    doc_types: [reminder_notice, demand_notice]
+    lifecycle_stage: collections
+    description: Whether the communication discloses the grievance officer's contact details.
+
+  - key: visit_prior_intimation_date
+    label: Prior intimation date before visit
+    type: date
+    doc_types: [field_visit_report]
+    lifecycle_stage: collections
+    normalisation: { formats: ["%d/%m/%Y", "%d-%m-%Y", "%d %B %Y", "%Y-%m-%d"], prefer: day_first }
+    description: The date the borrower was given prior intimation of the visit.
+
+  - key: first_visit_date
+    label: First visit date
+    type: date
+    doc_types: [field_visit_report]
+    lifecycle_stage: collections
+    normalisation: { formats: ["%d/%m/%Y", "%d-%m-%Y", "%d %B %Y", "%Y-%m-%d"], prefer: day_first }
+    description: The date of the first recovery visit to the borrower.
+
+  - key: days_past_due_at_contact
+    label: Days past due at contact
+    type: integer
+    doc_types: [call_transcript, field_visit_report]
+    lifecycle_stage: collections
+    description: The number of days the account was past due at the time of contact.
+
+  - key: device_restriction_applied_flag
+    label: Device restriction applied
+    type: boolean
+    doc_types: [field_visit_report]
+    lifecycle_stage: collections
+    description: Whether access to a financed device was restricted.
+
+  - key: device_restriction_applied_date
+    label: Device restriction applied date
+    type: date
+    doc_types: [field_visit_report]
+    lifecycle_stage: collections
+    normalisation: { formats: ["%d/%m/%Y", "%d-%m-%Y", "%d %B %Y", "%Y-%m-%d"], prefer: day_first }
+    description: The date on which device access was restricted.
+
+  - key: device_financed_by_loan_flag
+    label: Device financed by this loan
+    type: boolean
+    doc_types: [field_visit_report, loan_agreement]
+    lifecycle_stage: collections
+    description: Whether the restricted device was itself financed by this loan.
+
+  - key: cure_notice_21day_sent_date
+    label: 21-day cure notice sent date
+    type: date
+    doc_types: [reminder_notice]
+    lifecycle_stage: collections
+    normalisation: { formats: ["%d/%m/%Y", "%d-%m-%Y", "%d %B %Y", "%Y-%m-%d"], prefer: day_first }
+    description: The date the first (21-day) cure notice was sent.
+
+  - key: cure_notice_7day_sent_date
+    label: 7-day cure notice sent date
+    type: date
+    doc_types: [reminder_notice]
+    lifecycle_stage: collections
+    normalisation: { formats: ["%d/%m/%Y", "%d-%m-%Y", "%d %B %Y", "%Y-%m-%d"], prefer: day_first }
+    description: The date the second (7-day) cure notice was sent.
+
+  - key: device_restoration_delay_hours
+    label: Device restoration delay
+    type: integer
+    doc_types: [field_visit_report]
+    lifecycle_stage: collections
+    description: The number of hours between the borrower remedying the default and device access being restored.
+
+  # --- Closure (9) -----------------------------------------------------------------------
+  - key: full_repayment_date
+    label: Full repayment date
+    type: date
+    doc_types: [closure_statement]
+    lifecycle_stage: closure
+    required_for: [closure_statement]
+    normalisation: { formats: ["%d/%m/%Y", "%d-%m-%Y", "%d %B %Y", "%Y-%m-%d"], prefer: day_first }
+    description: The date the loan was fully repaid or settled.
+
+  - key: closure_statement_date
+    label: Closure statement date
+    type: date
+    doc_types: [closure_statement]
+    lifecycle_stage: closure
+    normalisation: { formats: ["%d/%m/%Y", "%d-%m-%Y", "%d %B %Y", "%Y-%m-%d"], prefer: day_first }
+    description: The date the closure statement itself was issued.
+
+  - key: original_docs_released_date
+    label: Original documents released on
+    type: date
+    doc_types: [docs_release_ack, closure_statement, noc]
+    lifecycle_stage: closure
+    required_for: [docs_release_ack]
+    normalisation: { formats: ["%d/%m/%Y", "%d-%m-%Y", "%d %B %Y", "%Y-%m-%d"], prefer: day_first }
+    description: >
+      The date on which original movable or immovable property documents were handed back
+      to the borrower.
+
+  - key: charge_satisfaction_filed_date
+    label: Charge satisfaction filed date
+    type: date
+    doc_types: [charge_satisfaction]
+    lifecycle_stage: closure
+    normalisation: { formats: ["%d/%m/%Y", "%d-%m-%Y", "%d %B %Y", "%Y-%m-%d"], prefer: day_first }
+    description: The date the charge satisfaction was filed with the relevant registry.
+
+  - key: noc_issued_date
+    label: No-objection certificate issued date
+    type: date
+    doc_types: [noc]
+    lifecycle_stage: closure
+    normalisation: { formats: ["%d/%m/%Y", "%d-%m-%Y", "%d %B %Y", "%Y-%m-%d"], prefer: day_first }
+    description: The date the no-objection certificate was issued to the borrower.
+
+  - key: docs_lost_flag
+    label: Documents lost or damaged
+    type: boolean
+    doc_types: [docs_release_ack]
+    lifecycle_stage: closure
+    description: Whether the original documents were reported lost or damaged.
+
+  - key: duplicate_docs_assistance_offered_flag
+    label: Duplicate document assistance offered
+    type: boolean
+    doc_types: [docs_release_ack]
+    lifecycle_stage: closure
+    description: Whether the lender assisted the borrower in obtaining duplicate documents.
+
+  - key: release_delay_compensation_paid
+    label: Release delay compensation paid
+    type: money
+    doc_types: [docs_release_ack]
+    lifecycle_stage: closure
+    description: The compensation amount paid to the borrower for delayed document release.
+
+  - key: release_delay_days
+    label: Release delay in days
+    type: integer
+    doc_types: [docs_release_ack]
+    lifecycle_stage: closure
+    description: The number of days the document release was delayed beyond the permitted window.

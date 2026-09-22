@@ -1,0 +1,31 @@
+{
+  "case_ref": "EV-VERDICT-R20-010",
+  "suite": "verdict",
+  "stage": "verdict",
+  "doc_type": "call_transcript",
+  "input_ref": null,
+  "event_date": "2027-01-10",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "third_party_relationship": "unknown"
+    },
+    "check_key": "F:third_party_relationship",
+    "verdict": "ambiguous",
+    "decisive_citations": [
+      "RBC-AMD2026/p100X"
+    ],
+    "context_citations": [],
+    "forbidden_citations": [
+      "RBC-AMD2026/p100I"
+    ]
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "R20_no_third_party_contact's first read is facts.flag_of('third_party_contacted_flag'), which is deliberately absent here so MissingFact fires before the relationship field is even reached, returning NotApplicable regardless of account type (R20 has no entity-type gate), so RBC-AMD2026/p100X stays retrieval-eligible and assess_fact() falls through to a real model call (check_key='F:third_party_relationship'). event_date is on/after the amendment's 2027-01-01 effective date so the clause is genuinely in force, not merely absent-from-window. Ground truth reasons from the ingested clause text: 'shall not contact any relative, friend, colleague or employer of the borrower for the purpose of intimidating or shaming the borrower into payment.' Relationships the clause names outright (spouse/parent/sibling/other_relative as 'relative', colleague, employer) are scored violation; guarantor is scored compliant, mirroring R20's own code path for a confirmed contact (contacting a guarantor is ordinary recovery practice, not the conduct targeted); neighbour and reference are scored ambiguous because the clause's own list does not name them and a reasonable reader could go either way -- this is the genuine judgment call the suite exists to exercise, not a restatement of the rule's arithmetic. decisive_citations again assumes RBC-AMD2026/p100X is what retrieval ranks top for this field; unverified without a live call, to reconcile on first live run."
+}

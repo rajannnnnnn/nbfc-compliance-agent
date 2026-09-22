@@ -1,0 +1,23 @@
+{
+  "case_ref": "EV-CONF-APR-0001",
+  "suite": "conflicts",
+  "stage": "end_to_end",
+  "doc_type": null,
+  "input_ref": null,
+  "event_date": "2026-02-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": true,
+    "device_financed": false
+  },
+  "documents": [
+    { "doc_type": "kfs", "facts": { "apr_bps": "1508" } },
+    { "doc_type": "loan_agreement", "facts": { "apr_bps": "1560" } },
+    { "doc_type": "sanction_letter", "facts": { "apr_bps": "1508" } }
+  ],
+  "conflict_expected": { "conflict_expected": true, "raises_check": "R03_apr_consistency" },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "apr group, operator equal_within tolerance=1 bps. loan_agreement's 1560 bps is 52 bps away from both kfs and sanction_letter's 1508 -- well past tolerance. Conflict, raises R03_apr_consistency."
+}

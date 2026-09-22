@@ -1,0 +1,13 @@
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+
+-- KFS (Key Facts Statement) --
+Ref no.: LN-SYN-2026-97410
+Product: consumer_durable loan
+Amount sanctioned: ₹500,000/-
+Tenure: 730 days
+Rate of interest: 12.00% per annum, floating basis
+Fees payable: ₹5,000/-
+APR (all-inclusive): 14.28%
+Look-up / cooling-off period: 3 days; no prepayment charge within this window.
+Grievance officer: Vikram Chauhan | Tel: 1800-230-4143 | Email: grievance@sunrise.example
+Validity of this statement: 7 working days from 20-06-2026.

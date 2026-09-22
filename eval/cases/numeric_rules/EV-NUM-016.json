@@ -1,0 +1,30 @@
+{
+  "case_ref": "EV-NUM-016",
+  "suite": "numeric_rules",
+  "stage": "verdict",
+  "doc_type": "docs_release_ack",
+  "input_ref": null,
+  "event_date": "2026-03-02",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "full_repayment_date": "2026-03-02",
+      "original_docs_released_date": "2026-03-02"
+    },
+    "check_key": "R01_docs_release_30d",
+    "verdict": "compliant",
+    "decisive_citations": [
+      "RBC2025/p35"
+    ],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Extreme low end: same-day release (zero-day delay) is well within the 30-day window \u2014 compliant."
+}

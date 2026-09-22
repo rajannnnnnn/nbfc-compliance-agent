@@ -1,0 +1,27 @@
+{
+  "case_ref": "EV-ABST-039",
+  "suite": "abstention",
+  "stage": "verdict",
+  "doc_type": "loan_agreement",
+  "input_ref": null,
+  "event_date": "2026-05-01",
+  "account_profile": {
+    "product_type": "personal",
+    "is_microfinance": false,
+    "is_digital_lending": false,
+    "device_financed": false
+  },
+  "expected": {
+    "facts": {
+      "instalment_amount": "750000"
+    },
+    "check_key": "F:instalment_amount",
+    "verdict": "no_clause_found",
+    "decisive_citations": [],
+    "context_citations": [],
+    "forbidden_citations": []
+  },
+  "tolerance": {},
+  "is_adversarial": false,
+  "notes": "Same unconsumed field as EV-ABST-005 but sourced from loan_agreement rather than kfs (a doc_type instalment_amount is also declared against) and a different instalment amount \u2014 still no rule or clause governs it."
+}

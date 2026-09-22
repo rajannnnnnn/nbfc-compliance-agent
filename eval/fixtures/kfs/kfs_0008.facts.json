@@ -1,0 +1,20 @@
+{
+  "doc_type": "kfs",
+  "facts": {
+    "loan_proposal_number": "LN-SYN-2026-90173",
+    "loan_type": "business",
+    "sanctioned_amount": "50000000",
+    "loan_term_days": "180",
+    "interest_rate_bps": "1450",
+    "interest_rate_type": "floating",
+    "fees_total": "750000",
+    "apr_bps": "1669",
+    "grievance_officer_name": "Deepak Rao",
+    "grievance_officer_phone": "1800-370-2891",
+    "grievance_officer_email": "grievance@northbridge.example",
+    "cooling_off_period_days": "1",
+    "cooling_off_prepayment_penalty_flag": "false",
+    "kfs_validity_days": "7",
+    "kfs_issued_date": "2026-04-12"
+  }
+}
