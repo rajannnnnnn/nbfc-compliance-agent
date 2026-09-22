@@ -16,7 +16,7 @@ CC_VERDICT_MODEL = "gemini/gemini-2.5-flash"
 CC_CLASSIFY_MODEL = "gemini/gemini-2.5-flash"
 
 [deploy]
-release_command = "sh -c 'alembic upgrade head && python -m app.corpus.service ingest --activate'"
+release_command = "python scripts/release.py"
 
 [http_service]
 internal_port = 8000
