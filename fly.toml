@@ -7,6 +7,9 @@ primary_region = "sin"
 CC_ENV = "prod"
 CC_REDIS_URL = "redis://localhost:6379/0"
 
+[deploy]
+release_command = "alembic upgrade head"
+
 [http_service]
 internal_port = 8000
 force_https = true
