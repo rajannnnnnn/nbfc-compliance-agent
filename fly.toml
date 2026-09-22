@@ -6,6 +6,14 @@ primary_region = "sin"
 [env]
 CC_ENV = "prod"
 CC_REDIS_URL = "redis://localhost:6379/0"
+# Only a Gemini key is provisioned for this deploy — override every model default away
+# from the OpenAI names app/config.py ships with, or litellm calls OpenAI with a Gemini
+# key and fails (confirmed: "AuthenticationError ... Incorrect API key provided" from
+# OpenAI's embeddings endpoint during corpus ingest).
+CC_EMBEDDING_MODEL = "gemini/gemini-embedding-001"
+CC_EXTRACT_MODEL = "gemini/gemini-2.0-flash"
+CC_VERDICT_MODEL = "gemini/gemini-2.0-flash"
+CC_CLASSIFY_MODEL = "gemini/gemini-2.0-flash"
 
 [deploy]
 release_command = "alembic upgrade head"
