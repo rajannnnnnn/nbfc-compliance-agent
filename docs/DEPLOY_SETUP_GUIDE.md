@@ -1,8 +1,8 @@
 # Deploy setup guide — you run these, not Claude
 
-Claude cannot sign up for Neon/Upstash/Fly.io or hold your API keys — these steps need your
+Claude cannot sign up for Neon/Fly.io or hold your API keys — these steps need your
 own accounts and billing. This is the exact, ordered command list. Total cost: ~$1.94/month
-(one Fly Machine) + variable Gemini usage, $0 for Neon + Upstash.
+(one Fly Machine, running api+worker+redis together) + variable Gemini usage, $0 for Neon.
 
 ## 0. Prerequisites
 
@@ -25,25 +25,29 @@ own accounts and billing. This is the exact, ordered command list. Total cost: ~
    make ingest
    ```
 
-## 2. Upstash (Redis) — free
+## 2. Redis — self-hosted on the same Fly Machine, no external service needed
 
-1. Sign up at upstash.com, create a Redis database (choose the region closest to `bom`).
-2. Copy the `rediss://` connection string — this is your `CC_REDIS_URL`.
+`fly.toml` now runs a third process, `redis`, alongside `api` and `worker`, all on one
+Machine — `redis-server` bound to `127.0.0.1:6379`, no persistence (`--save '' --appendonly
+no`, since Redis here is only a Celery broker/result backend, never a datastore of record
+per CLAUDE.md). `CC_REDIS_URL` is already set to `redis://localhost:6379/0` in `fly.toml`'s
+`[env]` block — nothing to sign up for, nothing to configure, skip straight to step 3.
 
-## 3. Fly.io (API + worker, one Machine) — ~$1.94/mo
+## 3. Fly.io (API + worker + redis, one Machine) — ~$1.94/mo
 
 `fly.toml` is already committed in this repo, configured for one `shared-cpu-1x`/512MB
-Machine running both the `api` and `worker` processes (kept as one Machine deliberately —
-two separate Machines would double the cost to ~$3.88/mo).
+Machine running the `api`, `worker`, and `redis` processes together (kept as one Machine
+deliberately — separate Machines would multiply the cost).
 
 ```bash
 fly auth login
 fly launch --no-deploy          # detects fly.toml + Dockerfile, creates the app, do NOT let it provision its own Postgres/Redis
 fly secrets set \
   CC_DATABASE_URL="<neon connection string>" \
-  CC_REDIS_URL="<upstash connection string>" \
   CC_LLM_API_KEY="<your Gemini key>" \
   CC_EMBEDDING_API_KEY="<your Gemini key>"
+# CC_REDIS_URL is not a secret here — it's already set in fly.toml's [env] block
+# to redis://localhost:6379/0, since Redis runs on the same Machine.
 fly deploy
 ```
 
