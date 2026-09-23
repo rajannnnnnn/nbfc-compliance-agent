@@ -5,6 +5,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import Response as StarletteResponse
 from uuid6 import uuid7
 
@@ -53,6 +54,15 @@ def create_app() -> FastAPI:
             time.monotonic() - start
         )
         return response
+
+    # Demo frontend is a static page hosted on a different origin; auth is a manually-set
+    # Bearer header, never a cookie, so a wildcard origin carries no credential-leak risk.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     app.add_exception_handler(APIError, api_error_handler)  # type: ignore[arg-type]
     app.add_exception_handler(Exception, unhandled_error_handler)
