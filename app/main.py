@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.responses import Response as StarletteResponse
 from uuid6 import uuid7
 
@@ -67,6 +68,12 @@ def create_app() -> FastAPI:
     app.add_exception_handler(APIError, api_error_handler)  # type: ignore[arg-type]
     app.add_exception_handler(Exception, unhandled_error_handler)
     app.include_router(v1_router)
+
+    # Recruiter-facing demo page: static, same-origin, served by this same container at
+    # zero additional infrastructure cost. Real captured pipeline output ships alongside
+    # the page (app/static/demo/sample_result.json) so it has something to show before
+    # anyone clicks "run live".
+    app.mount("/demo", StaticFiles(directory="app/static/demo", html=True), name="demo")
 
     return app
 

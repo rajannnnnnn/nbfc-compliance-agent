@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ClauseCheck — live demo</title>
+<style>
+  :root {
+    --bg: #0b0e14;
+    --panel: #131722;
+    --panel-2: #1a1f2e;
+    --border: #262c3d;
+    --text: #e6e9f0;
+    --text-dim: #9aa3b8;
+    --accent: #5b8cff;
+    --compliant: #34c98f;
+    --violation: #ff5c5c;
+    --ambiguous: #f0b429;
+    --no-clause: #7a8299;
+    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
+    line-height: 1.5;
+  }
+  .banner {
+    background: #3a2a00; color: #ffd166; text-align: center;
+    padding: 10px 16px; font-weight: 600; font-size: 14px;
+    border-bottom: 1px solid #5c4400;
+  }
+  header { max-width: 1100px; margin: 0 auto; padding: 32px 20px 16px; }
+  header h1 { margin: 0 0 6px; font-size: 26px; }
+  header p { margin: 0; color: var(--text-dim); max-width: 720px; }
+  .architecture {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px;
+  }
+  .chip {
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 999px; padding: 6px 12px; font-size: 12.5px; color: var(--text-dim);
+  }
+  main { max-width: 1100px; margin: 0 auto; padding: 8px 20px 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px;
+  }
+  .card h2 { margin: 0 0 12px; font-size: 15px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); }
+  pre.doc {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px; font-family: var(--mono); font-size: 12.5px; color: var(--text-dim);
+    white-space: pre-wrap; max-height: 260px; overflow-y: auto; margin: 0;
+  }
+  .runbar { display: flex; gap: 10px; margin-top: 14px; align-items: center; }
+  button {
+    background: var(--accent); color: white; border: none; border-radius: 8px;
+    padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; cursor: default; }
+  button.secondary { background: transparent; border: 1px solid var(--border); color: var(--text-dim); }
+  .status-line { font-size: 13px; color: var(--text-dim); }
+  .fact-row {
+    border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px;
+    background: var(--panel-2);
+  }
+  .fact-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .fact-key { font-family: var(--mono); font-size: 12.5px; color: var(--text-dim); }
+  .verdict-badge {
+    font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+    text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap;
+  }
+  .v-compliant { background: rgba(52,201,143,0.15); color: var(--compliant); }
+  .v-violation { background: rgba(255,92,92,0.15); color: var(--violation); }
+  .v-ambiguous { background: rgba(240,180,41,0.15); color: var(--ambiguous); }
+  .v-no_clause_found { background: rgba(122,130,153,0.15); color: var(--no-clause); }
+  .rationale { font-size: 13px; color: var(--text-dim); margin: 8px 0 0; }
+  .citation {
+    margin-top: 8px; padding: 8px 10px; background: var(--bg); border-left: 3px solid var(--accent);
+    border-radius: 4px; font-size: 12.5px;
+  }
+  .citation .path { font-family: var(--mono); color: var(--accent); font-weight: 600; }
+  .citation .excerpt { color: var(--text-dim); font-style: italic; margin-top: 4px; }
+  .metrics {
+    grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 24px; align-items: center;
+  }
+  .metric { font-size: 13px; }
+  .metric .label { color: var(--text-dim); display: block; font-size: 11px; text-transform: uppercase; }
+  .metric .value { font-family: var(--mono); font-size: 15px; }
+  .toggle-raw { margin-top: 12px; }
+  .toggle-raw summary { cursor: pointer; color: var(--text-dim); font-size: 13px; }
+  .toggle-raw pre { margin-top: 8px; font-size: 11.5px; max-height: 300px; overflow: auto; }
+  footer {
+    max-width: 1100px; margin: 0 auto; padding: 0 20px 40px; color: var(--text-dim); font-size: 12.5px;
+    border-top: 1px solid var(--border); padding-top: 16px;
+  }
+  footer a { color: var(--accent); }
+  .source-tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-dim); }
+</style>
+</head>
+<body>
+  <div class="banner">⚠ SYNTHETIC DEMO DATA — no real borrower or lender information is used anywhere in this system</div>
+
+  <header>
+    <h1>ClauseCheck</h1>
+    <p>A retrospective RBI-compliance auditor for Indian NBFCs. Extracts typed facts from a document, retrieves the RBI provisions in force on the event date, and issues a cited verdict — never a citation the corpus can't back up.</p>
+    <div class="architecture">
+      <span class="chip">Fact extraction ≠ legal judgment</span>
+      <span class="chip">Citation validator enforced in code, not prompt</span>
+      <span class="chip">Corpus hash-pinned &amp; versioned</span>
+      <span class="chip">No verdict without a resolvable clause</span>
+    </div>
+  </header>
+
+  <main>
+    <div class="card">
+      <h2>Input document <span class="source-tag" id="doc-source">captured live run</span></h2>
+      <pre class="doc" id="doc-text">Loading…</pre>
+      <div class="runbar">
+        <button id="run-btn">▶ Run this document live</button>
+        <button class="secondary" id="reset-btn">↺ Show captured result</button>
+      </div>
+      <div class="status-line" id="status-line"></div>
+    </div>
+
+    <div class="card">
+      <h2>Verdict result</h2>
+      <div id="results"></div>
+      <details class="toggle-raw">
+        <summary>View raw API response</summary>
+        <pre class="doc" id="raw-json"></pre>
+      </details>
+    </div>
+
+    <div class="card metrics" id="metrics-card">
+      <h2 style="width:100%">⚙ Live technical metrics <span style="font-weight:400; text-transform:none; letter-spacing:0;">(this run — real, not simulated)</span></h2>
+      <div class="metric"><span class="label">Facts assessed</span><span class="value" id="m-facts">—</span></div>
+      <div class="metric"><span class="label">Total cost</span><span class="value" id="m-cost">—</span></div>
+      <div class="metric"><span class="label">Median verdict latency</span><span class="value" id="m-latency">—</span></div>
+      <div class="metric"><span class="label">Model</span><span class="value" id="m-model">gemini-2.5-flash</span></div>
+      <div class="metric"><span class="label">Corpus snapshot</span><span class="value" id="m-corpus">—</span></div>
+    </div>
+  </main>
+
+  <footer>
+    <strong>Caveats, stated plainly:</strong> Real, RBI-hosted-source-verified regulation text
+    covers only the RBC2025 instrument (211 clauses) — everything else is placeholder text
+    used for architecture testing, and the system says so via <code>verification_status</code>
+    on every citation. Overall verdict accuracy on cases genuinely requiring judgment is
+    modest; the measured, strong claim is <strong>zero hallucinated citations</strong> — every
+    citation resolves to a real clause with a real effective-date window, enforced by a
+    validator in code, not a prompt instruction.
+    <br /><br />
+    <a href="/docs" target="_blank">Interactive API docs (Swagger)</a> ·
+    <a href="https://github.com/rajannnnnnn/nbfc-compliance-agent" target="_blank">Source on GitHub</a>
+  </footer>
+
+<script>
+const API_BASE = window.location.origin;
+const DEMO_TOKEN = "demo_YTlOQjOKe-BlMoMX3VuF9GrkyLeXwr1r";
+let CAPTURED = null;
+
+const verdictLabel = { compliant: "Compliant", violation: "Violation", ambiguous: "Ambiguous", no_clause_found: "No clause found" };
+
+async function loadCaptured() {
+  const [docRes, sampleRes] = await Promise.all([
+    fetch('/demo/sample_document.txt'),
+    fetch('/demo/sample_result.json'),
+  ]);
+  document.getElementById('doc-text').textContent = await docRes.text();
+  CAPTURED = await sampleRes.json();
+  render(CAPTURED, { source: 'captured live run' });
+}
+
+function median(arr) {
+  if (!arr.length) return null;
+  const s = [...arr].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+function render(data, opts) {
+  document.getElementById('doc-source').textContent = opts.source;
+  const results = document.getElementById('results');
+  results.innerHTML = '';
+  const assessments = data.assessments || [];
+
+  let totalCost = 0;
+  const latencies = [];
+  for (const a of assessments) {
+    const t = a.telemetry || {};
+    if (typeof t.cost_usd === 'number') totalCost += t.cost_usd;
+    if (typeof t.stage_c_ms === 'number') latencies.push(t.stage_c_ms);
+
+    const row = document.createElement('div');
+    row.className = 'fact-row';
+    const cites = (a.citations || []).map(c => `
+      <div class="citation">
+        <span class="path">${c.clause_path}</span> (${c.instrument_code}, ${c.verification_status})
+        <div class="excerpt">"${(c.quoted_clause_excerpt || '').slice(0, 220)}${(c.quoted_clause_excerpt||'').length > 220 ? '…' : ''}"</div>
+      </div>`).join('');
+    row.innerHTML = `
+      <div class="fact-top">
+        <span class="fact-key">${a.field_key}</span>
+        <span class="verdict-badge v-${a.verdict}">${verdictLabel[a.verdict] || a.verdict}</span>
+      </div>
+      <p class="rationale">${a.rationale || ''}</p>
+      ${cites}
+    `;
+    results.appendChild(row);
+  }
+
+  document.getElementById('raw-json').textContent = JSON.stringify(data, null, 2);
+  document.getElementById('m-facts').textContent = assessments.length;
+  document.getElementById('m-cost').textContent = '$' + totalCost.toFixed(4);
+  document.getElementById('m-latency').textContent = latencies.length ? Math.round(median(latencies)) + ' ms' : '—';
+  document.getElementById('m-corpus').textContent = data.corpus_snapshot ? data.corpus_snapshot.id.slice(0, 8) + '…' : '—';
+}
+
+async function runLive() {
+  const btn = document.getElementById('run-btn');
+  const statusLine = document.getElementById('status-line');
+  btn.disabled = true;
+  const stages = ['Creating loan…', 'Submitting document — extracting facts…', 'Retrieving clauses & generating verdicts…'];
+  let stageIdx = 0;
+  statusLine.textContent = stages[0];
+
+  try {
+    const docText = document.getElementById('doc-text').textContent;
+    const loanRes = await fetch(`${API_BASE}/v1/loans`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${DEMO_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ external_ref: 'live-demo-' + Date.now(), product_type: 'personal', is_digital_lending: true }),
+    });
+    const loan = await loanRes.json();
+
+    statusLine.textContent = stages[1];
+    const sha = await sha256(docText);
+    const docRes = await fetch(`${API_BASE}/v1/loans/${loan.id}/documents`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${DEMO_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        doc_type: 'call_transcript', event_date: '2026-08-22',
+        source_uri: 'demo://live-run', content_sha256: sha, text: docText,
+        is_synthetic: true, assess: true,
+      }),
+    });
+    if (!docRes.ok) throw new Error('document submission failed: ' + docRes.status);
+
+    statusLine.textContent = stages[2];
+    let attempts = 0;
+    let data = null;
+    while (attempts < 40) {
+      await new Promise(r => setTimeout(r, 3000));
+      const r = await fetch(`${API_BASE}/v1/loans/${loan.id}/assessments`, {
+        headers: { 'Authorization': `Bearer ${DEMO_TOKEN}` },
+      });
+      data = await r.json();
+      if (data.assessments && data.assessments.length > 0) break;
+      attempts++;
+      statusLine.textContent = stages[2] + ` (${attempts * 3}s elapsed)`;
+    }
+    if (!data || !data.assessments || data.assessments.length === 0) {
+      throw new Error('assessment did not complete in time — the worker may be cold-starting');
+    }
+    render(data, { source: 'live run, just now' });
+    statusLine.textContent = 'Done — real Gemini calls, real corpus, real citations.';
+  } catch (e) {
+    statusLine.textContent = 'Error: ' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function sha256(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+document.getElementById('run-btn').addEventListener('click', runLive);
+document.getElementById('reset-btn').addEventListener('click', () => {
+  if (CAPTURED) render(CAPTURED, { source: 'captured live run' });
+});
+
+loadCaptured();
+</script>
+</body>
+</html>
