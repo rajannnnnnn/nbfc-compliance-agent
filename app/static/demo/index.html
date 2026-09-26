@@ -65,35 +65,35 @@
 
   /* Case bar: reads as a system-of-record over a specific matter, not a text box */
   .casebar {
-    max-width: 1180px; margin: 18px auto 0; padding: 0 20px;
-    display: flex; flex-wrap: wrap; gap: 10px;
+    display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;
   }
   .case-field {
     background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-    padding: 9px 13px; font-size: 12.5px; flex: 1 1 150px; min-width: 140px;
+    padding: 9px 13px; font-size: 12.5px;
     box-shadow: var(--shadow-sm);
   }
   .case-field .label { display: block; color: var(--text-faint); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
   .case-field .value { font-family: var(--mono); font-size: 13px; color: var(--text); }
 
-  /* Pipeline stepper: shows this is a multi-stage system, not a single call */
-  .pipeline { max-width: 1180px; margin: 16px auto 0; padding: 0 20px; }
+  /* Pipeline stepper: a vertical sidebar next to the results, not a top bar — reads as
+     "here's where this run is" alongside what it has produced so far, not a one-off splash. */
+  .pipeline { padding: 0; }
   .progress-track {
-    height: 4px; background: var(--border); border-radius: 999px; margin-bottom: 12px; overflow: hidden;
+    height: 4px; background: var(--border); border-radius: 999px; margin-bottom: 14px; overflow: hidden;
   }
   .progress-fill {
     height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--compliant));
     border-radius: 999px; transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  .pipeline-track { display: flex; align-items: stretch; gap: 8px; }
+  .pipeline-track { display: flex; flex-direction: column; gap: 8px; }
   .stage {
-    flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-    padding: 13px 14px; position: relative; transition: border-color 0.25s, background 0.25s, box-shadow 0.25s, transform 0.25s;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 11px 13px; position: relative; transition: border-color 0.25s, background 0.25s, box-shadow 0.25s, transform 0.25s;
     box-shadow: var(--shadow-sm);
   }
   /* A connecting line between stages makes it read as one flow, not five separate boxes. */
   .stage:not(:first-child)::before {
-    content: ''; position: absolute; left: -8px; top: 24px; width: 8px; height: 2px;
+    content: ''; position: absolute; left: 20px; top: -9px; width: 2px; height: 8px;
     background: var(--border-strong); z-index: 1;
   }
   .stage.done:not(:first-child)::before { background: var(--compliant); }
@@ -135,8 +135,16 @@
     .stage, .stage.active, .stage.done .badge, .progress-fill { transition: none; animation: none; }
   }
 
-  main { max-width: 1180px; margin: 0 auto; padding: 8px 20px 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  main { max-width: 1180px; margin: 0 auto; padding: 8px 20px 40px; }
+  #view-input { max-width: 780px; margin: 0 auto; }
+  .results-shell { display: flex; gap: 20px; align-items: flex-start; }
+  .stage-sidebar { width: 250px; flex-shrink: 0; position: sticky; top: 20px; }
+  .results-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+  @media (max-width: 900px) {
+    .results-shell { flex-direction: column; }
+    .stage-sidebar { width: 100%; position: static; }
+  }
+  .back-btn-row { margin-bottom: 14px; }
   .card {
     background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
     padding: 20px; box-shadow: var(--shadow-sm);
@@ -189,10 +197,22 @@
   .char-count { font-size: 11px; color: var(--text-faint); text-align: right; margin-top: 4px; font-family: var(--mono); }
 
   .fact-row {
-    border: 1px solid var(--border); border-radius: 10px; padding: 13px 15px; margin-bottom: 10px;
-    background: var(--surface-sunken);
+    border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px;
+    background: var(--surface-sunken); overflow: hidden;
   }
-  .fact-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .fact-row[open] { background: var(--surface); }
+  .fact-top {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 13px 15px; cursor: pointer; list-style: none; user-select: none;
+  }
+  .fact-top::-webkit-details-marker { display: none; }
+  .fact-top::before {
+    content: ''; width: 8px; height: 8px; flex-shrink: 0; margin-right: 2px;
+    border-right: 2px solid var(--text-faint); border-bottom: 2px solid var(--text-faint);
+    transform: rotate(-45deg); transition: transform 0.2s;
+  }
+  .fact-row[open] .fact-top::before { transform: rotate(45deg); }
+  .fact-body { padding: 0 15px 13px; }
   .fact-key { font-family: var(--mono); font-size: 12.5px; color: var(--text-dim); font-weight: 500; }
   .badge-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
   .verdict-badge {
@@ -219,8 +239,23 @@
   .citation .excerpt { color: var(--text-dim); font-style: italic; margin-top: 4px; }
 
   .metrics {
-    grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 28px; align-items: center;
+    display: flex; flex-wrap: wrap; gap: 28px; align-items: center;
   }
+  .kpi-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+  .kpi-tile {
+    flex: 1 1 110px; border-radius: 10px; padding: 11px 13px; border: 1px solid var(--border);
+    background: var(--surface-sunken);
+  }
+  .kpi-tile .kpi-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 3px; }
+  .kpi-tile .kpi-value { font-family: var(--mono); font-size: 22px; font-weight: 600; }
+  .kpi-tile.k-compliant { background: var(--compliant-soft); border-color: #bfe3d1; }
+  .kpi-tile.k-compliant .kpi-label, .kpi-tile.k-compliant .kpi-value { color: var(--compliant); }
+  .kpi-tile.k-violation { background: var(--violation-soft); border-color: #f3c9c4; }
+  .kpi-tile.k-violation .kpi-label, .kpi-tile.k-violation .kpi-value { color: var(--violation); }
+  .kpi-tile.k-ambiguous { background: var(--ambiguous-soft); border-color: #f0dcb4; }
+  .kpi-tile.k-ambiguous .kpi-label, .kpi-tile.k-ambiguous .kpi-value { color: var(--ambiguous); }
+  .kpi-tile.k-no_clause_found { background: var(--no-clause-soft); border-color: #d8dce2; }
+  .kpi-tile.k-no_clause_found .kpi-label, .kpi-tile.k-no_clause_found .kpi-value { color: var(--no-clause); }
   .metric { font-size: 13px; }
   .metric .label { color: var(--text-faint); display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; }
   .metric .value { font-family: var(--mono); font-size: 16px; font-weight: 500; color: var(--text); font-variant-numeric: tabular-nums; }
@@ -254,121 +289,141 @@
     <p>Retrospective RBI-compliance review for a lender's own loan documents and collections transcripts. A submitted document moves through fact extraction, provision retrieval and a deterministic rule engine before any verdict is issued.</p>
   </header>
 
-  <div class="casebar">
-    <div class="case-field"><span class="label">Tenant</span><span class="value">nbfc_demo_partner</span></div>
-    <div class="case-field"><span class="label">Case / loan ref</span><span class="value" id="case-ref">—</span></div>
-    <div class="case-field"><span class="label">Corpus snapshot</span><span class="value" id="case-corpus">—</span></div>
-    <div class="case-field"><span class="label">Review status</span><span class="value" id="case-status">idle</span></div>
-  </div>
-
-  <div class="pipeline">
-    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
-    <div class="pipeline-track">
-      <div class="stage" id="stage-1">
-        <div class="badge-icon-row">
-          <span class="badge">1</span>
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
-        </div>
-        <div class="t">Intake &amp; hashing</div>
-        <div class="d" data-static="SHA-256, lifecycle stage, no raw bytes stored">SHA-256, lifecycle stage, no raw bytes stored</div>
-      </div>
-      <div class="stage" id="stage-2">
-        <div class="badge-icon-row">
-          <span class="badge">2</span>
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v4H4z"/><path d="M4 12h10M4 16h6"/></svg>
-        </div>
-        <div class="t">Fact extraction</div>
-        <div class="d" data-static="Typed facts only — no legal judgment here">Typed facts only — no legal judgment here</div>
-      </div>
-      <div class="stage" id="stage-3">
-        <div class="badge-icon-row">
-          <span class="badge">3</span>
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="6"/><line x1="21" y1="21" x2="14.5" y2="14.5"/></svg>
-        </div>
-        <div class="t">Provision retrieval</div>
-        <div class="d" data-static="As-of date resolves the in-force clause set">As-of date resolves the in-force clause set</div>
-      </div>
-      <div class="stage" id="stage-4">
-        <div class="badge-icon-row">
-          <span class="badge">4</span>
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 7l-3 6a3 3 0 0 0 6 0z"/><path d="M19 7l-3 6a3 3 0 0 0 6 0z"/><path d="M5 7h14"/><path d="M9 21h6"/></svg>
-        </div>
-        <div class="t">Rule engine + model review</div>
-        <div class="d" data-static="Deterministic rules first; model only where rules don't reach">Deterministic rules first; model only where rules don't reach</div>
-      </div>
-      <div class="stage" id="stage-5">
-        <div class="badge-icon-row">
-          <span class="badge">5</span>
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 3v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V5z"/><path d="M9 12l2 2 4-4"/></svg>
-        </div>
-        <div class="t">Citation validator</div>
-        <div class="d" data-static="Verdict without a resolvable clause is discarded in code">Verdict without a resolvable clause is discarded in code</div>
-      </div>
-    </div>
-  </div>
-
   <main>
-    <div class="card">
-      <h2>Submit a document for review</h2>
-      <div class="intake-row">
-        <div class="field-group">
-          <label for="doc-type">Document type</label>
-          <select id="doc-type">
-            <option value="">Auto-detect</option>
-            <option value="call_transcript">Collections call transcript</option>
-            <option value="kfs">Key Fact Statement</option>
-            <option value="loan_agreement">Loan agreement</option>
-            <option value="sanction_letter">Sanction letter</option>
-            <option value="mitc">Most Important T&amp;C</option>
-            <option value="closure_statement">Closure statement</option>
-          </select>
+    <div id="view-input">
+      <div class="card">
+        <h2>Submit a document for review</h2>
+        <div class="intake-row">
+          <div class="field-group">
+            <label for="doc-type">Document type</label>
+            <select id="doc-type">
+              <option value="">Auto-detect</option>
+              <option value="call_transcript">Collections call transcript</option>
+              <option value="kfs">Key Fact Statement</option>
+              <option value="loan_agreement">Loan agreement</option>
+              <option value="sanction_letter">Sanction letter</option>
+              <option value="mitc">Most Important T&amp;C</option>
+              <option value="closure_statement">Closure statement</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label for="event-date">Event date</label>
+            <input type="date" id="event-date" value="2026-08-22" />
+          </div>
         </div>
-        <div class="field-group">
-          <label for="event-date">Event date</label>
-          <input type="date" id="event-date" value="2026-08-22" />
+
+        <div class="samples" id="sample-buttons">
+          <span class="sample-btn active" data-sample="call_transcript">Sample: collections call</span>
+          <span class="sample-btn" data-sample="kfs">Sample: KFS</span>
+          <span class="sample-btn" data-sample="loan_agreement">Sample: loan agreement</span>
+          <span class="sample-btn" data-sample="blank">Blank / paste your own</span>
         </div>
+
+        <div class="input-warning">⚠ Do not paste or upload real borrower, customer or lender data. This text is sent to a third-party AI model (Gemini) for processing — use only synthetic or sample documents.</div>
+
+        <textarea id="doc-text" placeholder="Paste any loan document or call transcript text here…">Loading…</textarea>
+        <div class="char-count" id="char-count"></div>
+
+        <div class="upload-row">
+          <span class="sample-btn file-btn">Upload .txt or .pdf<input type="file" id="file-input" accept=".txt,.pdf" /></span>
+          <span>or paste directly above — any text is accepted, not just the samples.</span>
+        </div>
+
+        <div class="runbar">
+          <button id="run-btn">Submit for compliance review</button>
+        </div>
+        <div class="status-line" id="status-line"></div>
       </div>
-
-      <div class="samples" id="sample-buttons">
-        <span class="sample-btn active" data-sample="call_transcript">Sample: collections call</span>
-        <span class="sample-btn" data-sample="kfs">Sample: KFS</span>
-        <span class="sample-btn" data-sample="loan_agreement">Sample: loan agreement</span>
-        <span class="sample-btn" data-sample="blank">Blank / paste your own</span>
-      </div>
-
-      <div class="input-warning">⚠ Do not paste or upload real borrower, customer or lender data. This text is sent to a third-party AI model (Gemini) for processing — use only synthetic or sample documents.</div>
-
-      <textarea id="doc-text" placeholder="Paste any loan document or call transcript text here…">Loading…</textarea>
-      <div class="char-count" id="char-count"></div>
-
-      <div class="upload-row">
-        <span class="sample-btn file-btn">Upload .txt or .pdf<input type="file" id="file-input" accept=".txt,.pdf" /></span>
-        <span>or paste directly above — any text is accepted, not just the samples.</span>
-      </div>
-
-      <div class="runbar">
-        <button id="run-btn">Submit for compliance review</button>
-      </div>
-      <div class="status-line" id="status-line"></div>
     </div>
 
-    <div class="card">
-      <h2>Review findings <span id="result-source" style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--text-faint);"></span></h2>
-      <div id="results"><div class="empty-state">Submit a document to see typed findings appear here, each traced to either a deterministic rule or a model assessment.</div></div>
-      <details class="toggle-raw">
-        <summary>View raw API response</summary>
-        <pre id="raw-json"></pre>
-      </details>
-    </div>
+    <div id="view-results" style="display:none">
+      <div class="results-shell">
+        <aside class="stage-sidebar">
+          <div class="back-btn-row">
+            <button id="back-btn" class="secondary">← Back to input</button>
+          </div>
 
-    <div class="card metrics" id="metrics-card">
-      <h2 style="width:100%">Run telemetry <span style="font-weight:400; text-transform:none; letter-spacing:0;">(recorded per assessment, not estimated)</span></h2>
-      <div class="metric"><span class="label">Findings</span><span class="value" id="m-facts">—</span></div>
-      <div class="metric"><span class="label">Rule-decided</span><span class="value" id="m-rule">—</span></div>
-      <div class="metric"><span class="label">Model-decided</span><span class="value" id="m-model-count">—</span></div>
-      <div class="metric"><span class="label">Total cost</span><span class="value" id="m-cost">—</span></div>
-      <div class="metric"><span class="label">Median verdict latency</span><span class="value" id="m-latency">—</span></div>
-      <div class="metric"><span class="label">Corpus snapshot</span><span class="value" id="m-corpus">—</span></div>
+          <div class="casebar">
+            <div class="case-field"><span class="label">Tenant</span><span class="value">nbfc_demo_partner</span></div>
+            <div class="case-field"><span class="label">Case / loan ref</span><span class="value" id="case-ref">—</span></div>
+            <div class="case-field"><span class="label">Corpus snapshot</span><span class="value" id="case-corpus">—</span></div>
+            <div class="case-field"><span class="label">Review status</span><span class="value" id="case-status">idle</span></div>
+          </div>
+
+          <div class="pipeline">
+            <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+            <div class="pipeline-track">
+              <div class="stage" id="stage-1">
+                <div class="badge-icon-row">
+                  <span class="badge">1</span>
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
+                </div>
+                <div class="t">Intake &amp; hashing</div>
+                <div class="d" data-static="SHA-256, lifecycle stage, no raw bytes stored">SHA-256, lifecycle stage, no raw bytes stored</div>
+              </div>
+              <div class="stage" id="stage-2">
+                <div class="badge-icon-row">
+                  <span class="badge">2</span>
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v4H4z"/><path d="M4 12h10M4 16h6"/></svg>
+                </div>
+                <div class="t">Fact extraction</div>
+                <div class="d" data-static="Typed facts only — no legal judgment here">Typed facts only — no legal judgment here</div>
+              </div>
+              <div class="stage" id="stage-3">
+                <div class="badge-icon-row">
+                  <span class="badge">3</span>
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="6"/><line x1="21" y1="21" x2="14.5" y2="14.5"/></svg>
+                </div>
+                <div class="t">Provision retrieval</div>
+                <div class="d" data-static="As-of date resolves the in-force clause set">As-of date resolves the in-force clause set</div>
+              </div>
+              <div class="stage" id="stage-4">
+                <div class="badge-icon-row">
+                  <span class="badge">4</span>
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 7l-3 6a3 3 0 0 0 6 0z"/><path d="M19 7l-3 6a3 3 0 0 0 6 0z"/><path d="M5 7h14"/><path d="M9 21h6"/></svg>
+                </div>
+                <div class="t">Rule engine + model review</div>
+                <div class="d" data-static="Deterministic rules first; model only where rules don't reach">Deterministic rules first; model only where rules don't reach</div>
+              </div>
+              <div class="stage" id="stage-5">
+                <div class="badge-icon-row">
+                  <span class="badge">5</span>
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 3v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V5z"/><path d="M9 12l2 2 4-4"/></svg>
+                </div>
+                <div class="t">Citation validator</div>
+                <div class="d" data-static="Verdict without a resolvable clause is discarded in code">Verdict without a resolvable clause is discarded in code</div>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <div class="results-main">
+          <div class="card">
+            <h2>Review findings <span id="result-source" style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--text-faint);"></span></h2>
+            <div class="kpi-row" id="kpi-row" style="display:none">
+              <div class="kpi-tile k-compliant"><span class="kpi-label">Compliant</span><span class="kpi-value" id="kpi-compliant">0</span></div>
+              <div class="kpi-tile k-violation"><span class="kpi-label">Violation</span><span class="kpi-value" id="kpi-violation">0</span></div>
+              <div class="kpi-tile k-ambiguous"><span class="kpi-label">Ambiguous</span><span class="kpi-value" id="kpi-ambiguous">0</span></div>
+              <div class="kpi-tile k-no_clause_found"><span class="kpi-label">No clause found</span><span class="kpi-value" id="kpi-no_clause_found">0</span></div>
+            </div>
+            <div id="results"><div class="empty-state">Submit a document to see typed findings appear here, each traced to either a deterministic rule or a model assessment.</div></div>
+            <details class="toggle-raw">
+              <summary>View raw API response</summary>
+              <pre id="raw-json"></pre>
+            </details>
+          </div>
+
+          <div class="card metrics" id="metrics-card">
+            <h2 style="width:100%">Run telemetry <span style="font-weight:400; text-transform:none; letter-spacing:0;">(recorded per assessment, not estimated)</span></h2>
+            <div class="metric"><span class="label">Findings</span><span class="value" id="m-facts">—</span></div>
+            <div class="metric"><span class="label">Rule-decided</span><span class="value" id="m-rule">—</span></div>
+            <div class="metric"><span class="label">Model-decided</span><span class="value" id="m-model-count">—</span></div>
+            <div class="metric"><span class="label">Total cost</span><span class="value" id="m-cost">—</span></div>
+            <div class="metric"><span class="label">Median verdict latency</span><span class="value" id="m-latency">—</span></div>
+            <div class="metric"><span class="label">Corpus snapshot</span><span class="value" id="m-corpus">—</span></div>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -517,6 +572,22 @@ function resetPipeline() {
   document.getElementById('m-cost').textContent = '—';
   document.getElementById('m-latency').textContent = '—';
   document.getElementById('m-corpus').textContent = '—';
+
+  const kpiRow = document.getElementById('kpi-row');
+  kpiRow.style.display = 'none';
+  for (const v of ['compliant', 'violation', 'ambiguous', 'no_clause_found']) {
+    document.getElementById('kpi-' + v).textContent = '0';
+  }
+}
+
+function showResultsView() {
+  document.getElementById('view-input').style.display = 'none';
+  document.getElementById('view-results').style.display = '';
+}
+
+function showInputView() {
+  document.getElementById('view-results').style.display = 'none';
+  document.getElementById('view-input').style.display = '';
 }
 
 function resetLiveLog() {
@@ -572,6 +643,7 @@ function render(data, opts) {
   const latencies = [];
   let ruleCount = 0, modelCount = 0, citationsTotal = 0;
   let sumA = 0, sumB = 0, sumC = 0, nStage = 0;
+  const verdictCounts = { compliant: 0, violation: 0, ambiguous: 0, no_clause_found: 0 };
 
   for (const a of assessments) {
     const t = a.telemetry || {};
@@ -581,8 +653,9 @@ function render(data, opts) {
     const decidedByRule = a.decided_by === 'rule';
     if (decidedByRule) ruleCount++; else modelCount++;
     citationsTotal += (a.citations || []).length;
+    if (Object.prototype.hasOwnProperty.call(verdictCounts, a.verdict)) verdictCounts[a.verdict]++;
 
-    const row = document.createElement('div');
+    const row = document.createElement('details');
     row.className = 'fact-row';
     const cites = (a.citations || []).map(c => `
       <div class="citation">
@@ -590,18 +663,30 @@ function render(data, opts) {
         <div class="excerpt">"${(c.quoted_clause_excerpt || '').slice(0, 220)}${(c.quoted_clause_excerpt||'').length > 220 ? '…' : ''}"</div>
       </div>`).join('');
     row.innerHTML = `
-      <div class="fact-top">
+      <summary class="fact-top">
         <span class="fact-key">${a.field_key}</span>
         <div class="badge-row">
           <span class="sev-badge">${a.severity || ''} · ${a.confidence_band || ''} confidence</span>
           <span class="decided-badge ${decidedByRule ? 'd-rule' : 'd-model'}">${decidedByRule ? 'Rule ' + (a.rule_id || '') : 'Model review'}</span>
           <span class="verdict-badge v-${a.verdict}">${verdictLabel[a.verdict] || a.verdict}</span>
         </div>
+      </summary>
+      <div class="fact-body">
+        <p class="rationale">${a.rationale || ''}</p>
+        ${cites}
       </div>
-      <p class="rationale">${a.rationale || ''}</p>
-      ${cites}
     `;
     results.appendChild(row);
+  }
+
+  const kpiRow = document.getElementById('kpi-row');
+  if (assessments.length > 0) {
+    kpiRow.style.display = '';
+    for (const v of ['compliant', 'violation', 'ambiguous', 'no_clause_found']) {
+      document.getElementById('kpi-' + v).textContent = verdictCounts[v];
+    }
+  } else {
+    kpiRow.style.display = 'none';
   }
 
   document.getElementById('raw-json').textContent = JSON.stringify(data, null, 2);
@@ -624,12 +709,15 @@ function render(data, opts) {
 
 async function runLive() {
   const btn = document.getElementById('run-btn');
+  const backBtn = document.getElementById('back-btn');
   const statusLine = document.getElementById('status-line');
   const docText = docTextEl.value.trim();
   if (!docText) { statusLine.textContent = 'Paste or load a document first.'; return; }
   btn.disabled = true;
   resetPipeline();
   resetLiveLog();
+  showResultsView();
+  backBtn.disabled = true;
   document.getElementById('case-status').textContent = 'in review';
   setStage(1, 'active', 'Computing SHA-256 client-side…');
   statusLine.textContent = 'Opening case, hashing document…';
@@ -706,6 +794,7 @@ async function runLive() {
     document.getElementById('case-status').textContent = 'error';
   } finally {
     btn.disabled = false;
+    backBtn.disabled = false;
   }
 }
 
@@ -715,6 +804,7 @@ async function sha256(text) {
 }
 
 document.getElementById('run-btn').addEventListener('click', runLive);
+document.getElementById('back-btn').addEventListener('click', showInputView);
 
 loadInitialSample();
 </script>
