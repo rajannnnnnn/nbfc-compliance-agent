@@ -7,7 +7,7 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /srv
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libpq5 curl redis-server \
+        libpq5 curl redis-server bash \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml ./
