@@ -297,7 +297,6 @@
 
       <div class="runbar">
         <button id="run-btn">Submit for compliance review</button>
-        <button class="secondary" id="reset-btn">Show captured result</button>
       </div>
       <div class="status-line" id="status-line"></div>
     </div>
@@ -334,7 +333,6 @@
 <script>
 const API_BASE = window.location.origin;
 const DEMO_TOKEN = "demo_YTlOQjOKe-BlMoMX3VuF9GrkyLeXwr1r";
-let CAPTURED = null;
 
 const verdictLabel = { compliant: "Compliant", violation: "Violation", ambiguous: "Ambiguous", no_clause_found: "No clause found" };
 const SAMPLE_FILES = {
@@ -412,12 +410,9 @@ if (typeof pdfjsLib !== 'undefined') {
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 
-async function loadCaptured() {
+async function loadInitialSample() {
   // Load the sample document into the input so there's something to submit, but leave the
-  // findings panel on its empty state — the reviewer should trigger a real run rather than
-  // land on a page already showing someone else's result.
-  const sampleRes = await fetch('/sample_result.json');
-  CAPTURED = await sampleRes.json();
+  // findings panel on its empty state — it only ever shows a real, just-run result.
   await loadSample('call_transcript', document.querySelector('.sample-btn[data-sample="call_transcript"]'));
 }
 
@@ -601,11 +596,8 @@ async function sha256(text) {
 }
 
 document.getElementById('run-btn').addEventListener('click', runLive);
-document.getElementById('reset-btn').addEventListener('click', () => {
-  if (CAPTURED) { render(CAPTURED, { source: '(captured live run)' }); document.getElementById('case-status').textContent = 'review complete'; }
-});
 
-loadCaptured();
+loadInitialSample();
 </script>
 </body>
 </html>
