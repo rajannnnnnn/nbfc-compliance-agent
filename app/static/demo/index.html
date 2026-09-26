@@ -216,6 +216,10 @@
   footer a { color: var(--accent); }
   footer code { background: var(--surface-sunken); padding: 1px 5px; border-radius: 3px; font-family: var(--mono); }
   .empty-state { color: var(--text-faint); font-size: 13px; padding: 34px 10px; text-align: center; }
+  .live-log { font-family: var(--mono); font-size: 12px; line-height: 1.6; padding: 4px 2px; }
+  .live-log .log-line { color: var(--text-dim); white-space: pre-wrap; word-break: break-word; }
+  .live-log .log-line .ts { color: var(--text-faint); margin-right: 6px; }
+  .live-log .log-line.err { color: var(--violation); }
   #results { max-height: 640px; overflow-y: auto; padding-right: 4px; }
 </style>
 </head>
@@ -462,6 +466,22 @@ function resetPipeline() {
   document.getElementById('progress-fill').style.width = '0%';
 }
 
+function resetLiveLog() {
+  const results = document.getElementById('results');
+  results.innerHTML = '<div class="live-log" id="live-log"></div>';
+}
+
+function logLine(msg, isErr) {
+  const log = document.getElementById('live-log');
+  if (!log) return;
+  const ts = new Date().toLocaleTimeString('en-IN', { hour12: false });
+  const line = document.createElement('div');
+  line.className = 'log-line' + (isErr ? ' err' : '');
+  line.innerHTML = `<span class="ts">${ts}</span>${msg}`;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
 function setStage(n, state, detailText) {
   const el = document.getElementById('stage-' + n);
   if (!el) return;
@@ -555,25 +575,34 @@ async function runLive() {
   if (!docText) { statusLine.textContent = 'Paste or load a document first.'; return; }
   btn.disabled = true;
   resetPipeline();
+  resetLiveLog();
   document.getElementById('case-status').textContent = 'in review';
   setStage(1, 'active', 'Computing SHA-256 client-side…');
   statusLine.textContent = 'Opening case, hashing document…';
+  logLine('Case opened. Hashing document client-side (nothing uploaded yet)…');
 
   try {
     const sha = await sha256(docText);
     setStage(1, 'done', `sha256 ${sha.slice(0, 16)}… · ${docText.length.toLocaleString()} chars`);
+    logLine(`sha256 <b>${sha.slice(0, 16)}…</b> computed over ${docText.length.toLocaleString()} chars.`);
 
+    logLine('POST /v1/loans — opening a loan account for this case…');
     const loanRes = await fetch(`${API_BASE}/v1/loans`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${DEMO_TOKEN}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ external_ref: 'live-demo-' + Date.now(), product_type: 'personal', is_digital_lending: true }),
     });
     const loan = await loanRes.json();
-    if (!loanRes.ok) throw new Error('loan creation failed: ' + loanRes.status + ' ' + (loan.error?.message || loan.detail || ''));
+    if (!loanRes.ok) {
+      logLine(`→ ${loanRes.status} loan creation failed`, true);
+      throw new Error('loan creation failed: ' + loanRes.status + ' ' + (loan.error?.message || loan.detail || ''));
+    }
     document.getElementById('case-ref').textContent = loan.external_ref || loan.id;
+    logLine(`→ ${loanRes.status} loan_account <b>${loan.id}</b> created.`);
 
     setStage(2, 'active', 'Submitting to the extraction pipeline…');
     statusLine.textContent = 'Extracting typed facts from the document…';
+    logLine('POST /v1/loans/{id}/documents — submitting document (Stage A extraction runs synchronously here)…');
     const docRes = await fetch(`${API_BASE}/v1/loans/${loan.id}/documents`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${DEMO_TOKEN}`, 'Content-Type': 'application/json' },
@@ -583,7 +612,12 @@ async function runLive() {
         is_synthetic: true, assess: true,
       }),
     });
-    if (!docRes.ok) throw new Error('document submission failed: ' + docRes.status);
+    if (!docRes.ok) {
+      logLine(`→ ${docRes.status} document submission failed`, true);
+      throw new Error('document submission failed: ' + docRes.status);
+    }
+    const docBody = await docRes.json();
+    logLine(`→ ${docRes.status} document ${docBody.document_id ? docBody.document_id + ' ' : ''}accepted. Assessment job queued to the Celery worker.`);
 
     setStage(2, 'done', 'Accepted — extraction running asynchronously');
     setStage(3, 'active', 'Resolving the in-force clause set for this event date…');
@@ -593,19 +627,24 @@ async function runLive() {
 
     let attempts = 0;
     let data = null;
+    logLine('Polling GET /v1/loans/{id}/assessments every 3s until the worker finishes each fact…');
     while (attempts < 60) {
       await new Promise(r => setTimeout(r, 3000));
       const r = await fetch(`${API_BASE}/v1/loans/${loan.id}/assessments`, {
         headers: { 'Authorization': `Bearer ${DEMO_TOKEN}` },
       });
       data = await r.json();
-      if (data.assessments && data.assessments.length > 0) break;
       attempts++;
+      const n = (data.assessments || []).length;
+      logLine(`[${attempts * 3}s] → ${r.status} · ${n} assessment${n === 1 ? '' : 's'} written so far`);
+      if (n > 0) break;
       statusLine.textContent = `Working through the pipeline… (${attempts * 3}s elapsed — a document with many extractable facts means more model calls, not a stall)`;
     }
     if (!data || !data.assessments || data.assessments.length === 0) {
+      logLine('No assessments landed within the 3-minute poll budget.', true);
       throw new Error('assessment did not complete within 3 minutes — try a shorter document, or check back shortly and reload');
     }
+    logLine(`Done — ${data.assessments.length} assessment(s) received. Rendering findings…`);
     render(data, { source: '(live run, just now)' });
     statusLine.textContent = 'Review complete.';
   } catch (e) {
