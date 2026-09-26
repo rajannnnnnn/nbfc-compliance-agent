@@ -17,6 +17,6 @@ RUN pip install -e .
 COPY . .
 RUN chmod +x scripts/start.sh
 
-EXPOSE 8000
+EXPOSE 8080
 
 CMD ["scripts/start.sh"]
