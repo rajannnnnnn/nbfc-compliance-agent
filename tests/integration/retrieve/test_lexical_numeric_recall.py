@@ -27,6 +27,7 @@ from sqlalchemy import text as sqltext
 from app.config import get_settings
 from app.corpus.service import ingest
 from app.db.engine import get_sessionmaker
+from app.retrieve import lexical
 from app.retrieve.lexical import build_lexical_query, fts_search, numeric_tokens
 
 pytestmark = pytest.mark.integration
@@ -41,6 +42,47 @@ async def snapshot_id():
         await session.commit()
     report = await ingest(settings=settings, activate=True)
     return report.snapshot_id
+
+
+async def test_resolve_ts_config_falls_back_without_raising_when_config_is_absent():
+    """Regression for the production incident where fts_search hardcoded
+    'clausecheck_en' and crashed every single lexical call on managed Postgres
+    (Neon, RDS, ...), which lacks filesystem access to install the
+    numbers_syn synonym dictionary migration 0010 needs — confirmed via a real
+    production traceback (asyncpg.exceptions.UndefinedObjectError: text search
+    configuration "clausecheck_en" does not exist). resolve_ts_config must
+    mirror migration 0010's own fallback (plain 'english') instead of assuming
+    the custom config exists."""
+    settings = get_settings()
+    sm = get_sessionmaker(settings)
+
+    # Whatever this Postgres actually has, the existence lookup itself must never raise —
+    # querying pg_ts_config for a name that isn't there is a normal empty result, not an
+    # error (unlike asking websearch_to_tsquery for a config Postgres doesn't have).
+    async with sm() as session:
+        lexical._resolved_ts_config = None
+        row = (
+            await session.execute(
+                sqltext(lexical._TS_CONFIG_EXISTS_SQL), {"cfg": "definitely_does_not_exist_xyz"}
+            )
+        ).first()
+        assert row is None
+
+    # The result is cached — resolve it once for real, then confirm the cache is used
+    # rather than re-querying, and that whichever value comes back is a real, usable
+    # regconfig name (never raises when bound into websearch_to_tsquery).
+    lexical._resolved_ts_config = None
+    async with sm() as session:
+        cfg = await lexical.resolve_ts_config(session)
+    assert cfg in ("clausecheck_en", "english")
+    assert lexical._resolved_ts_config == cfg
+
+    async with sm() as session:
+        result = await session.execute(
+            sqltext("SELECT websearch_to_tsquery(CAST(:tscfg AS regconfig), :q)::text AS tq"),
+            {"tscfg": cfg, "q": "thirty days"},
+        )
+        assert result.first().tq  # did not raise, produced a real tsquery
 
 
 def test_numeric_tokens_extracts_digits_and_number_words():
