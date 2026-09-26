@@ -53,10 +53,19 @@ async def _proxy(request: Request, path: str) -> Response:
     )
 
 
+async def _proxy_route(request: Request) -> Response:
+    return await _proxy(request, request.url.path.lstrip("/"))
+
+
 for _prefix in _API_PREFIXES:
+    route_path = (
+        _prefix
+        if _prefix in ("/docs", "/redoc", "/openapi.json", "/healthz", "/readyz")
+        else _prefix + "/{path:path}"
+    )
     gateway.add_api_route(
-        _prefix if _prefix in ("/docs", "/redoc", "/openapi.json", "/healthz", "/readyz") else _prefix + "/{path:path}",
-        lambda request, path="": _proxy(request, request.url.path.lstrip("/")),
+        route_path,
+        _proxy_route,
         methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     )
 
