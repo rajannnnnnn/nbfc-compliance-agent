@@ -1,6 +1,7 @@
-# ClauseCheck
+# NBFC Compliance Intelligence
 
-RBI-grounded lending compliance auditor for Indian NBFCs.
+RBI-grounded lending compliance auditor for Indian NBFCs. (Internal codename: ClauseCheck —
+retained in the `ClauseCheck_*` document set and code comments per `CLAUDE.md`.)
 
 **Owner** N Rajan · **Date** 19 September 2026 · **Status** building against `TASKS.md`
 
