@@ -61,7 +61,18 @@
     font-family: var(--mono); font-size: 11.5px; color: var(--text-dim);
     background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 9px;
   }
+  .header-tags { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .alpha-badge {
+    font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+    color: var(--ambiguous); background: var(--ambiguous-soft); border: 1px solid #f0dcb4;
+    border-radius: 6px; padding: 4px 9px; text-transform: uppercase;
+  }
   header p { margin: 8px 0 0; color: var(--text-dim); max-width: 760px; font-size: 14px; }
+  .maturity-note {
+    margin: 10px 0 0; padding: 9px 12px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; font-size: 12.5px; color: var(--text-dim); max-width: 780px; line-height: 1.5;
+  }
+  .maturity-note b { color: var(--text); }
 
   /* Case bar: reads as a system-of-record over a specific matter, not a text box */
   .casebar {
@@ -284,9 +295,20 @@
   <header>
     <div class="brandrow">
       <h1>NBFC Compliance Intelligence</h1>
-      <span class="env-tag" id="env-tag">env: demo tenant · region: sin</span>
+      <div class="header-tags">
+        <span class="alpha-badge">Alpha · in active development</span>
+        <span class="env-tag" id="env-tag">env: demo tenant · region: sin</span>
+      </div>
     </div>
     <p>Retrospective RBI-compliance review for a lender's own loan documents and collections transcripts. A submitted document moves through fact extraction, provision retrieval and a deterministic rule engine before any verdict is issued.</p>
+    <div class="maturity-note">
+      <b>This is a live alpha, not a finished product.</b> The architectural guarantees are already
+      enforced in code — every verdict here either resolves to a real, date-valid clause or is
+      discarded as <code>no_clause_found</code>, and citation hallucination is structurally
+      impossible, not just tested for. What's still improving is judgment-level verdict accuracy on
+      harder, non-obvious cases — that number is being measured and tracked openly, not hidden, and
+      is expected to rise across development cycles from here.
+    </div>
   </header>
 
   <main>
