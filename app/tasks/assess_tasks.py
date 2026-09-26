@@ -13,6 +13,7 @@ this task was ever queued, so this module only ever reads back what extraction a
 
 import asyncio
 import json
+from collections.abc import Coroutine
 from typing import Any
 from uuid import UUID
 
@@ -21,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
 from app.corpus.snapshot import get_active_snapshot_id
-from app.db.engine import get_sessionmaker
+from app.db.engine import dispose_engine, get_sessionmaker
 from app.domain.documents import LoanAccountRef
 from app.domain.facts import ExtractedFactOut, FactValue
 from app.llm.client import LLMClient
@@ -382,9 +383,26 @@ async def _run_assess_account(
     }
 
 
+async def _run_and_dispose(coro: Coroutine[Any, Any, dict[str, Any]]) -> dict[str, Any]:
+    """Every task wrapper below runs its own fresh `asyncio.run(...)` — a new event loop per
+    task, per Celery's own execution model here (no long-lived worker loop). But
+    `app/db/engine.py`'s engine and connection pool are process-level globals, and a pooled
+    asyncpg connection is bound to the event loop that created it. Left un-disposed, the next
+    task's new loop inherits a pool full of connections tied to a now-closed loop, which
+    asyncpg refuses with "attached to a different loop" (confirmed in production: the second
+    assess.document task a worker processed after the first succeeded). Disposing the engine
+    at the end of every task forces the next one to build a fresh, loop-bound pool."""
+    try:
+        return await coro
+    finally:
+        await dispose_engine()
+
+
 @app.task(name="assess.document", bind=True)  # type: ignore[untyped-decorator]
 def assess_document(self: Any, document_id: str, tenant_id: str, request_id: str) -> dict[str, Any]:
-    return asyncio.run(_run_assess_document(UUID(document_id), UUID(tenant_id), request_id))
+    return asyncio.run(
+        _run_and_dispose(_run_assess_document(UUID(document_id), UUID(tenant_id), request_id))
+    )
 
 
 @app.task(name="assess.check", bind=True)  # type: ignore[untyped-decorator]
@@ -392,7 +410,9 @@ def assess_check(
     self: Any, loan_account_id: str, check_key: str, tenant_id: str, request_id: str
 ) -> dict[str, Any]:
     return asyncio.run(
-        _run_assess_check(UUID(loan_account_id), check_key, UUID(tenant_id), request_id)
+        _run_and_dispose(
+            _run_assess_check(UUID(loan_account_id), check_key, UUID(tenant_id), request_id)
+        )
     )
 
 
@@ -400,4 +420,6 @@ def assess_check(
 def assess_account(
     self: Any, loan_account_id: str, tenant_id: str, request_id: str
 ) -> dict[str, Any]:
-    return asyncio.run(_run_assess_account(UUID(loan_account_id), UUID(tenant_id), request_id))
+    return asyncio.run(
+        _run_and_dispose(_run_assess_account(UUID(loan_account_id), UUID(tenant_id), request_id))
+    )

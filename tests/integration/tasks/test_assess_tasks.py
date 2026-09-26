@@ -216,7 +216,7 @@ async def test_assess_document_fans_out_model_calls_concurrently(snapshot_id, ac
             )
         await session.commit()
 
-    delay_s = 0.5
+    delay_s = 1.0  # embed() and structured() each sleep this long, so ~2*delay_s per fact
     start = time.monotonic()
     result = await _run_assess_document(
         doc_id,
@@ -227,9 +227,12 @@ async def test_assess_document_fans_out_model_calls_concurrently(snapshot_id, ac
     elapsed = time.monotonic() - start
 
     assert result["facts_assessed"] == len(field_keys)
-    # Fully sequential would take > len(field_keys) * delay_s (six calls, each embed+structured).
-    # Bounded concurrency should finish in a couple of rounds, not six.
-    assert elapsed < len(field_keys) * delay_s * 0.75
+    # Each fact costs embed() + structured() sequentially, ~2*delay_s. Fully sequential over
+    # all facts would take len(field_keys) * 2 * delay_s (12s here). Bounded concurrency (4)
+    # should finish in ceil(6/4) = 2 rounds, ~2 * 2*delay_s = 4s plus real per-fact DB/session
+    # overhead — comfortably under half the fully-sequential time even under load.
+    fully_sequential_s = len(field_keys) * 2 * delay_s
+    assert elapsed < fully_sequential_s * 0.6
 
 
 async def test_assess_document_missing_document_raises(snapshot_id):
