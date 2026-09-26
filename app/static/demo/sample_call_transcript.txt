@@ -1,10 +1,68 @@
-*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower, agent or lender. Names, phone
+numbers and account details below are fabricated for demonstration only. ***
 
 COLLECTIONS CALL TRANSCRIPT
-Date/time of call: 22/08/2026 19:00 IST
-Agent: Deepak Rao (Apex Recovery Services)
-Agent identified themself and the agency before proceeding with the call.
+Account reference: LN-SYN-2025-19116
+Lender: Sunrise Capital NBFC Ltd.
+Recovery agency on record: Apex Recovery Services (LSP empanelment ID: APX-2024-0087)
+Call direction: Outbound
+Date of call: 22 August 2026
+Time of call: 19:00:14 IST (call duration: 00:07:42)
+Channel: Voice call, borrower's registered mobile number ending 8821
+Recording: This call was recorded. Recording will be retained for 90 days from the
+date of the call and stored on the lender's internal servers, not a third party.
+
+--- TRANSCRIPT ---
+
+[19:00:14] Agent: Good evening, am I speaking with Mr. R. Kumar?
+[19:00:19] Borrower: Yes, speaking.
+[19:00:22] Agent: Sir, my name is Deepak Rao, and I'm calling on behalf of Apex
+Recovery Services, an agency engaged by Sunrise Capital NBFC Ltd. for collections on
+your personal loan account ending 9116. This call is being recorded. Is this a good
+time to speak?
+[19:00:41] Borrower: Yes, go ahead.
+[19:00:44] Agent: Thank you, sir. As per our records, your loan account is currently
+95 days past due. The outstanding amount as of today is Rs. 84,250, which includes
+the overdue EMIs for June, July and August. Can you tell me when you expect to make
+the payment?
+[19:01:20] Borrower: I've had some trouble at work, my salary got delayed this month.
+I can pay by the first week of September.
+[19:01:35] Agent: I understand, sir. I want to flag that under RBI guidelines we are
+required to inform you that our records show two missed EMI payments and one partial
+payment in this cycle. Would you be able to commit to a specific date?
+[19:02:10] Borrower: Let's say 5th September.
+[19:02:14] Agent: Noted, sir — 5th September for the full outstanding amount of
+Rs. 84,250. I'll log this commitment on our system. You will also receive an SMS and
+email confirmation of this call summary within 24 hours. Do you have any questions
+regarding the loan terms or the Key Facts Statement issued to you at disbursal?
+[19:02:55] Borrower: No, that's fine. Just don't call my office colleagues about this
+please, like the earlier agency used to.
+[19:03:05] Agent: Understood, sir. I can confirm that per our policy and RBI
+directions, we do not contact any relative, friend, colleague or employer of a
+borrower for recovery purposes, and we will not make any disclosure about your
+account on social media or otherwise. This call will not involve any third party.
+[19:03:30] Borrower: Okay, thank you.
+[19:03:34] Agent: Thank you for your time, sir. To summarize: outstanding amount
+Rs. 84,250, commitment date 5th September 2026. If you have any grievance regarding
+this call or the recovery process, you may contact our Grievance Redressal Officer,
+Ms. Anjali Mehta, at grievance@sunrisecapital.example or 1800-489-5554, quoting your
+loan reference LN-SYN-2025-19116. Have a good evening.
+[19:03:58] Borrower: You too, thank you.
+[19:04:02] Call ended.
+
+--- POST-CALL AGENT NOTES ---
+
 Days past due at time of contact: 95
-Call was recorded; recording will be retained for 90 days.
-No third party was contacted regarding this account.
-No abusive language or threats were used during this call.
+Agent identified themself and the recovery agency by name before proceeding with the
+call, prior to any discussion of account details.
+Agent's employee ID and authorization to act on behalf of the regulated entity was
+disclosed to the borrower verbally at the start of the call.
+No third party (relative, friend, colleague, employer) was contacted regarding this
+account during or around this call.
+No abusive, threatening or intimidating language was used at any point during this
+interaction.
+Call was placed within permitted contact hours (before 8:00 a.m. and after 7:00 p.m.
+are the restricted windows under the applicable direction); this call commenced at
+19:00:14 IST.
+Promise-to-pay logged: Rs. 84,250 by 5 September 2026.
+No settlement or waiver was offered or discussed on this call.

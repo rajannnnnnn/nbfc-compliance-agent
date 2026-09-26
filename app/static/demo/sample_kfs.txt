@@ -1,13 +1,83 @@
-*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. ***
+*** SYNTHETIC DATA — TEST FIXTURE. No real borrower or lender. All names, numbers and
+identifiers below are fabricated for demonstration only. ***
 
--- KFS (Key Facts Statement) --
-Ref no.: LN-SYN-2025-19116
-Product: personal loan
-Amount sanctioned: Rs. 1,200,000
-Tenure: 365 days
-Rate of interest: 16.50% per annum, floating basis
-Fees payable: INR 5,000.00
-APR (all-inclusive): 17.20%
-Look-up / cooling-off period: 1 days; no prepayment charge within this window.
-Grievance officer: Deepak Rao | Tel: 1800-489-5554 | Email: grievance@sunrise.example
-Validity of this statement: 7 working days from 03 July 2026.
+======================================================================
+                    KEY FACTS STATEMENT (KFS)
+   Issued pursuant to Reserve Bank of India Digital Lending Directions
+======================================================================
+
+Regulated Entity      : Sunrise Capital NBFC Ltd. (CIN: U65999SYN2018PLC999999)
+Lending Service Provider (LSP) : Apex Digital Lending Platform Pvt. Ltd.
+KFS Reference Number  : KFS-SYN-2026-07031
+Loan Application Ref. : LN-SYN-2025-19116
+Date of issue         : 03 July 2026
+Validity of this statement : 7 working days from date of issue
+
+----------------------------------------------------------------------
+PART 1 — LOAN AND BORROWER PARTICULARS
+----------------------------------------------------------------------
+Borrower name                 : Ravi Kumar Singh (synthetic)
+Product type                  : Personal loan, unsecured, digital
+Loan account reference        : LN-SYN-2025-19116
+Purpose of loan                : Personal / consumption
+Sanctioned loan amount         : Rs. 12,00,000.00
+Loan tenure                    : 365 days (12 EMIs)
+Repayment frequency            : Monthly
+
+----------------------------------------------------------------------
+PART 2 — INTEREST, FEES AND ALL-INCLUSIVE COST
+----------------------------------------------------------------------
+Item                                      Amount / Rate
+------------------------------------------------------
+Rate of interest (annualised, floating)   16.50% p.a.
+Processing fee (one-time, non-refundable) Rs. 5,000.00
+Insurance premium (optional add-on)       Rs. 0.00 (not opted)
+Stamp duty / documentation charges        Rs. 350.00
+Other recurring charges                   Nil
+------------------------------------------------------
+Annual Percentage Rate (APR, all-inclusive) : 17.20%
+(APR includes interest, processing fee, documentation charges and all other
+recurring/non-recurring charges levied by the regulated entity and the LSP.)
+
+Details of recovery/collection agent or LSP acting on behalf of the lender and
+authorised to approach the borrower: Apex Recovery Services, empanelment ID
+APX-2024-0087, authorised for collections communication only, not for disbursal
+or fee collection.
+
+----------------------------------------------------------------------
+PART 3 — REPAYMENT SCHEDULE (ILLUSTRATIVE, FIRST 3 OF 12 EMIs)
+----------------------------------------------------------------------
+EMI No.   Due Date       EMI Amount     Principal      Interest
+1         03-Aug-2026    Rs. 108,850    Rs. 92,350     Rs. 16,500
+2         03-Sep-2026    Rs. 108,850    Rs. 93,620     Rs. 15,230
+3         03-Oct-2026    Rs. 108,850    Rs. 94,910     Rs. 13,940
+...(remaining schedule provided separately as Annexure A)
+
+----------------------------------------------------------------------
+PART 4 — COOLING-OFF, PREPAYMENT AND DEFAULT TERMS
+----------------------------------------------------------------------
+Look-up / cooling-off period    : 1 day from date of loan agreement execution.
+                                   No prepayment charge is levied if the loan is
+                                   foreclosed within this window.
+Prepayment charge (after window) : 2% of outstanding principal.
+Penal charge on default          : Charged as penal charge, not capitalised as
+                                    additional interest, in accordance with
+                                    applicable direction.
+Consequence of default           : Recovery process as per the lender's Board-
+                                    approved policy; no coercive action outside
+                                    permitted hours or channels.
+
+----------------------------------------------------------------------
+PART 5 — GRIEVANCE REDRESSAL
+----------------------------------------------------------------------
+Grievance Redressal Officer (Regulated Entity) : Ms. Anjali Mehta
+Designation                                     : Chief Grievance Officer
+Telephone                                       : 1800-489-5554
+Email                                           : grievance@sunrisecapital.example
+Escalation (if unresolved in 30 days)            : RBI Ombudsman for NBFCs, as per
+                                                    the Reserve Bank – Integrated
+                                                    Ombudsman Scheme.
+
+This Key Facts Statement is a summary and forms part of the Loan Agreement. In the
+event of any discrepancy between this KFS and the Loan Agreement, the terms more
+favourable to the borrower shall prevail as per applicable RBI directions.

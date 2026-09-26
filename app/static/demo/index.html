@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   :root {
     --bg: #f5f6f8;
@@ -70,20 +71,44 @@
 
   /* Pipeline stepper: shows this is a multi-stage system, not a single call */
   .pipeline { max-width: 1180px; margin: 16px auto 0; padding: 0 20px; }
+  .progress-track {
+    height: 4px; background: var(--border); border-radius: 999px; margin-bottom: 12px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--compliant));
+    border-radius: 999px; transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
   .pipeline-track { display: flex; align-items: stretch; gap: 8px; }
   .stage {
     flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-    padding: 13px 14px; position: relative; transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
+    padding: 13px 14px; position: relative; transition: border-color 0.25s, background 0.25s, box-shadow 0.25s, transform 0.25s;
     box-shadow: var(--shadow-sm);
   }
-  .stage .n { font-family: var(--mono); font-size: 10.5px; color: var(--text-faint); font-weight: 500; }
-  .stage .t { font-size: 12.5px; font-weight: 600; margin: 4px 0 2px; color: var(--text); }
-  .stage .d { font-size: 11px; color: var(--text-dim); line-height: 1.4; }
-  .stage .ms { font-family: var(--mono); font-size: 11px; color: var(--accent); margin-top: 7px; display: block; min-height: 14px; font-weight: 500; }
-  .stage.active { border-color: var(--accent); background: var(--accent-soft); box-shadow: var(--shadow-md); }
+  .stage .badge {
+    display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px;
+    border-radius: 999px; border: 1.5px solid var(--border-strong); font-family: var(--mono);
+    font-size: 10px; color: var(--text-faint); font-weight: 600; transition: all 0.25s;
+  }
+  .stage .t { font-size: 12.5px; font-weight: 600; margin: 8px 0 2px; color: var(--text); }
+  .stage .d {
+    font-size: 11px; color: var(--text-dim); line-height: 1.45; min-height: 28px; transition: color 0.2s;
+  }
+  .stage .d.detail { color: var(--text); font-weight: 500; }
+  .stage.active { border-color: var(--accent); background: var(--accent-soft); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+  .stage.active .badge {
+    border-color: var(--accent); color: var(--accent); background: var(--surface);
+    animation: pulse-ring 1.4s ease-in-out infinite;
+  }
   .stage.done { border-color: #bfe3d1; background: var(--compliant-soft); }
-  .stage.done .n { color: var(--compliant); }
-  .stage.done .ms { color: var(--compliant); }
+  .stage.done .badge { border-color: var(--compliant); background: var(--compliant); color: white; }
+  .stage.done .d.detail { color: #0a6b48; }
+  @keyframes pulse-ring {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(30, 64, 175, 0.25); }
+    50% { box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.08); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .stage, .stage.active, .progress-fill { transition: none; animation: none; }
+  }
 
   main { max-width: 1180px; margin: 0 auto; padding: 8px 20px 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
@@ -109,6 +134,11 @@
   }
   .sample-btn:hover { border-color: var(--border-strong); }
   .sample-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+
+  .input-warning {
+    background: var(--ambiguous-soft); border: 1px solid #f0dcb4; color: #7a4d06;
+    border-radius: 8px; padding: 9px 12px; font-size: 12px; line-height: 1.5; margin-bottom: 10px;
+  }
 
   textarea#doc-text {
     width: 100%; min-height: 220px; max-height: 340px; resize: vertical;
@@ -179,6 +209,7 @@
   footer a { color: var(--accent); }
   footer code { background: var(--surface-sunken); padding: 1px 5px; border-radius: 3px; font-family: var(--mono); }
   .empty-state { color: var(--text-faint); font-size: 13px; padding: 34px 10px; text-align: center; }
+  #results { max-height: 640px; overflow-y: auto; padding-right: 4px; }
 </style>
 </head>
 <body>
@@ -200,12 +231,28 @@
   </div>
 
   <div class="pipeline">
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
     <div class="pipeline-track">
-      <div class="stage" id="stage-1"><span class="n">01</span><div class="t">Intake &amp; hashing</div><div class="d">SHA-256, lifecycle stage, no raw bytes stored</div><span class="ms"></span></div>
-      <div class="stage" id="stage-2"><span class="n">02</span><div class="t">Fact extraction</div><div class="d">Typed facts only — no legal judgment here</div><span class="ms"></span></div>
-      <div class="stage" id="stage-3"><span class="n">03</span><div class="t">Provision retrieval</div><div class="d">As-of date resolves the in-force clause set</div><span class="ms"></span></div>
-      <div class="stage" id="stage-4"><span class="n">04</span><div class="t">Rule engine + model review</div><div class="d">Deterministic rules first; model only where rules don't reach</div><span class="ms"></span></div>
-      <div class="stage" id="stage-5"><span class="n">05</span><div class="t">Citation validator</div><div class="d">Verdict without a resolvable clause is discarded in code</div><span class="ms"></span></div>
+      <div class="stage" id="stage-1">
+        <span class="badge">1</span><div class="t">Intake &amp; hashing</div>
+        <div class="d" data-static="SHA-256, lifecycle stage, no raw bytes stored">SHA-256, lifecycle stage, no raw bytes stored</div>
+      </div>
+      <div class="stage" id="stage-2">
+        <span class="badge">2</span><div class="t">Fact extraction</div>
+        <div class="d" data-static="Typed facts only — no legal judgment here">Typed facts only — no legal judgment here</div>
+      </div>
+      <div class="stage" id="stage-3">
+        <span class="badge">3</span><div class="t">Provision retrieval</div>
+        <div class="d" data-static="As-of date resolves the in-force clause set">As-of date resolves the in-force clause set</div>
+      </div>
+      <div class="stage" id="stage-4">
+        <span class="badge">4</span><div class="t">Rule engine + model review</div>
+        <div class="d" data-static="Deterministic rules first; model only where rules don't reach">Deterministic rules first; model only where rules don't reach</div>
+      </div>
+      <div class="stage" id="stage-5">
+        <span class="badge">5</span><div class="t">Citation validator</div>
+        <div class="d" data-static="Verdict without a resolvable clause is discarded in code">Verdict without a resolvable clause is discarded in code</div>
+      </div>
     </div>
   </div>
 
@@ -238,11 +285,13 @@
         <span class="sample-btn" data-sample="blank">Blank / paste your own</span>
       </div>
 
+      <div class="input-warning">⚠ Do not paste or upload real borrower, customer or lender data. This text is sent to a third-party AI model (Gemini) for processing — use only synthetic or sample documents.</div>
+
       <textarea id="doc-text" placeholder="Paste any loan document or call transcript text here…">Loading…</textarea>
       <div class="char-count" id="char-count"></div>
 
       <div class="upload-row">
-        <span class="sample-btn file-btn">Upload .txt file<input type="file" id="file-input" accept=".txt" /></span>
+        <span class="sample-btn file-btn">Upload .txt or .pdf<input type="file" id="file-input" accept=".txt,.pdf" /></span>
         <span>or paste directly above — any text is accepted, not just the samples.</span>
       </div>
 
@@ -322,20 +371,54 @@ document.querySelectorAll('.sample-btn[data-sample]').forEach(btn => {
   btn.addEventListener('click', () => loadSample(btn.dataset.sample, btn));
 });
 
+async function extractPdfText(file) {
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  const pages = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    pages.push(content.items.map(it => it.str).join(' '));
+  }
+  return pages.join('\n\n').trim();
+}
+
 document.getElementById('file-input').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
   document.querySelectorAll('.sample-btn[data-sample]').forEach(b => b.classList.remove('active'));
-  docTextEl.value = await file.text();
+  const statusLine = document.getElementById('status-line');
+  if (file.name.toLowerCase().endsWith('.pdf')) {
+    if (typeof pdfjsLib === 'undefined') {
+      statusLine.textContent = 'PDF parsing library failed to load (check your network/ad-blocker) — please paste the text directly, or try a .txt file.';
+      return;
+    }
+    statusLine.textContent = 'Parsing PDF in your browser — nothing is uploaded to a server for this step…';
+    try {
+      const text = await extractPdfText(file);
+      if (!text) throw new Error('no extractable text found (the PDF may be scanned/image-only)');
+      docTextEl.value = text;
+      statusLine.textContent = `Extracted ${text.length.toLocaleString()} characters from ${file.name}.`;
+    } catch (err) {
+      statusLine.textContent = 'Could not parse this PDF: ' + err.message;
+    }
+  } else {
+    docTextEl.value = await file.text();
+    statusLine.textContent = '';
+  }
   updateCharCount();
 });
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
 
 async function loadCaptured() {
+  // Load the sample document into the input so there's something to submit, but leave the
+  // findings panel on its empty state — the reviewer should trigger a real run rather than
+  // land on a page already showing someone else's result.
   const sampleRes = await fetch('/sample_result.json');
   CAPTURED = await sampleRes.json();
   await loadSample('call_transcript', document.querySelector('.sample-btn[data-sample="call_transcript"]'));
-  render(CAPTURED, { source: '(captured live run)' });
-  setStage(5, 'done');
 }
 
 function median(arr) {
@@ -349,16 +432,33 @@ function resetPipeline() {
   for (let i = 1; i <= 5; i++) {
     const el = document.getElementById('stage-' + i);
     el.classList.remove('active', 'done');
-    el.querySelector('.ms').textContent = '';
+    const badge = el.querySelector('.badge');
+    badge.textContent = String(i);
+    const d = el.querySelector('.d');
+    d.textContent = d.dataset.static;
+    d.classList.remove('detail');
   }
+  document.getElementById('progress-fill').style.width = '0%';
 }
 
-function setStage(n, state, msText) {
+function setStage(n, state, detailText) {
   const el = document.getElementById('stage-' + n);
   if (!el) return;
-  if (state === 'active') { el.classList.add('active'); el.classList.remove('done'); }
-  if (state === 'done') { el.classList.remove('active'); el.classList.add('done'); }
-  if (msText) el.querySelector('.ms').textContent = msText;
+  if (state === 'active') {
+    el.classList.add('active'); el.classList.remove('done');
+    el.querySelector('.d').textContent = detailText || 'Working…';
+    el.querySelector('.d').classList.add('detail');
+  }
+  if (state === 'done') {
+    el.classList.remove('active'); el.classList.add('done');
+    el.querySelector('.badge').textContent = '✓';
+    if (detailText) {
+      el.querySelector('.d').textContent = detailText;
+      el.querySelector('.d').classList.add('detail');
+    }
+    const doneCount = document.querySelectorAll('.stage.done').length;
+    document.getElementById('progress-fill').style.width = (doneCount / 5 * 100) + '%';
+  }
 }
 
 function render(data, opts) {
@@ -376,7 +476,7 @@ function render(data, opts) {
 
   let totalCost = 0;
   const latencies = [];
-  let ruleCount = 0, modelCount = 0;
+  let ruleCount = 0, modelCount = 0, citationsTotal = 0;
   let sumA = 0, sumB = 0, sumC = 0, nStage = 0;
 
   for (const a of assessments) {
@@ -386,6 +486,7 @@ function render(data, opts) {
     if (typeof t.stage_a_ms === 'number') { sumA += t.stage_a_ms; sumB += t.stage_b_ms || 0; sumC += t.stage_c_ms || 0; nStage++; }
     const decidedByRule = a.decided_by === 'rule';
     if (decidedByRule) ruleCount++; else modelCount++;
+    citationsTotal += (a.citations || []).length;
 
     const row = document.createElement('div');
     row.className = 'fact-row';
@@ -418,11 +519,11 @@ function render(data, opts) {
   document.getElementById('m-corpus').textContent = data.corpus_snapshot ? data.corpus_snapshot.id.slice(0, 8) + '…' : '—';
 
   if (nStage > 0) {
-    setStage(1, 'done', 'hashed');
-    setStage(2, 'done', Math.round(sumA / nStage) + ' ms avg');
-    setStage(3, 'done', Math.round(sumB / nStage) + ' ms avg');
-    setStage(4, 'done', ruleCount + ' rule · ' + modelCount + ' model');
-    setStage(5, 'done', assessments.length + ' citation(s) passed');
+    setStage(1, 'done', 'Document hashed — no raw bytes stored');
+    setStage(2, 'done', `${assessments.length} typed facts extracted`);
+    setStage(3, 'done', `${Math.round(sumB / nStage)} ms avg to retrieve candidate clauses`);
+    setStage(4, 'done', `${ruleCount} decided by rule, ${modelCount} by model`);
+    setStage(5, 'done', `${citationsTotal} citation(s) validated against the corpus`);
   }
 }
 
@@ -434,22 +535,24 @@ async function runLive() {
   btn.disabled = true;
   resetPipeline();
   document.getElementById('case-status').textContent = 'in review';
-  setStage(1, 'active');
+  setStage(1, 'active', 'Computing SHA-256 client-side…');
   statusLine.textContent = 'Opening case, hashing document…';
 
   try {
+    const sha = await sha256(docText);
+    setStage(1, 'done', `sha256 ${sha.slice(0, 16)}… · ${docText.length.toLocaleString()} chars`);
+
     const loanRes = await fetch(`${API_BASE}/v1/loans`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${DEMO_TOKEN}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ external_ref: 'live-demo-' + Date.now(), product_type: 'personal', is_digital_lending: true }),
     });
     const loan = await loanRes.json();
+    if (!loanRes.ok) throw new Error('loan creation failed: ' + loanRes.status + ' ' + (loan.error?.message || loan.detail || ''));
     document.getElementById('case-ref').textContent = loan.external_ref || loan.id;
 
-    setStage(1, 'done', 'hashed');
-    setStage(2, 'active');
+    setStage(2, 'active', 'Submitting to the extraction pipeline…');
     statusLine.textContent = 'Extracting typed facts from the document…';
-    const sha = await sha256(docText);
     const docRes = await fetch(`${API_BASE}/v1/loans/${loan.id}/documents`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${DEMO_TOKEN}`, 'Content-Type': 'application/json' },
@@ -461,11 +564,11 @@ async function runLive() {
     });
     if (!docRes.ok) throw new Error('document submission failed: ' + docRes.status);
 
-    setStage(2, 'done');
-    setStage(3, 'active');
+    setStage(2, 'done', 'Accepted — extraction running asynchronously');
+    setStage(3, 'active', 'Resolving the in-force clause set for this event date…');
     statusLine.textContent = 'Resolving in-force provisions and running the rule engine…';
-    setTimeout(() => { setStage(3, 'done'); setStage(4, 'active'); }, 1200);
-    setTimeout(() => { setStage(4, 'done'); setStage(5, 'active'); statusLine.textContent = 'Validating citations against the corpus…'; }, 2600);
+    setTimeout(() => { setStage(3, 'done', 'Candidate clauses retrieved'); setStage(4, 'active', 'Rules run first; model reviews the rest…'); }, 1200);
+    setTimeout(() => { setStage(4, 'done', 'Rule + model review complete'); setStage(5, 'active', 'Checking every citation resolves to a real clause…'); statusLine.textContent = 'Validating citations against the corpus…'; }, 2600);
 
     let attempts = 0;
     let data = null;
