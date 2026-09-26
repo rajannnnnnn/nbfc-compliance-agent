@@ -289,9 +289,9 @@ let CAPTURED = null;
 
 const verdictLabel = { compliant: "Compliant", violation: "Violation", ambiguous: "Ambiguous", no_clause_found: "No clause found" };
 const SAMPLE_FILES = {
-  call_transcript: '/demo/sample_call_transcript.txt',
-  kfs: '/demo/sample_kfs.txt',
-  loan_agreement: '/demo/sample_loan_agreement.txt',
+  call_transcript: '/sample_call_transcript.txt',
+  kfs: '/sample_kfs.txt',
+  loan_agreement: '/sample_loan_agreement.txt',
 };
 
 const docTextEl = document.getElementById('doc-text');
@@ -331,7 +331,7 @@ document.getElementById('file-input').addEventListener('change', async (e) => {
 });
 
 async function loadCaptured() {
-  const sampleRes = await fetch('/demo/sample_result.json');
+  const sampleRes = await fetch('/sample_result.json');
   CAPTURED = await sampleRes.json();
   await loadSample('call_transcript', document.querySelector('.sample-btn[data-sample="call_transcript"]'));
   render(CAPTURED, { source: '(captured live run)' });

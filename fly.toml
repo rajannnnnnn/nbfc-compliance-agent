@@ -19,7 +19,9 @@ CC_CLASSIFY_MODEL = "gemini/gemini-2.5-flash"
 release_command = "python scripts/release.py"
 
 [http_service]
-internal_port = 8000
+# Points at the gateway (app/gateway.py), not the backend directly — the backend binds
+# 127.0.0.1:8000 and is unreachable from outside this machine.
+internal_port = 8080
 force_https = true
 auto_stop_machines = false
 auto_start_machines = true

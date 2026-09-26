@@ -6,7 +6,6 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from starlette.responses import Response as StarletteResponse
 from uuid6 import uuid7
 
@@ -56,11 +55,14 @@ def create_app() -> FastAPI:
         )
         return response
 
-    # Demo frontend is a static page hosted on a different origin; auth is a manually-set
-    # Bearer header, never a cookie, so a wildcard origin carries no credential-leak risk.
+    # This process binds to 127.0.0.1 only (see scripts/start.sh) and is never reached by
+    # a browser directly — app/gateway.py is the public process and proxies to it over
+    # loopback. No browser traffic is ever subject to this middleware; it exists only so
+    # that if the backend is ever accidentally exposed, cross-origin browser access is
+    # still confined to the gateway's own loopback address rather than left wide open.
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=["http://127.0.0.1:8080", "http://localhost:8080"],
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -68,12 +70,6 @@ def create_app() -> FastAPI:
     app.add_exception_handler(APIError, api_error_handler)  # type: ignore[arg-type]
     app.add_exception_handler(Exception, unhandled_error_handler)
     app.include_router(v1_router)
-
-    # Recruiter-facing demo page: static, same-origin, served by this same container at
-    # zero additional infrastructure cost. Real captured pipeline output ships alongside
-    # the page (app/static/demo/sample_result.json) so it has something to show before
-    # anyone clicks "run live".
-    app.mount("/demo", StaticFiles(directory="app/static/demo", html=True), name="demo")
 
     return app
 
