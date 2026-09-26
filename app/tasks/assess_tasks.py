@@ -62,6 +62,17 @@ class AssessmentTaskError(Exception):
     """A permanent failure — missing account/document/facts. Never auto-retried."""
 
 
+# Per-document/per-account assessment fans a model-routed fact out to its own embed + verdict
+# call (LLD §7.5 / §12). Run sequentially, N facts cost N round trips of real LLM latency
+# stacked end to end — trivially several times the frontend's poll budget for any document
+# with more than a handful of unmatched fields. Facts are independent of one another (each
+# reads its own field's rule/model path; the only cross-fact write, recompute_loan_compliance_state,
+# is a full recompute from already-committed assessment rows, so it is safe to run from several
+# concurrent isolated sessions). Bounded by a semaphore to stay inside sane Gemini rate limits
+# and DB pool size, not to serialize correctness.
+_ASSESS_CONCURRENCY = 4
+
+
 async def _load_account_ref(session: AsyncSession, loan_account_id: UUID) -> LoanAccountRef:
     row = (
         await session.execute(text(_ACCOUNT_REF_SQL), {"loan_account_id": str(loan_account_id)})
@@ -127,6 +138,45 @@ async def _assess_one_field(
     return len(results)
 
 
+async def _assess_one_field_isolated(
+    sessionmaker: Any,
+    *,
+    fact_row: Any,
+    loan_account_id: UUID,
+    document_id: UUID,
+    event_date: Any,
+    account: LoanAccountRef,
+    snapshot_id: UUID,
+    settings: Settings,
+    registry: FieldRegistry,
+    client: LLMClient,
+    request_id: str,
+    tenant_id: UUID,
+    semaphore: "asyncio.Semaphore",
+) -> int:
+    """Runs one fact's assessment on its own session/transaction so independent facts can be
+    scheduled concurrently instead of stacking their LLM latency sequentially."""
+    async with semaphore, sessionmaker() as session:
+        await session.execute(
+            text("SELECT set_config('app.tenant_id', :tid, true)"), {"tid": str(tenant_id)}
+        )
+        checks = await _assess_one_field(
+            session,
+            fact_row=fact_row,
+            loan_account_id=loan_account_id,
+            document_id=document_id,
+            event_date=event_date,
+            account=account,
+            snapshot_id=snapshot_id,
+            settings=settings,
+            registry=registry,
+            client=client,
+            request_id=request_id,
+        )
+        await session.commit()
+        return checks
+
+
 async def _run_assess_document(
     document_id: UUID, tenant_id: UUID, request_id: str, *, client: LLMClient | None = None
 ) -> dict[str, Any]:
@@ -154,10 +204,11 @@ async def _run_assess_document(
             await session.execute(text(_FACTS_FOR_DOCUMENT_SQL), {"document_id": str(document_id)})
         ).all()
 
-        checks_run = 0
-        for fact_row in fact_rows:
-            checks_run += await _assess_one_field(
-                session,
+    semaphore = asyncio.Semaphore(_ASSESS_CONCURRENCY)
+    per_fact_checks = await asyncio.gather(
+        *[
+            _assess_one_field_isolated(
+                sessionmaker,
                 fact_row=fact_row,
                 loan_account_id=doc_row.loan_account_id,
                 document_id=document_id,
@@ -168,13 +219,17 @@ async def _run_assess_document(
                 registry=registry,
                 client=client,
                 request_id=request_id,
+                tenant_id=tenant_id,
+                semaphore=semaphore,
             )
-        await session.commit()
+            for fact_row in fact_rows
+        ]
+    )
 
     return {
         "document_id": str(document_id),
         "facts_assessed": len(fact_rows),
-        "checks_run": checks_run,
+        "checks_run": sum(per_fact_checks),
     }
 
 
@@ -279,7 +334,7 @@ async def _run_assess_account(
             )
         ).all()
 
-        checks_run = 0
+        fact_and_doc_rows = []
         for field_row in field_rows:
             fact_row = (
                 await session.execute(
@@ -296,8 +351,13 @@ async def _run_assess_account(
             ).first()
             if doc_row is None:
                 continue
-            checks_run += await _assess_one_field(
-                session,
+            fact_and_doc_rows.append((fact_row, doc_row))
+
+    semaphore = asyncio.Semaphore(_ASSESS_CONCURRENCY)
+    per_field_checks = await asyncio.gather(
+        *[
+            _assess_one_field_isolated(
+                sessionmaker,
                 fact_row=fact_row,
                 loan_account_id=loan_account_id,
                 document_id=fact_row.document_id,
@@ -308,13 +368,17 @@ async def _run_assess_account(
                 registry=registry,
                 client=client,
                 request_id=request_id,
+                tenant_id=tenant_id,
+                semaphore=semaphore,
             )
-        await session.commit()
+            for fact_row, doc_row in fact_and_doc_rows
+        ]
+    )
 
     return {
         "loan_account_id": str(loan_account_id),
         "fields_assessed": len(field_rows),
-        "checks_run": checks_run,
+        "checks_run": sum(per_field_checks),
     }
 
 

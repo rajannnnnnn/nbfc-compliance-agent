@@ -568,7 +568,7 @@ async function runLive() {
 
     let attempts = 0;
     let data = null;
-    while (attempts < 40) {
+    while (attempts < 60) {
       await new Promise(r => setTimeout(r, 3000));
       const r = await fetch(`${API_BASE}/v1/loans/${loan.id}/assessments`, {
         headers: { 'Authorization': `Bearer ${DEMO_TOKEN}` },
@@ -576,10 +576,10 @@ async function runLive() {
       data = await r.json();
       if (data.assessments && data.assessments.length > 0) break;
       attempts++;
-      statusLine.textContent = `Working through the pipeline… (${attempts * 3}s elapsed)`;
+      statusLine.textContent = `Working through the pipeline… (${attempts * 3}s elapsed — a document with many extractable facts means more model calls, not a stall)`;
     }
     if (!data || !data.assessments || data.assessments.length === 0) {
-      throw new Error('assessment did not complete in time — the worker may be cold-starting');
+      throw new Error('assessment did not complete within 3 minutes — try a shorter document, or check back shortly and reload');
     }
     render(data, { source: '(live run, just now)' });
     statusLine.textContent = 'Review complete.';

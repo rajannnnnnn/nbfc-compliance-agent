@@ -3,7 +3,9 @@ themselves are thin (asyncio.run + uuid parsing) — tested here via the async h
 matching every other module in this codebase's "no Celery worker needed to test the logic"
 pattern (LLD §14's own point of keeping task bodies thin)."""
 
+import asyncio
 import json
+import time
 import uuid
 
 import pytest
@@ -23,10 +25,12 @@ from app.tasks.assess_tasks import (
 pytestmark = pytest.mark.integration
 
 
-def _no_clause_found_client(settings) -> LLMClient:
+def _no_clause_found_client(settings, *, delay_s: float = 0.0) -> LLMClient:
     client = LLMClient(settings)
 
     async def _structured(*, model_cls, model, messages, stage, adapter_id=None):
+        if delay_s:
+            await asyncio.sleep(delay_s)
         draft = VerdictDraft(
             verdict="no_clause_found",
             citations=[],
@@ -47,6 +51,8 @@ def _no_clause_found_client(settings) -> LLMClient:
         return draft, record
 
     async def _embed(texts, *, model, dimensions):
+        if delay_s:
+            await asyncio.sleep(delay_s)
         return [[0.001] * dimensions for _ in texts]
 
     client.structured = _structured  # type: ignore[method-assign]
@@ -178,6 +184,52 @@ async def test_assess_document_runs_a_check_for_every_non_absent_fact(snapshot_i
             )
         ).scalar_one()
         assert count == result["checks_run"]
+
+
+async def test_assess_document_fans_out_model_calls_concurrently(snapshot_id, account_and_doc):
+    """Regression for the assessment-timeout bug: with N facts each needing a model call,
+    wall-clock must scale like N / concurrency, not N — a sequential loop over per-fact
+    embed+structured calls is exactly what stacked real Gemini latency past the frontend's
+    poll budget in production. Six fields with no matching rule, each with an artificial
+    delay, must finish well under what six sequential calls would take."""
+    tenant_id, loan_id, doc_id = account_and_doc
+    settings = get_settings()
+    sm = get_sessionmaker(settings)
+
+    field_keys = [
+        "loan_proposal_number",
+        "loan_type",
+        "sanctioned_amount",
+        "disbursal_schedule_text",
+        "loan_term_days",
+        "instalment_amount",
+    ]
+    async with sm() as session:
+        for field_key in field_keys:
+            await _insert_fact(
+                session,
+                tenant_id=tenant_id,
+                document_id=doc_id,
+                loan_account_id=loan_id,
+                field_key=field_key,
+                value_json={"kind": "string", "v": "x"},
+            )
+        await session.commit()
+
+    delay_s = 0.5
+    start = time.monotonic()
+    result = await _run_assess_document(
+        doc_id,
+        tenant_id,
+        "req-task-concurrency",
+        client=_no_clause_found_client(settings, delay_s=delay_s),
+    )
+    elapsed = time.monotonic() - start
+
+    assert result["facts_assessed"] == len(field_keys)
+    # Fully sequential would take > len(field_keys) * delay_s (six calls, each embed+structured).
+    # Bounded concurrency should finish in a couple of rounds, not six.
+    assert elapsed < len(field_keys) * delay_s * 0.75
 
 
 async def test_assess_document_missing_document_raises(snapshot_id):
