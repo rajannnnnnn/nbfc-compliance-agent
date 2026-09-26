@@ -91,10 +91,20 @@
     padding: 13px 14px; position: relative; transition: border-color 0.25s, background 0.25s, box-shadow 0.25s, transform 0.25s;
     box-shadow: var(--shadow-sm);
   }
+  /* A connecting line between stages makes it read as one flow, not five separate boxes. */
+  .stage:not(:first-child)::before {
+    content: ''; position: absolute; left: -8px; top: 24px; width: 8px; height: 2px;
+    background: var(--border-strong); z-index: 1;
+  }
+  .stage.done:not(:first-child)::before { background: var(--compliant); }
+  .badge-icon-row { display: flex; align-items: center; gap: 7px; position: relative; z-index: 2; }
+  .stage .icon { width: 14px; height: 14px; color: var(--text-faint); flex-shrink: 0; transition: color 0.25s; }
+  .stage.active .icon { color: var(--accent); }
+  .stage.done .icon { color: var(--compliant); }
   .stage .badge {
     display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px;
     border-radius: 999px; border: 1.5px solid var(--border-strong); font-family: var(--mono);
-    font-size: 10px; color: var(--text-faint); font-weight: 600; transition: all 0.25s;
+    font-size: 10px; color: var(--text-faint); font-weight: 600; transition: all 0.25s; flex-shrink: 0;
   }
   .stage .t { font-size: 12.5px; font-weight: 600; margin: 8px 0 2px; color: var(--text); }
   .stage .d {
@@ -107,14 +117,22 @@
     animation: pulse-ring 1.4s ease-in-out infinite;
   }
   .stage.done { border-color: #bfe3d1; background: var(--compliant-soft); }
-  .stage.done .badge { border-color: var(--compliant); background: var(--compliant); color: white; }
+  .stage.done .badge {
+    border-color: var(--compliant); background: var(--compliant); color: white;
+    animation: badge-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
   .stage.done .d.detail { color: #0a6b48; }
   @keyframes pulse-ring {
     0%, 100% { box-shadow: 0 0 0 0 rgba(30, 64, 175, 0.25); }
     50% { box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.08); }
   }
+  @keyframes badge-pop {
+    0% { transform: scale(0.6); }
+    60% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+  }
   @media (prefers-reduced-motion: reduce) {
-    .stage, .stage.active, .progress-fill { transition: none; animation: none; }
+    .stage, .stage.active, .stage.done .badge, .progress-fill { transition: none; animation: none; }
   }
 
   main { max-width: 1180px; margin: 0 auto; padding: 8px 20px 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -247,23 +265,43 @@
     <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
     <div class="pipeline-track">
       <div class="stage" id="stage-1">
-        <span class="badge">1</span><div class="t">Intake &amp; hashing</div>
+        <div class="badge-icon-row">
+          <span class="badge">1</span>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
+        </div>
+        <div class="t">Intake &amp; hashing</div>
         <div class="d" data-static="SHA-256, lifecycle stage, no raw bytes stored">SHA-256, lifecycle stage, no raw bytes stored</div>
       </div>
       <div class="stage" id="stage-2">
-        <span class="badge">2</span><div class="t">Fact extraction</div>
+        <div class="badge-icon-row">
+          <span class="badge">2</span>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v4H4z"/><path d="M4 12h10M4 16h6"/></svg>
+        </div>
+        <div class="t">Fact extraction</div>
         <div class="d" data-static="Typed facts only — no legal judgment here">Typed facts only — no legal judgment here</div>
       </div>
       <div class="stage" id="stage-3">
-        <span class="badge">3</span><div class="t">Provision retrieval</div>
+        <div class="badge-icon-row">
+          <span class="badge">3</span>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="6"/><line x1="21" y1="21" x2="14.5" y2="14.5"/></svg>
+        </div>
+        <div class="t">Provision retrieval</div>
         <div class="d" data-static="As-of date resolves the in-force clause set">As-of date resolves the in-force clause set</div>
       </div>
       <div class="stage" id="stage-4">
-        <span class="badge">4</span><div class="t">Rule engine + model review</div>
+        <div class="badge-icon-row">
+          <span class="badge">4</span>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 7l-3 6a3 3 0 0 0 6 0z"/><path d="M19 7l-3 6a3 3 0 0 0 6 0z"/><path d="M5 7h14"/><path d="M9 21h6"/></svg>
+        </div>
+        <div class="t">Rule engine + model review</div>
         <div class="d" data-static="Deterministic rules first; model only where rules don't reach">Deterministic rules first; model only where rules don't reach</div>
       </div>
       <div class="stage" id="stage-5">
-        <span class="badge">5</span><div class="t">Citation validator</div>
+        <div class="badge-icon-row">
+          <span class="badge">5</span>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 3v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V5z"/><path d="M9 12l2 2 4-4"/></svg>
+        </div>
+        <div class="t">Citation validator</div>
         <div class="d" data-static="Verdict without a resolvable clause is discarded in code">Verdict without a resolvable clause is discarded in code</div>
       </div>
     </div>
@@ -464,6 +502,21 @@ function resetPipeline() {
     d.classList.remove('detail');
   }
   document.getElementById('progress-fill').style.width = '0%';
+
+  // A fresh submission must start from a genuinely blank slate — otherwise the previous
+  // run's findings/metrics linger on screen while the new run is still in flight, which
+  // reads as if they belong to the run just started.
+  document.getElementById('result-source').textContent = '';
+  document.getElementById('case-ref').textContent = '—';
+  document.getElementById('case-corpus').textContent = '—';
+  document.getElementById('case-status').textContent = 'idle';
+  document.getElementById('raw-json').textContent = '';
+  document.getElementById('m-facts').textContent = '—';
+  document.getElementById('m-rule').textContent = '—';
+  document.getElementById('m-model-count').textContent = '—';
+  document.getElementById('m-cost').textContent = '—';
+  document.getElementById('m-latency').textContent = '—';
+  document.getElementById('m-corpus').textContent = '—';
 }
 
 function resetLiveLog() {
@@ -559,13 +612,14 @@ function render(data, opts) {
   document.getElementById('m-latency').textContent = latencies.length ? Math.round(median(latencies)) + ' ms' : '—';
   document.getElementById('m-corpus').textContent = data.corpus_snapshot ? data.corpus_snapshot.id.slice(0, 8) + '…' : '—';
 
-  if (nStage > 0) {
-    setStage(1, 'done', 'Document hashed — no raw bytes stored');
-    setStage(2, 'done', `${assessments.length} typed facts extracted`);
-    setStage(3, 'done', `${Math.round(sumB / nStage)} ms avg to retrieve candidate clauses`);
-    setStage(4, 'done', `${ruleCount} decided by rule, ${modelCount} by model`);
-    setStage(5, 'done', `${citationsTotal} citation(s) validated against the corpus`);
-  }
+  // Mark every stage done once results actually arrive, regardless of whether per-stage
+  // telemetry happened to come back on every assessment — a run that reached render() has,
+  // by definition, gone through all five stages. Only the detail text depends on nStage.
+  setStage(1, 'done', 'Document hashed — no raw bytes stored');
+  setStage(2, 'done', `${assessments.length} typed fact${assessments.length === 1 ? '' : 's'} extracted`);
+  setStage(3, 'done', nStage > 0 ? `${Math.round(sumB / nStage)} ms avg to retrieve candidate clauses` : 'Candidate clauses retrieved');
+  setStage(4, 'done', `${ruleCount} decided by rule, ${modelCount} by model`);
+  setStage(5, 'done', `${citationsTotal} citation(s) validated against the corpus`);
 }
 
 async function runLive() {
