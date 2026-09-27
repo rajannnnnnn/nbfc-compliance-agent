@@ -187,6 +187,31 @@ carried over as a genuine open item, not dismissed:
 
 ---
 
+## 8. Trial log — what changed, and what it moved (append-only)
+
+> **Purpose.** Every dev cycle, one row per real change: what was worked on, which metric it
+> targeted, the number **before**, the number **after** (from a real re-run, not a guess), and
+> the commit. This is the "did the work actually move the needle" ledger — separate from §7's
+> narrative changelog. A row with no "after" yet means the fix shipped but hasn't been re-measured
+> — leave it open, don't fill in a guess.
+
+| Date | Worked on | Metric | Before | After | Commit |
+|---|---|---|---|---|---|
+| 2026-09-26 | Bounded concurrency (semaphore=4) for per-fact embed+verdict calls in `assess.document`, replacing a sequential loop | Per-fact assessment latency (local repro, simulated 1.2s embed + 3.0s verdict) | 33.8s / 8 facts | **8.6s / 8 facts (~4x)** | `272dd86` |
+| 2026-09-26 | Dynamic text-search-config fallback in lexical retrieval (`resolve_ts_config`) — was hardcoding `clausecheck_en`, which doesn't exist on managed Postgres (Neon) | Production incident count (every assessment failing on prod) | every request 500 | 0 (root cause resolved, confirmed via local Postgres repro) | `56a460c` |
+| 2026-09-26 | Dispose the SQLAlchemy engine after every Celery task (`_run_and_dispose`) — module-global engine/pool was reused across separate `asyncio.run()` event loops | Production incident count (2nd+ task per worker crashing) | crash on every 2nd task | 0 (confirmed via local cross-loop repro harness) | `64d6628` |
+| *(open)* | Re-run `make eval suite=verdict` against current code — 31.25% predates all three fixes above | Verdict accuracy (`verdict` suite) | 31.25% (2026-09-21, stale) | **not yet re-measured** | — |
+| *(open)* | Fix `contact_datetime` extraction (flat 0% exact match) | Field accuracy, `contact_datetime` | 0% | not yet re-measured | — |
+| *(open)* | Improve span grounding in Stage A extraction | Span grounding (`extraction_core`) | 48.6% | not yet re-measured | — |
+
+**How to add a row next cycle:** pick one real change → note the metric it should move → read the
+"Current" value from the relevant §1–§6 table *before* starting → make the change → re-run the
+matching `make eval suite=...` from [How to regenerate](#how-to-regenerate-each-cycle) → fill in
+the "After" column with the real number → commit. Never backfill an "After" without having
+actually re-run the suite.
+
+---
+
 ## How to regenerate each cycle
 
 ```bash
