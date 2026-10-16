@@ -292,3 +292,78 @@ async def test_get_loan_not_found_is_404_not_leaked(active_snapshot, tenant):
         r = await client.get(f"/v1/loans/{uuid.uuid4()}", headers=_auth_headers(raw_token))
     assert r.status_code == 404
     assert r.json()["error"]["code"] == "CC-404-LOAN"
+
+
+async def test_upload_txt_file_is_parsed_and_ingested(tenant):
+    _tenant_id, raw_token = tenant
+    async with await _client() as client:
+        r = await client.post(
+            "/v1/loans",
+            json={"external_ref": "LN-UPLOAD-1", "product_type": "personal"},
+            headers=_auth_headers(raw_token),
+        )
+        loan_id = r.json()["id"]
+
+        r2 = await client.post(
+            f"/v1/loans/{loan_id}/documents/upload",
+            data={"event_date": "2026-04-01", "doc_type": "kfs", "assess": "false"},
+            files={"file": ("kfs.txt", KFS_TEXT.encode("utf-8"), "text/plain")},
+            headers=_auth_headers(raw_token),
+        )
+        assert r2.status_code == 202, r2.text
+        document_id = r2.json()["document_id"]
+        assert document_id
+
+        # Same bytes uploaded again (by filename) is rejected as a duplicate, just like
+        # the direct-text route — dedup is keyed on the extracted content hash, not on
+        # how the text arrived.
+        r3 = await client.post(
+            f"/v1/loans/{loan_id}/documents/upload",
+            data={"event_date": "2026-04-01", "doc_type": "kfs", "assess": "false"},
+            files={"file": ("kfs-again.txt", KFS_TEXT.encode("utf-8"), "text/plain")},
+            headers=_auth_headers(raw_token),
+        )
+        assert r3.status_code == 409
+        assert r3.json()["error"]["code"] == "CC-409-DUPLICATE-DOC"
+
+
+async def test_upload_unsupported_file_type_is_422(tenant):
+    _tenant_id, raw_token = tenant
+    async with await _client() as client:
+        r = await client.post(
+            "/v1/loans",
+            json={"external_ref": "LN-UPLOAD-2", "product_type": "personal"},
+            headers=_auth_headers(raw_token),
+        )
+        loan_id = r.json()["id"]
+
+        r2 = await client.post(
+            f"/v1/loans/{loan_id}/documents/upload",
+            data={"event_date": "2026-04-01", "assess": "false"},
+            files={"file": ("notes.xyz", b"whatever", "application/octet-stream")},
+            headers=_auth_headers(raw_token),
+        )
+        assert r2.status_code == 422
+        assert r2.json()["error"]["code"] == "CC-422-PARSE-FAILED"
+
+
+async def test_upload_oversized_file_is_413(tenant):
+    _tenant_id, raw_token = tenant
+    settings = get_settings()
+    async with await _client() as client:
+        r = await client.post(
+            "/v1/loans",
+            json={"external_ref": "LN-UPLOAD-3", "product_type": "personal"},
+            headers=_auth_headers(raw_token),
+        )
+        loan_id = r.json()["id"]
+
+        oversized = b"a" * (settings.max_upload_bytes + 1)
+        r2 = await client.post(
+            f"/v1/loans/{loan_id}/documents/upload",
+            data={"event_date": "2026-04-01", "assess": "false"},
+            files={"file": ("huge.txt", oversized, "text/plain")},
+            headers=_auth_headers(raw_token),
+        )
+        assert r2.status_code == 413
+        assert r2.json()["error"]["code"] == "CC-413-PAYLOAD-TOO-LARGE"

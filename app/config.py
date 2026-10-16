@@ -58,6 +58,10 @@ class Settings(BaseSettings):
 
     # --- extraction ----------------------------------------------------------
     ocr_char_per_page_threshold: int = 120
+    ocr_dpi: int = 200
+    ocr_lang: str = "eng"
+    ocr_max_pages: int = 50
+    max_upload_bytes: int = 15_000_000
     classify_confidence_floor: float = 0.70
     span_window_chars: int = 240
 

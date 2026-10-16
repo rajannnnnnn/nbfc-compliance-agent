@@ -11,7 +11,7 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Form, Header, UploadFile
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,9 +23,13 @@ from app.api.errors import APIError
 from app.config import Settings, get_settings
 from app.domain.enums import DocType
 from app.extract.classify import classify_document
+from app.extract.parse import ParseError, parse_document
 from app.extract.service import extract_document
 from app.llm.client import LLMClient
+from app.obs.logging import get_logger
 from app.schema.registry import FieldRegistry
+
+logger = get_logger()
 
 router = APIRouter(prefix="/v1/loans", tags=["documents"])
 
@@ -72,10 +76,11 @@ SELECT id FROM document WHERE tenant_id = :tid AND loan_account_id = :lid
 _INSERT_DOC_SQL = """
 INSERT INTO document
     (id, tenant_id, loan_account_id, doc_type, lifecycle_stage, event_date, content_sha256,
-     source_uri, char_count, span_budget_chars, is_synthetic, classify_confidence)
+     source_uri, char_count, page_count, ocr_used, language, span_budget_chars, is_synthetic,
+     classify_confidence)
 VALUES
     (:id, :tid, :lid, :doc_type, :stage, :event_date, :sha, :source_uri, :char_count,
-     :span_budget, :is_synthetic, :classify_confidence)
+     :page_count, :ocr_used, :language, :span_budget, :is_synthetic, :classify_confidence)
 """
 
 _IDEMPOTENCY_LOOKUP_SQL = """
@@ -104,18 +109,18 @@ def _route_key(loan_id: UUID) -> str:
 
 
 async def _resolve_doc_type(
-    body: DocumentSubmitRequest, *, client: LLMClient, settings: Settings
+    doc_type: str | None, text_: str, *, client: LLMClient, settings: Settings
 ) -> str:
-    if body.doc_type:
-        if body.doc_type not in DOC_TYPE_LIFECYCLE_STAGE:
+    if doc_type:
+        if doc_type not in DOC_TYPE_LIFECYCLE_STAGE:
             raise APIError(
                 "CC-400-SCHEMA",
-                f"unknown doc_type {body.doc_type!r}",
-                detail={"doc_type": body.doc_type},
+                f"unknown doc_type {doc_type!r}",
+                detail={"doc_type": doc_type},
             )
-        return body.doc_type
+        return doc_type
 
-    result = await classify_document(body.text, client=client, settings=settings)
+    result = await classify_document(text_, client=client, settings=settings)
     if result.doc_type == DocType.UNKNOWN.value:
         raise APIError(
             "CC-422-DOCTYPE-UNKNOWN",
@@ -125,20 +130,32 @@ async def _resolve_doc_type(
     return result.doc_type
 
 
-@router.post("/{loan_id}/documents", status_code=202)
-async def submit_document(
+async def _ingest_document(
+    *,
     loan_id: UUID,
-    body: DocumentSubmitRequest,
-    tenant_id: UUID = Depends(get_tenant_id),
-    session: AsyncSession = Depends(get_tenant_session),
-    settings: Settings = Depends(get_settings),
-    client: LLMClient = Depends(get_llm_client),
-    request_id: str = Depends(_get_request_id),
-    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    tenant_id: UUID,
+    session: AsyncSession,
+    settings: Settings,
+    client: LLMClient,
+    request_id: str,
+    route: str,
+    request_hash: str,
+    idempotency_key: str | None,
+    doc_type_in: str | None,
+    event_date_str: str,
+    source_uri: str,
+    content_sha256_in: str | None,
+    document_text: str,
+    is_synthetic: bool,
+    assess: bool,
+    page_count: int | None,
+    ocr_used: bool,
+    language: str,
 ) -> dict[str, Any]:
-    request_hash = hashlib.sha256(body.model_dump_json().encode("utf-8")).hexdigest()
-    route = _route_key(loan_id)
-
+    """Shared by both submission routes (direct text and file upload) from the point where
+    each has reduced its input down to plain extracted text — everything downstream
+    (idempotency, dedup-by-hash, classification, extraction, queueing) is identical either
+    way, so it lives once here rather than twice."""
     if idempotency_key:
         existing = (
             await session.execute(
@@ -159,14 +176,15 @@ async def submit_document(
     if loan_row is None:
         raise APIError("CC-404-LOAN", f"loan {loan_id} not found", detail={"loan_id": str(loan_id)})
 
-    computed_hash = hashlib.sha256(body.text.encode("utf-8")).hexdigest()
-    if computed_hash != body.content_sha256:
+    computed_hash = hashlib.sha256(document_text.encode("utf-8")).hexdigest()
+    if content_sha256_in is not None and computed_hash != content_sha256_in:
         raise APIError("CC-400-HASH-MISMATCH", "content_sha256 does not match the supplied text")
+    content_sha256 = computed_hash
 
     dup = (
         await session.execute(
             text(_EXISTING_DOC_SQL),
-            {"tid": str(tenant_id), "lid": str(loan_id), "sha": body.content_sha256},
+            {"tid": str(tenant_id), "lid": str(loan_id), "sha": content_sha256},
         )
     ).first()
     if dup is not None:
@@ -177,17 +195,17 @@ async def submit_document(
         )
 
     try:
-        event_date = date.fromisoformat(body.event_date)
+        event_date = date.fromisoformat(event_date_str)
     except ValueError as exc:
         raise APIError(
-            "CC-400-SCHEMA", f"event_date {body.event_date!r} is not a valid ISO date"
+            "CC-400-SCHEMA", f"event_date {event_date_str!r} is not a valid ISO date"
         ) from exc
 
-    doc_type = await _resolve_doc_type(body, client=client, settings=settings)
+    doc_type = await _resolve_doc_type(doc_type_in, document_text, client=client, settings=settings)
     stage = DOC_TYPE_LIFECYCLE_STAGE[doc_type]
 
     document_id = uuid7()
-    span_budget = int(len(body.text) * settings.span_budget_ratio)
+    span_budget = int(len(document_text) * settings.span_budget_ratio)
     await session.execute(
         text(_INSERT_DOC_SQL),
         {
@@ -197,11 +215,14 @@ async def submit_document(
             "doc_type": doc_type,
             "stage": stage,
             "event_date": event_date,
-            "sha": body.content_sha256,
-            "source_uri": body.source_uri,
-            "char_count": len(body.text),
+            "sha": content_sha256,
+            "source_uri": source_uri,
+            "char_count": len(document_text),
+            "page_count": page_count,
+            "ocr_used": ocr_used,
+            "language": language,
             "span_budget": span_budget,
-            "is_synthetic": body.is_synthetic,
+            "is_synthetic": is_synthetic,
             "classify_confidence": None,
         },
     )
@@ -213,7 +234,7 @@ async def submit_document(
         tenant_id=tenant_id,
         loan_account_id=loan_id,
         doc_type=doc_type,
-        document_text=body.text,
+        document_text=document_text,
         client=client,
         registry=registry,
         settings=settings,
@@ -221,7 +242,7 @@ async def submit_document(
     await session.commit()
 
     job_id = uuid7()
-    if body.assess:
+    if assess:
         from app.tasks.assess_tasks import assess_document
 
         assess_document.delay(str(document_id), str(tenant_id), request_id)
@@ -249,3 +270,122 @@ async def submit_document(
         await session.commit()
 
     return response_body
+
+
+@router.post("/{loan_id}/documents", status_code=202)
+async def submit_document(
+    loan_id: UUID,
+    body: DocumentSubmitRequest,
+    tenant_id: UUID = Depends(get_tenant_id),
+    session: AsyncSession = Depends(get_tenant_session),
+    settings: Settings = Depends(get_settings),
+    client: LLMClient = Depends(get_llm_client),
+    request_id: str = Depends(_get_request_id),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+) -> dict[str, Any]:
+    request_hash = hashlib.sha256(body.model_dump_json().encode("utf-8")).hexdigest()
+    return await _ingest_document(
+        loan_id=loan_id,
+        tenant_id=tenant_id,
+        session=session,
+        settings=settings,
+        client=client,
+        request_id=request_id,
+        route=_route_key(loan_id),
+        request_hash=request_hash,
+        idempotency_key=idempotency_key,
+        doc_type_in=body.doc_type,
+        event_date_str=body.event_date,
+        source_uri=body.source_uri,
+        content_sha256_in=body.content_sha256,
+        document_text=body.text,
+        is_synthetic=body.is_synthetic,
+        assess=body.assess,
+        page_count=None,
+        ocr_used=False,
+        language="en",
+    )
+
+
+@router.post("/{loan_id}/documents/upload", status_code=202)
+async def upload_document(
+    loan_id: UUID,
+    file: UploadFile,
+    doc_type: str | None = Form(default=None),
+    event_date: str = Form(...),
+    source_uri: str | None = Form(default=None),
+    is_synthetic: bool = Form(default=True),
+    assess: bool = Form(default=True),
+    tenant_id: UUID = Depends(get_tenant_id),
+    session: AsyncSession = Depends(get_tenant_session),
+    settings: Settings = Depends(get_settings),
+    client: LLMClient = Depends(get_llm_client),
+    request_id: str = Depends(_get_request_id),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+) -> dict[str, Any]:
+    """Accepts a raw file (PDF, DOCX, TXT, or a scanned image) instead of pre-extracted
+    text. Parsing (app/extract/parse.py) happens here, inside the request handler, for the
+    same reason the text route's extraction does — ADR-017: document bytes never cross the
+    Celery/Redis boundary. The bytes themselves live only in this function's local scope and
+    are discarded the moment parsing returns (CLAUDE.md §2.3); only the parsed text and its
+    hash are passed onward, identically to the direct-text route."""
+    filename = file.filename or "upload"
+    data = await file.read()
+
+    if len(data) > settings.max_upload_bytes:
+        raise APIError(
+            "CC-413-PAYLOAD-TOO-LARGE",
+            f"file exceeds the {settings.max_upload_bytes}-byte upload limit",
+            detail={"filename": filename, "size_bytes": len(data)},
+        )
+
+    try:
+        parsed = parse_document(filename=filename, data=data, settings=settings)
+    except ParseError as exc:
+        raise APIError("CC-422-PARSE-FAILED", str(exc), detail={"filename": filename}) from exc
+    finally:
+        del data
+
+    logger.info(
+        "document.upload_parsed",
+        char_count=parsed.char_count,
+        page_count=parsed.page_count,
+        ocr_used=parsed.ocr_used,
+    )
+
+    request_hash = hashlib.sha256(
+        json.dumps(
+            {
+                "filename": filename,
+                "size": file.size,
+                "doc_type": doc_type,
+                "event_date": event_date,
+                "source_uri": source_uri,
+                "is_synthetic": is_synthetic,
+                "assess": assess,
+            },
+            sort_keys=True,
+        ).encode("utf-8")
+    ).hexdigest()
+
+    return await _ingest_document(
+        loan_id=loan_id,
+        tenant_id=tenant_id,
+        session=session,
+        settings=settings,
+        client=client,
+        request_id=request_id,
+        route=_route_key(loan_id) + "/upload",
+        request_hash=request_hash,
+        idempotency_key=idempotency_key,
+        doc_type_in=doc_type,
+        event_date_str=event_date,
+        source_uri=source_uri or f"upload://{filename}",
+        content_sha256_in=None,
+        document_text=parsed.text,
+        is_synthetic=is_synthetic,
+        assess=assess,
+        page_count=parsed.page_count,
+        ocr_used=parsed.ocr_used,
+        language=parsed.language,
+    )
